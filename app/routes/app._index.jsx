@@ -133,7 +133,7 @@ export default function Dashboard() {
       <Grid>
         {cards.map((card) => (
           <Grid.Cell columnSpan={{ xs: 6, sm: 4, md: 4, lg: 4, xl: 4 }}>
-            <Gridcards title={card.title} value={card.value} icon={card.icon} />
+            <Gridcards id={card.id} title={card.title} value={card.value} icon={card.icon} />
           </Grid.Cell>
         ))}
       </Grid>
@@ -164,7 +164,9 @@ export default function Dashboard() {
                   <Text as="p" variant="bodySm" alignment="end">
                     {completedCount} of 2 tasks complete ({progress}%)
                   </Text>
-                  <ProgressBar progress={progress} size="small" />
+                  <div className="black-progress">
+                    <ProgressBar progress={progress} size="small" />
+                  </div>
                 </BlockStack>
               </Box>
             </InlineStack>
@@ -400,7 +402,7 @@ export default function Dashboard() {
                 borderRadius="200"
               >
                 <Text as="p" variant="bodySm">
-                 <b>Free Concierge Setup:</b>  We will write bespoke CSS to match your
+                  <b>Free Concierge Setup:</b>  We will write bespoke CSS to match your
                   Shopify store theme fonts, radius, and button hierarchy free of charge.
                 </Text>
               </Box>
