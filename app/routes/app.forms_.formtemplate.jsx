@@ -1,4 +1,4 @@
-import { BlockStack, Box, Button, Card, Divider, Grid, InlineStack, Modal, Page, Tabs, Text, Icon } from '@shopify/polaris'
+import { BlockStack, Box, Button, Card, Divider, Grid, InlineStack, Modal, Page, Tabs, Text, Icon, Tooltip } from '@shopify/polaris'
 import React, { useState } from 'react'
 
 import {
@@ -8,9 +8,11 @@ import {
   EmailIcon,
   AppsIcon,
   SettingsIcon,
-
+  MagicIcon,
   ChevronLeftIcon, ChevronRightIcon, ViewIcon,
   LanguageTranslateIcon,
+  MenuIcon,
+  AlertTriangleIcon,
   ArrowLeftIcon
 } from "@shopify/polaris-icons";
 import { useNavigate } from 'react-router';
@@ -83,9 +85,12 @@ function Formtemplate() {
   ];
   // sidebar options
   const [selectedOption, setSelectedOption] = useState("Elements");
+  // collpase
+  const [collpase, setCollapse] = useState(false)
 
   const sidebarOptions = [
     { label: "Elements", icon: FormsIcon },
+    { label: "Edit with AI", icon: MagicIcon, },
     { label: "Appearance", icon: PaintBrushFlatIcon },
     { label: "After submit", icon: CheckCircleIcon },
     { label: "Mail", icon: EmailIcon },
@@ -106,18 +111,20 @@ function Formtemplate() {
   const navigate = useNavigate();
   return (
     <Page>
-       <InlineStack gap="200" blockAlign="center">
-        <Button
-          icon={ArrowLeftIcon}
-          variant="plain"
-          onClick={() => navigate("/app/forms")}
-          accessibilityLabel="Go back to Forms"
-        />
+      <Box paddingBlockEnd={400}>
+        <InlineStack gap="200" blockAlign="center">
+          <Button
+            icon={ArrowLeftIcon}
+            variant="plain"
+            onClick={() => navigate("/app/forms")}
+            accessibilityLabel="Go back to Forms"
+          />
 
-        <Text as="h1" variant="headingLg">
-          Forms Templates
-        </Text>
-      </InlineStack>
+          <Text as="h1" variant="headingLg">
+            Forms Templates
+          </Text>
+        </InlineStack>
+      </Box>
       <BlockStack>
         {/* //tabs */}
         <Tabs tabs={tabs}
@@ -195,136 +202,222 @@ function Formtemplate() {
         ))}
       </Grid>
 
-      <Modal
-        open={activeTemplate !== null}
-        onClose={() => setActiveTemplate(null)}
-        title={"Unsaved changes"}
-        size="large"
-        
-      >
-        {activeTemplate && (
-          <Modal.Section>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "160px minmax(200px, 260px) minmax(0, 1fr)",
-                minHeight: "70vh",
-                margin: "-16px",
-                overflow: "hidden",
-              }}
-            >
-              {/* Sidebar */}
-              <div
-                style={{
-                  borderRight: "1px solid #e1e3e5",
-                  padding: "12px 8px",
-                  background: "#fff",
-                  overflowY: "auto",
+      {/* //modal */}
+      {activeTemplate && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 1000,
+            background: "#fff",
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          {/* Header */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: "16px 24px",
+              borderBottom: "1px solid #e1e3e5",
+              flexShrink: 0,
+            }}
+          >
+            <InlineStack gap="200" blockAlign="center">
+              <Icon source={AlertTriangleIcon} />
+              <Text as="h2" variant="headingMd">
+                Unsaved changes
+              </Text>
+            </InlineStack>
+
+            <InlineStack gap="200">
+              <Button
+                onClick={() => {
+                  setActiveTemplate(null);
+                  setSelectedOption("Elements");
                 }}
               >
-                <BlockStack gap="100">
-                  {sidebarOptions.map((option) => {
-                    const selected = selectedOption === option.label;
+                Discard
+              </Button>
 
-                    return (
+              <Button
+                variant="primary"
+                onClick={() => {
+                  // Add your save logic here
+                  setActiveTemplate(null);
+                }}
+              >
+                Save
+              </Button>
+            </InlineStack>
+          </div>
+
+          {/* Main content */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: collpase
+                ? "56px 260px minmax(0, 1fr)"
+                : "220px 260px minmax(0, 1fr)",
+              transition: "grid-template-columns 0.2s ease",
+              flex: 1,
+              minHeight: 0,
+            }}
+          >
+            {/* Sidebar */}
+            <div
+              style={{
+                borderRight: "1px solid #e1e3e5",
+                padding: collpase ? "12px 4px" : "12px 8px",
+                display: "flex",
+                flexDirection: "column",
+                minHeight: 0,
+                overflowY: "auto",
+              }}
+            >
+              <div style={{ flex: 1 }}>
+                <BlockStack gap="100">
+                  {sidebarOptions.map((option, index) => (
+                    <React.Fragment key={option.label}>
+                      {index === 4 || index === 7 ? (
+                        <Box paddingBlock="200">
+                          <Divider />
+                        </Box>
+                      ) : null}
+
                       <button
-                        key={option.label}
                         type="button"
                         onClick={() => setSelectedOption(option.label)}
                         style={{
                           display: "flex",
                           alignItems: "center",
-                          gap: "10px",
+                          justifyContent: collpase ? "center" : "flex-start",
+                          gap: "8px",
+                          padding: "8px 10px",
+                          gap: "4px",
                           width: "100%",
-                          padding: "10px",
+                          padding: "8px 6px",
                           border: "none",
                           borderRadius: "6px",
                           cursor: "pointer",
-                          textAlign: "left",
-                          background: selected ? "#f1f1f1" : "transparent",
-                          fontWeight: selected ? "600" : "400",
+                          textAlign: "center",
+                          background:
+                            selectedOption === option.label ? "#F0F5FD" : "transparent",
+                          fontWeight: selectedOption === option.label ? 600 : 400,
+                          color: selectedOption === option.label ? "#0051ff" : "#000",
                         }}
                       >
-                        <Icon source={option.icon} />
-                        <span>{option.label}</span>
+                        <span style={{ display: "flex", flexShrink: 0 }}>
+                          <Icon source={option.icon} />
+                        </span>
+                        {!collpase && <span>{option.label}</span>}
+
                       </button>
-                    );
-                  })}
+                    </React.Fragment>
+                  ))}
                 </BlockStack>
               </div>
-
-              {/* Settings panel */}
-              <div
-                style={{
-                  borderRight: "1px solid #e1e3e5",
-                  padding: "20px",
-                  background: "#fff",
-                  minWidth: 0,
-                  overflowY: "auto",
-                }}
-              >
-                <Text as="h2" variant="headingMd">
-                  {selectedOption}
-                </Text>
-
-                <Box paddingBlockStart="400">
-                  {selectedOption === "Elements" && (
-                    <Text as="p">Add and arrange your form fields here.</Text>
-                  )}
-                  {selectedOption === "Appearance" && (
-                    <Text as="p">Customize colors, fonts, and form styles here.</Text>
-                  )}
-                  {selectedOption === "After submit" && (
-                    <Text as="p">Configure the message shown after submission.</Text>
-                  )}
-                  {selectedOption === "Mail" && (
-                    <Text as="p">Configure email notifications here.</Text>
-                  )}
-                  {selectedOption === "Integration" && (
-                    <Text as="p">Connect your form with other apps here.</Text>
-                  )}
-                  {selectedOption === "Settings" && (
-                    <Text as="p">Configure general form settings here.</Text>
-                  )}
-                  {selectedOption === "Translation" && (
-                    <Text as="p">Manage form translations here.</Text>
-                  )}
-                </Box>
-              </div>
-
-              {/* Live preview */}
-              <div
-                style={{
-                  padding: "24px",
-                  background: "#f6f6f7",
-                  minWidth: 0,
-                  overflowY: "auto",
-                }}
-              >
-                <Box
-                  background="bg-surface"
-                  borderColor="border"
-                  borderWidth="025"
-                  borderRadius="300"
-                  padding="600"
-                >
-                  <BlockStack gap="300">
-                    <Text as="h2" variant="headingLg">
-                      {activeTemplate.heading || activeTemplate.title}
-                    </Text>
-
-                    <Text as="p" tone="subdued">
-                      {activeTemplate.description}
-                    </Text>
-
-                    {/* Add your live form preview here */}
-                  </BlockStack>
-                </Box>
-              </div>
+              {/* //collapse */}
+              <Box paddingBlockStart="200">
+                <Divider />
+                <Tooltip content={collpase ? "Expand sidebar" : "Collapse sidebar"}>
+                  <Button
+                    fullWidth
+                    variant="tertiary"
+                    icon={MenuIcon}
+                    onClick={() => setCollapse((prev) => !prev)}
+                    accessibilityLabel={collpase ? "Expand sidebar" : "Collapse sidebar"}
+                  >
+                    {collpase ? "" : "Collapse Sidebar"}
+                  </Button>
+                </Tooltip>
+              </Box>
             </div>
-          </Modal.Section>
-        )}
-      </Modal>
+
+            {/* Settings panel */}
+            <div
+              style={{
+                borderRight: "1px solid #e1e3e5",
+                padding: "20px",
+                overflowY: "auto",
+              }}
+            >
+              <Text as="h2" variant="headingMd">
+                {selectedOption}
+              </Text>
+
+              <Box paddingBlockStart="400">
+                {selectedOption === "Elements" && (
+                  <Text as="p">
+                    Add and arrange your form fields here.
+                  </Text>
+                )}
+
+                {selectedOption === "Appearance" && (
+                  <Text as="p">
+                    Customize colors, fonts, and form styles here.
+                  </Text>
+                )}
+
+                {selectedOption === "After submit" && (
+                  <Text as="p">
+                    Configure the message shown after submission.
+                  </Text>
+                )}
+
+                {selectedOption === "Mail" && (
+                  <Text as="p">
+                    Configure email notifications here.
+                  </Text>
+                )}
+
+                {selectedOption === "Integration" && (
+                  <Text as="p">
+                    Connect your form with other apps here.
+                  </Text>
+                )}
+
+                {selectedOption === "Settings" && (
+                  <Text as="p">
+                    Configure general form settings here.
+                  </Text>
+                )}
+
+                {selectedOption === "Translation" && (
+                  <Text as="p">
+                    Manage form translations here.
+                  </Text>
+                )}
+              </Box>
+            </div>
+
+            {/* Live preview */}
+            <div
+              style={{
+                background: "#f6f6f7",
+                padding: "20px",
+                minWidth: 0,
+                minHeight: 0,
+                overflow: "hidden",
+              }}
+            >
+              <iframe
+                title={`${activeTemplate.title} preview`}
+                src={activeTemplate.previewUrl || ""}
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  border: "none",
+                  background: "#fff",
+                  borderRadius: "8px",
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
     </Page>
   )
