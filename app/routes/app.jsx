@@ -33,7 +33,7 @@ export default function App() {
          <NavMenu>
       <s-link href="/app">Dashboard</s-link>
       <s-link href="/app/forms">Forms</s-link>
-      <s-link href="/app/formtemplate">Forms-template</s-link>
+    {/* /<s-link href="/app/forms/formtemplate">Formstemp</s-link> */}
     </NavMenu>
         <Outlet />
       </PolarisAppProvider>

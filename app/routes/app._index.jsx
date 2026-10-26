@@ -18,6 +18,7 @@ import {
   Divider,
   Tabs,
 } from "@shopify/polaris";
+import { useNavigate } from "react-router";
 import { ViewIcon, EmailIcon, ChartLineIcon } from "@shopify/polaris-icons";
 import { useState } from "react";
 import Gridcards from "../routes/components/Gridcards"

@@ -11,7 +11,8 @@ import {
     InlineStack,
     Image,
 } from "@shopify/polaris";
-
+import { ArrowLeftIcon } from "@shopify/polaris-icons";
+import { useNavigate } from "react-router";
 export default function FormsPage() {
     // Controls whether the popup is visible
     const [active, setActive] = useState(false);
@@ -26,6 +27,7 @@ export default function FormsPage() {
         setActive(false);
     };
 
+    const navigate = useNavigate();
     return (
         <Page title="Your Forms">
             {/* Button that opens the popup */}
@@ -38,7 +40,7 @@ export default function FormsPage() {
                 open={active}
                 onClose={handleClose}
                 title="Create new form"
-                size="large"
+                size="medium"
             >
                 <Modal.Section>
                     <BlockStack gap="400">
@@ -74,29 +76,36 @@ export default function FormsPage() {
                         </Box>
 
                         {/* Option 2 */}
-                        <Box
-                            borderColor="border"
-                            borderWidth="025"
-                            borderRadius="300"
-                            padding="400"
+                        <div
+                            onClick={() => navigate("/app/forms/formtemplate")}
+                            style={{ cursor: "pointer" }}
                         >
-                            <InlineStack align="space-between">
-                                <BlockStack gap="200">
-                                    <Text as="h3" variant="headingSm">
-                                        Browse pre-built forms
-                                    </Text>
+                            <Box
+                                borderColor="border"
+                                borderWidth="025"
+                                borderRadius="300"
+                                padding="400"
+                                // style={{ cursor: "pointer" }}
+                                // onClick={() => navigate("/app/forms/formtemplate")}
+                            >
+                                <InlineStack align="space-between">
+                                    <BlockStack gap="200">
+                                        <Text as="h3" variant="headingSm">
+                                            Browse pre-built forms
+                                        </Text>
 
-                                    <Text as="p" tone="subdued">
-                                        Choose from a variety of pre-built forms to get started.
-                                    </Text>
-                                </BlockStack>
-                                <Image
-                                    source="sync-form-test/public/images/templatesform.d12ce8b2dadc1d212cf5.svg"
-                                    alt="Pre bulit form builder"
-                                    width={90}
-                                />
-                            </InlineStack>
-                        </Box>
+                                        <Text as="p" tone="subdued">
+                                            Choose from a variety of pre-built forms to get started.
+                                        </Text>
+                                    </BlockStack>
+                                    <Image
+                                        source="sync-form-test/public/images/templatesform.d12ce8b2dadc1d212cf5.svg"
+                                        alt="Pre bulit form builder"
+                                        width={90}
+                                    />
+                                </InlineStack>
+                            </Box>
+                        </div>
                     </BlockStack>
                 </Modal.Section>
             </Modal>
