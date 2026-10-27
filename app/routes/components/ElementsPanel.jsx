@@ -13,50 +13,13 @@ import {
     LayoutSectionIcon,
 } from "@shopify/polaris-icons";
 
-export default function ElementsPanel() {
+export default function ElementsPanel({ pages, setPages }) {
 
     // ==================================================
     // STEP 1: CREATE STATE FOR PAGES
     // ==================================================
-    //
-    // useState stores the pages and their contents.
-    //
-    // Initially, we create one page:
-    // Page 1
-    //
-    // Page 1 contains:
-    // - Row 1: First Name and Last Name
-    // - Row 2: Email and Phone
-    // - rootElements: elements outside the rows
-    //
-    // open: true means the page is expanded.
-    //
-    // Each row has its own "elements" array.
-    // This array stores additional elements added to that row.
-
-    const [pages, setPages] = useState([
-        {
-            id: 1,
-            label: "Page 1",
-            open: true,
-
-            rows: [
-                {
-                    id: 101,
-                    fields: ["First Name", "Last Name"],
-                    elements: [],
-                },
-                {
-                    id: 102,
-                    fields: ["Email", "Phone"],
-                    elements: [],
-                },
-            ],
-
-            // Stores elements added outside all rows.
-            rootElements: [],
-        },
-    ]);
+    // this logic is in parent page 
+    
 
     // ==================================================
     // STEP 2: ADD A NEW PAGE
@@ -75,26 +38,26 @@ export default function ElementsPanel() {
     // New pages start with empty rows and empty elements.
     // Only Page 1 has the two initial rows.
 
-    const addPage = () => {
-        setPages((previousPages) => [
-            ...previousPages,
+    
+const addPage = () => {
+  setPages((previousPages) => [
+    ...previousPages.map((page) => ({
+      ...page,
+      open: false,
+    })),
+    {
+      id: Date.now(),
+      // new page name will be pre page + 1
+      label: `Page ${previousPages.length + 1}`,
+      // new crete will be open 
+      open: true,
+      // initally row is empty
+      rows: [],
+      rootElements: [],
+    },
+  ]);
+};
 
-            {
-                id: Date.now(),
-
-                // If there are 2 pages, the next one is Page 3.
-                label: `Page ${previousPages.length + 1}`,
-
-                open: true,
-
-                // No rows are automatically added to new pages.
-                rows: [],
-
-                // No outside elements initially.
-                rootElements: [],
-            },
-        ]);
-    };
 
     // ==================================================
     // STEP 3: OPEN OR CLOSE A PAGE
@@ -113,17 +76,13 @@ export default function ElementsPanel() {
     // Other pages remain unchanged.
 
     const togglePage = (pageId) => {
-        setPages((previousPages) =>
-            previousPages.map((page) =>
-                page.id === pageId
-                    ? {
-                        ...page,
-                        open: !page.open,
-                    }
-                    : page
-            )
-        );
-    };
+  setPages((previousPages) =>
+    previousPages.map((page) => ({
+      ...page,
+      open: page.id === pageId ? !page.open : false,
+    }))
+  );
+};
 
     // ==================================================
     // STEP 4: ADD AN ELEMENT INSIDE A ROW

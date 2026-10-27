@@ -25,14 +25,14 @@ import {
   AlertTriangleIcon,
 } from "@shopify/polaris-icons";
 import ElementsPanel from "../routes/components/ElementsPanel";
-
+import LivePreview from '../routes/components/LivePreview'
 import { useSearchParams } from "react-router";
 
 export default function FormEditor() {
   const [searchParams] = useSearchParams();
 
   const templateTitle = searchParams.get("title") || "Form editor";
-  const previewUrl = searchParams.get("previewUrl") || "";
+  //const previewUrl = searchParams.get("previewUrl") || "";
 
   const [selectedOption, setSelectedOption] = useState("Elements");
   const [collpase, setCollapse] = useState(false);
@@ -48,27 +48,55 @@ export default function FormEditor() {
     { label: "Translation", icon: LanguageTranslateIcon },
   ];
 
+  // stores pages info 
+  // Initially, we create one page:
+  // Page 1
+  //
+  // Page 1 contains:
+  // - Row 1: First Name and Last Name
+  // - Row 2: Email and Phone
+  // - rootElements: elements outside the rows
+  //
+  // open: true means the page is expanded.
+  //
+  // Each row has its own "elements" array.
+  const [pages, setPages] = useState([
+    {
+      id: 1,
+      label: "Page 1",
+      open: true,
+      rows: [
+        {
+          id: 101,
+          fields: ["First Name", "Last Name"],
+          elements: [],
+        },
+        {
+          id: 102,
+          fields: ["Email", "Phone"],
+          elements: [],
+        },
+      ],
+      rootElements: [],
+    },
+  ]);
+
   return (
     <div className="template-editor">
-
-    
-
       {/* Main content */}
       <div
-        className={`template-editor__main ${
-          collpase
-            ? "template-editor__main--collapsed"
-            : "template-editor__main--expanded"
-        }`}
+        className={`template-editor__main ${collpase
+          ? "template-editor__main--collapsed"
+          : "template-editor__main--expanded"
+          }`}
       >
 
         {/* Sidebar */}
         <div
-          className={`template-editor__sidebar ${
-            collpase
-              ? "template-editor__sidebar--collapsed"
-              : ""
-          }`}
+          className={`template-editor__sidebar ${collpase
+            ? "template-editor__sidebar--collapsed"
+            : ""
+            }`}
         >
           <div className="template-editor__sidebar-options">
             <BlockStack gap="100">
@@ -89,15 +117,13 @@ export default function FormEditor() {
                       onClick={() =>
                         setSelectedOption(option.label)
                       }
-                      className={`template-editor__option ${
-                        selectedOption === option.label
-                          ? "template-editor__option--selected"
-                          : ""
-                      } ${
-                        collpase
+                      className={`template-editor__option ${selectedOption === option.label
+                        ? "template-editor__option--selected"
+                        : ""
+                        } ${collpase
                           ? "template-editor__option--collapsed"
                           : ""
-                      }`}
+                        }`}
                       aria-label={option.label}
                     >
                       <span className="template-editor__option-icon">
@@ -151,7 +177,10 @@ export default function FormEditor() {
           </Text> */}
 
           <Box paddingBlockStart="400">
-            {selectedOption === "Elements" && ( <ElementsPanel/>
+            {selectedOption === "Elements" && (<ElementsPanel
+              pages={pages}
+              setPages={setPages}
+            />
             )}
 
             {selectedOption === "Edit with AI" && (
@@ -199,13 +228,16 @@ export default function FormEditor() {
         </div>
 
         {/* Live preview */}
-        <div className="template-editor__preview">
-          
+        {/* <div className="template-editor__preview">
+
           <iframe
             title={`${templateTitle} preview`}
             src={previewUrl}
             className="template-editor__iframe"
           />
+        </div> */}
+        <div className="template-editor__preview">
+          <LivePreview pages={pages} templateTitle={templateTitle} />
         </div>
 
       </div>

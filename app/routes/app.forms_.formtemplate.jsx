@@ -85,21 +85,7 @@ function Formtemplate() {
       content: "Popup",
     }
   ];
-  // sidebar options
-  // const [selectedOption, setSelectedOption] = useState("Elements");
-  // // collpase
-  // const [collpase, setCollapse] = useState(false)
-
-  // const sidebarOptions = [
-  //   { label: "Elements", icon: FormsIcon },
-  //   { label: "Edit with AI", icon: MagicIcon, },
-  //   { label: "Appearance", icon: PaintBrushFlatIcon },
-  //   { label: "After submit", icon: CheckCircleIcon },
-  //   { label: "Mail", icon: EmailIcon },
-  //   { label: "Integration", icon: AppsIcon },
-  //   { label: "Settings", icon: SettingsIcon },
-  //   { label: "Translation", icon: LanguageTranslateIcon },
-  // ];
+ 
   // function to filter the categoroies
   const filteredTemplates =
     selectedCategory === 0

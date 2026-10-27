@@ -300,6 +300,26 @@
   outline: 2px solid #005bd3;
   outline-offset: -2px;
 }
+.element-tree__add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 4px;
+}
+
+.element-tree__add .Polaris-Icon {
+  display: inline-flex;
+  margin: 0;
+  padding: 0;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.element-tree__add .Polaris-Icon__Svg {
+  width: 16px;
+  height: 16px;
+}
 
 /* Smaller panels */
 @media (max-width: 600px) {
