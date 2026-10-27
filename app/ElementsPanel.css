@@ -1,4 +1,8 @@
 
+/* ======================================================
+   MAIN PANEL
+====================================================== */
+
 .elements-panel {
   display: flex;
   flex-direction: column;
@@ -19,7 +23,10 @@
   box-sizing: border-box;
 }
 
-/* Header and footer */
+/* ======================================================
+   HEADER AND FOOTER
+====================================================== */
+
 .elements-panel__header {
   display: flex;
   align-items: center;
@@ -57,7 +64,10 @@
   min-height: 52px;
 }
 
-/* Elements heading */
+/* ======================================================
+   ELEMENTS SECTION TITLE
+====================================================== */
+
 .elements-panel__section-title {
   display: flex;
   align-items: center;
@@ -67,7 +77,10 @@
   flex-shrink: 0;
 }
 
-/* Scrollable tree */
+/* ======================================================
+   SCROLLABLE ELEMENT TREE
+====================================================== */
+
 .element-tree {
   flex: 1 1 auto;
   min-height: 0;
@@ -82,20 +95,25 @@
   font-family: inherit;
   font-size: 13px;
   line-height: normal;
-  font-weight: 400;
+  font-weight: 700;
 }
 
-/* Reset button defaults */
+/* Shared button reset */
 .element-tree__page,
 .element-tree__row-heading,
-.element-tree__add {
+.element-tree__add,
+.element-tree__page-toggle,
+.element-tree__chevron {
   appearance: none;
   -webkit-appearance: none;
   border: 0;
   font-weight: 400;
 }
 
-/* Shared icon sizing */
+/* ======================================================
+   SHARED ICON STYLES
+====================================================== */
+
 .element-tree__chevron,
 .element-tree__node-icon,
 .element-tree__row-icon,
@@ -114,8 +132,7 @@
 .element-tree__chevron > svg,
 .element-tree__node-icon > svg,
 .element-tree__row-icon > svg,
-.element-tree__field-icon > svg,
-.element-tree__add > svg {
+.element-tree__field-icon > svg {
   display: block;
   width: 14px;
   height: 14px;
@@ -124,7 +141,10 @@
   margin: 0;
 }
 
-/* Page heading */
+/* ======================================================
+   PAGE HEADER
+====================================================== */
+
 .element-tree__page {
   display: flex;
   align-items: center;
@@ -136,16 +156,18 @@
   background: transparent;
   color: #303030;
   text-align: left;
-  cursor: pointer;
 }
 
 .element-tree__page:hover {
   background: #f6f6f6;
 }
 
+/* Expand/collapse arrow */
 .element-tree__page .element-tree__chevron {
   flex: 0 0 10px;
   width: 10px;
+  height: 14px;
+  cursor: pointer;
 }
 
 .element-tree__page .element-tree__chevron > svg {
@@ -153,6 +175,32 @@
   height: 12px;
 }
 
+/* Page name */
+.element-tree__page-toggle {
+  display: inline-flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  background: transparent;
+  color: #303030;
+  font-size: 18px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+/* Page icon acts as drag handle */
+.element-tree__page-icon {
+  cursor: grab;
+  touch-action: none;
+}
+
+.element-tree__page-icon:active {
+  cursor: grabbing;
+}
+
+/* Page label truncation */
 .element-tree__node-label {
   min-width: 0;
   overflow: hidden;
@@ -164,7 +212,10 @@
   font-weight: 600;
 }
 
-/* Page's vertical dotted guide */
+/* ======================================================
+   PAGE CONTENT AND INDENTATION
+====================================================== */
+
 .element-tree__page-content {
   position: relative;
   min-width: 0;
@@ -173,7 +224,10 @@
   border-left: 1px dashed #d6d6d6;
 }
 
-/* Row container */
+/* ======================================================
+   ROW
+====================================================== */
+
 .element-tree__row {
   position: relative;
   min-width: 0;
@@ -181,7 +235,7 @@
   padding: 0;
 }
 
-/* Folder icon and Row label */
+/* Row heading and folder icon */
 .element-tree__row-heading {
   display: flex;
   align-items: center;
@@ -194,12 +248,17 @@
   background: transparent;
   color: #303030;
   text-align: left;
-  cursor: default;
 }
 
-.element-tree__row-icon {
-  color: #505050;
-  flex-shrink: 0;
+/* Row icon acts as drag handle */
+.element-tree__row-drag-icon {
+  position: relative;
+  cursor: grab;
+  touch-action: none;
+}
+
+.element-tree__row-drag-icon:active {
+  cursor: grabbing;
 }
 
 /* Nested dotted guide for row fields */
@@ -210,7 +269,10 @@
   border-left: 1px dashed #d6d6d6;
 }
 
-/* Individual fields */
+/* ======================================================
+   FIELDS AND CREATED ELEMENTS
+====================================================== */
+
 .element-tree__field {
   display: flex;
   align-items: center;
@@ -229,11 +291,22 @@
   background: #f6f6f6;
 }
 
-.element-tree__field-icon {
-  flex-shrink: 0;
-  color: #505050;
+/* Draggable fields */
+.element-tree__field--draggable {
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
 }
 
+.element-tree__field--draggable:active {
+  cursor: grabbing;
+}
+
+.element-tree__field--draggable * {
+  cursor: inherit;
+}
+
+/* Field label */
 .element-tree__field-label {
   min-width: 0;
   overflow: hidden;
@@ -242,11 +315,81 @@
   white-space: nowrap;
 }
 
-/* Add element buttons */
-.element-tree__add {
-  display: flex;
+/* ======================================================
+   ICON REPLACEMENT ON HOVER
+   Original icon changes to ⠿
+====================================================== */
+
+.element-tree__field-icon {
+  position: relative;
+  display: inline-flex;
   align-items: center;
-  gap: 2px;
+  justify-content: center;
+  flex: 0 0 14px;
+  width: 14px;
+  height: 14px;
+  min-width: 14px;
+  margin: 0;
+  padding: 0;
+  color: #505050;
+}
+
+/* Original icon */
+.element-tree__default-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+}
+
+/* Drag icon overlays the original icon */
+.element-tree__drag-icon {
+  display: none;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  align-items: center;
+  justify-content: center;
+  font-size: 19px;
+  line-height: 1;
+  color: #616161;
+  white-space: nowrap;
+}
+
+/* Hide original icon when hovering over the page, row, or field */
+.element-tree__page:hover .element-tree__default-icon,
+.element-tree__row-heading:hover .element-tree__default-icon,
+.element-tree__field--draggable:hover .element-tree__default-icon {
+  display: none;
+}
+
+/* Show drag icon in the original icon's place */
+.element-tree__page:hover .element-tree__drag-icon,
+.element-tree__row-heading:hover .element-tree__drag-icon,
+.element-tree__field--draggable:hover .element-tree__drag-icon {
+  display: inline-flex;
+}
+
+/* ======================================================
+   ADD ELEMENT BUTTONS
+====================================================== */
+/* Active page background */
+.element-tree__page--active {
+  background: #F1F1F1;
+}
+
+/* Keep the active background when hovering */
+.element-tree__page--active:hover {
+  background: #e4efff;
+}
+
+.element-tree__add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 4px;
   min-height: 32px;
   margin: 0;
   padding: 0 4px;
@@ -268,51 +411,15 @@
   color: #005bd3;
 }
 
-/* Add element inside a row */
-.element-tree__row > .element-tree__add {
-  margin-left: 28px;
-}
-
-/* Outside elements, such as Message */
-.element-tree__page-content > .element-tree__field {
-  width: calc(100% - 25px);
-  margin-left: 25px;
-}
-
-/* Full-width Add elements button outside rows */
-.element-tree__page-content > .element-tree__add--root {
-  width: calc(100% - 25px);
-  min-height: 32px;
-  margin-left: 25px;
-  padding: 0 4px;
-}
-
-/* Add page */
-.element-tree__add--page {
-  width: 100%;
-  min-height: 32px;
-  margin: 2px 0;
-  padding: 0 20px;
-}
-
-/* Keyboard focus */
-.element-tree button:focus-visible {
-  outline: 2px solid #005bd3;
-  outline-offset: -2px;
-}
-.element-tree__add {
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 4px;
-}
-
+/* Polaris add icon sizing */
 .element-tree__add .Polaris-Icon {
   display: inline-flex;
-  margin: 0;
-  padding: 0;
+  align-items: center;
+  justify-content: center;
   width: 20px;
   height: 20px;
+  margin: 0;
+  padding: 0;
   flex-shrink: 0;
 }
 
@@ -321,7 +428,48 @@
   height: 16px;
 }
 
-/* Smaller panels */
+/* Add element inside a row */
+.element-tree__row > .element-tree__add {
+  margin-left: 28px;
+}
+
+/* Root elements outside rows */
+.element-tree__page-content > .element-tree__field {
+  width: calc(100% - 25px);
+  margin-left: 25px;
+}
+
+/* Add element outside rows */
+.element-tree__page-content > .element-tree__add--root {
+  width: calc(100% - 25px);
+  min-height: 32px;
+  margin-left: 25px;
+  padding: 0 4px;
+}
+
+/* Add page button */
+.element-tree__add--page {
+  width: 100%;
+  min-height: 32px;
+  margin: 2px 0;
+  padding: 0 20px;
+}
+.last_add_page{
+  background-color: #F1F1F1;
+}
+/* ======================================================
+   KEYBOARD ACCESSIBILITY
+====================================================== */
+
+.element-tree button:focus-visible {
+  outline: 2px solid #005bd3;
+  outline-offset: -2px;
+}
+
+/* ======================================================
+   RESPONSIVE LAYOUT
+====================================================== */
+
 @media (max-width: 600px) {
   .elements-panel__header {
     padding-inline: 16px;

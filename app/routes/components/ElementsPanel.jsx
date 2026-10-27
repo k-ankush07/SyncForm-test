@@ -1,9 +1,28 @@
 
 import React, { useState } from "react";
 
-import { Divider, Text, Icon } from "@shopify/polaris";
+import {
+    DndContext,
+    closestCenter,
+    PointerSensor,
+    useSensor,
+    useSensors,
+} from "@dnd-kit/core";
 
-import "../../ElementsPanel.css"
+import {
+    SortableContext,
+    useSortable,
+    verticalListSortingStrategy,
+    arrayMove,
+} from "@dnd-kit/sortable";
+
+import { CSS } from "@dnd-kit/utilities";
+
+import { Divider, Text, Icon, Modal, Button, InlineGrid } from "@shopify/polaris";
+
+import { ELEMENT_TYPES } from "./elementsConfig.js";
+import "../../ElementsPanel.css";
+
 import {
     PlusCircleIcon,
     ChevronDownIcon,
@@ -13,131 +32,262 @@ import {
     LayoutSectionIcon,
 } from "@shopify/polaris-icons";
 
+// ======================================================
+// MAIN COMPONENT
+// Manages pages and provides drag-and-drop handlers.
+// ======================================================
+
 export default function ElementsPanel({ pages, setPages }) {
+    // show that modal is open or not 
+    const [elementPickerOpen, setElementPickerOpen] = useState(false);
+    //where the selecetd element add
+    const [elementTarget, setElementTarget] = useState(null);
+    // Configure the pointer sensor.
 
-    // ==================================================
-    // STEP 1: CREATE STATE FOR PAGES
-    // ==================================================
-    // this logic is in parent page 
-    
+    // The user must move the pointer 5px before dragging starts.
+    const sensors = useSensors(
+        useSensor(PointerSensor, {
+            activationConstraint: {
+                distance: 5,
+            },
+        })
+    );
 
-    // ==================================================
-    // STEP 2: ADD A NEW PAGE
-    // ==================================================
-    //
-    // This function runs when the user clicks "Add page".
-    //
-    // setPages updates the pages state.
-    //
-    // previousPages contains all existing pages.
-    //
-    // ...previousPages copies the existing pages.
-    //
-    // The new page is added at the end of the array.
-    //
-    // New pages start with empty rows and empty elements.
-    // Only Page 1 has the two initial rows.
+    // ======================================================
+    // FUNCTION: REORDER PAGES
+    // Moves the dragged page to the position of the target.
+    // ======================================================
 
-    
-const addPage = () => {
-  setPages((previousPages) => [
-    ...previousPages.map((page) => ({
-      ...page,
-      open: false,
-    })),
-    {
-      id: Date.now(),
-      // new page name will be pre page + 1
-      label: `Page ${previousPages.length + 1}`,
-      // new crete will be open 
-      open: true,
-      // initally row is empty
-      rows: [],
-      rootElements: [],
-    },
-  ]);
-};
+    const handlePageDragEnd = (event) => {
+        const { active, over } = event;
 
+        if (!over || active.id === over.id) return;
 
-    // ==================================================
-    // STEP 3: OPEN OR CLOSE A PAGE
-    // ==================================================
-    //
-    // pageId tells us which page was clicked.
-    //
-    // map() checks every page.
-    //
-    // If the page ID matches, we create a copy of that
-    // page and reverse its "open" value:
-    //
-    // true  becomes false (close the page)
-    // false becomes true  (open the page)
-    //
-    // Other pages remain unchanged.
+        setPages((previousPages) => {
+            const oldIndex = previousPages.findIndex(
+                (page) => `page-${page.id}` === active.id
+            );
+
+            const newIndex = previousPages.findIndex(
+                (page) => `page-${page.id}` === over.id
+            );
+
+            if (oldIndex === -1 || newIndex === -1) {
+                return previousPages;
+            }
+
+            return arrayMove(previousPages, oldIndex, newIndex);
+        });
+    };
+
+    // ======================================================
+    // FUNCTION: REORDER ROWS
+    // Moves a row within its own page.
+    // ======================================================
+
+    const handleRowDragEnd = (event, pageId) => {
+        const { active, over } = event;
+
+        if (!over || active.id === over.id) return;
+
+        setPages((previousPages) =>
+            previousPages.map((page) => {
+                // Only update the page containing the dragged row.
+                if (page.id !== pageId) return page;
+
+                const oldIndex = page.rows.findIndex(
+                    (row) => `row-${row.id}` === active.id
+                );
+
+                const newIndex = page.rows.findIndex(
+                    (row) => `row-${row.id}` === over.id
+                );
+
+                if (oldIndex === -1 || newIndex === -1) {
+                    return page;
+                }
+
+                return {
+                    ...page,
+                    rows: arrayMove(page.rows, oldIndex, newIndex),
+                };
+            })
+        );
+    };
+
+    // ======================================================
+    // FUNCTION: REORDER FIELDS
+    // Moves a field within its own row.
+    // ======================================================
+
+    const handleFieldDragEnd = (event, pageId, rowId) => {
+        const { active, over } = event;
+
+        if (!over || active.id === over.id) return;
+
+        setPages((previousPages) =>
+            previousPages.map((page) => {
+                if (page.id !== pageId) return page;
+
+                return {
+                    ...page,
+
+                    // Find the row whose fields need reordering.
+                    rows: page.rows.map((row) => {
+                        if (row.id !== rowId) return row;
+
+                        const oldIndex = row.fields.findIndex(
+                            (_, index) => `${rowId}-field-${index}` === active.id
+                        );
+
+                        const newIndex = row.fields.findIndex(
+                            (_, index) => `${rowId}-field-${index}` === over.id
+                        );
+
+                        if (oldIndex === -1 || newIndex === -1) {
+                            return row;
+                        }
+
+                        return {
+                            ...row,
+                            fields: arrayMove(row.fields, oldIndex, newIndex),
+                        };
+                    }),
+                };
+            })
+        );
+    };
+
+    // ======================================================
+    // FUNCTION: REORDER CREATED ELEMENTS
+    // Reorders elements either inside a row or outside rows.
+    // ======================================================
+
+    const handleElementDragEnd = (event, pageId, rowId = null) => {
+        const { active, over } = event;
+
+        if (!over || active.id === over.id) return;
+
+        setPages((previousPages) =>
+            previousPages.map((page) => {
+                if (page.id !== pageId) return page;
+
+                // CASE 1: Element belongs inside a row.
+                if (rowId !== null) {
+                    return {
+                        ...page,
+
+                        rows: page.rows.map((row) => {
+                            if (row.id !== rowId) return row;
+
+                            const oldIndex = row.elements.findIndex(
+                                (element) => `element-${element.id}` === active.id
+                            );
+
+                            const newIndex = row.elements.findIndex(
+                                (element) => `element-${element.id}` === over.id
+                            );
+
+                            if (oldIndex === -1 || newIndex === -1) {
+                                return row;
+                            }
+
+                            return {
+                                ...row,
+                                elements: arrayMove(
+                                    row.elements,
+                                    oldIndex,
+                                    newIndex
+                                ),
+                            };
+                        }),
+                    };
+                }
+
+                // CASE 2: Element belongs directly to the page.
+                const oldIndex = page.rootElements.findIndex(
+                    (element) => `element-${element.id}` === active.id
+                );
+
+                const newIndex = page.rootElements.findIndex(
+                    (element) => `element-${element.id}` === over.id
+                );
+
+                if (oldIndex === -1 || newIndex === -1) {
+                    return page;
+                }
+
+                return {
+                    ...page,
+                    rootElements: arrayMove(
+                        page.rootElements,
+                        oldIndex,
+                        newIndex
+                    ),
+                };
+            })
+        );
+    };
+
+    // ======================================================
+    // FUNCTION: ADD A PAGE
+    // Adds a new page and closes the previously open pages.
+    // ======================================================
+
+    const addPage = () => {
+        setPages((previousPages) => [
+            ...previousPages.map((page) => ({
+                ...page,
+                open: false,
+            })),
+
+            {
+                id: Date.now(),
+                label: `Page ${previousPages.length + 1}`,
+                open: true,
+                rows: [],
+                rootElements: [],
+            },
+        ]);
+    };
+
+    // ======================================================
+    // FUNCTION: TOGGLE A PAGE
+    // Opens the selected page and closes the others.
+    // ======================================================
 
     const togglePage = (pageId) => {
-  setPages((previousPages) =>
-    previousPages.map((page) => ({
-      ...page,
-      open: page.id === pageId ? !page.open : false,
-    }))
-  );
-};
+        setPages((previousPages) =>
+            previousPages.map((page) => ({
+                ...page,
+                open: page.id === pageId ? !page.open : false,
+            }))
+        );
+    };
 
-    // ==================================================
-    // STEP 4: ADD AN ELEMENT INSIDE A ROW
-    // ==================================================
-    //
-    // This function is called by the Add elements button
-    // belonging to a particular row.
-    //
-    // It receives TWO IDs:
-    //
-    // pageId = which page contains the row?
-    // rowId  = which row should receive the element?
-    //
-    // First, map() finds the correct page.
-    //
-    // Inside that page, another map() finds the correct row.
-    //
-    // Only the selected row's "elements" array changes.
-    // The other row and the other pages stay unchanged.
-    //
-    // For now, the new element is a placeholder called
-    // "New element". Later, we can open the element picker.
+    // ======================================================
+    // FUNCTION: ADD ELEMENT TO A ROW
+    // Adds a new element to the selected row.
+    // ======================================================
 
     const addRowElement = (pageId, rowId) => {
         setPages((previousPages) =>
             previousPages.map((page) => {
+                if (page.id !== pageId) return page;
 
-                // If this is not the selected page,
-                // return it without changing anything.
-                if (page.id !== pageId) {
-                    return page;
-                }
-
-                // This is the selected page.
                 return {
                     ...page,
 
-                    // Check each row on this page.
                     rows: page.rows.map((row) => {
+                        if (row.id !== rowId) return row;
 
-                        // If this is not the selected row,
-                        // leave it unchanged.
-                        if (row.id !== rowId) {
-                            return row;
-                        }
+                        //fn before return
+                        
 
-                        // This is the selected row.
-                        // Copy its existing elements and append
-                        // one new element to the end.
                         return {
                             ...row,
-
                             elements: [
-                                ...row.elements,
-
+                                ...(row.elements || []),
                                 {
                                     id: Date.now(),
                                     label: "New element",
@@ -150,38 +300,20 @@ const addPage = () => {
         );
     };
 
-    // ==================================================
-    // STEP 5: ADD AN ELEMENT OUTSIDE THE ROWS
-    // ==================================================
-    //
-    // This function belongs to the full-width Add elements
-    // button below the two rows.
-    //
-    // Unlike addRowElement(), this function does not
-    // search for a row.
-    //
-    // It updates the selected page's rootElements array.
-    //
-    // Therefore, the new element appears OUTSIDE the rows.
+    // ======================================================
+    // FUNCTION: ADD ROOT ELEMENT
+    // Adds an element directly to the page, outside rows.
+    // ======================================================
 
     const addRootElement = (pageId) => {
         setPages((previousPages) =>
             previousPages.map((page) => {
+                if (page.id !== pageId) return page;
 
-                // Leave other pages unchanged.
-                if (page.id !== pageId) {
-                    return page;
-                }
-
-                // Update the selected page.
                 return {
                     ...page,
-
-                    // Copy existing outside elements and append
-                    // the newly created element.
                     rootElements: [
-                        ...page.rootElements,
-
+                        ...(page.rootElements || []),
                         {
                             id: Date.now(),
                             label: "New element",
@@ -192,21 +324,16 @@ const addPage = () => {
         );
     };
 
-    // ==================================================
-    // STEP 6: DISPLAY THE COMPONENT
-    // ==================================================
+    // ======================================================
+    // RENDER THE ELEMENTS PANEL actual content 
+    // ======================================================
 
     return (
         <div className="elements-panel">
 
-            {/* ----------------------------------------------
-          HEADER SECTION
-          ----------------------------------------------
-          Displays the Header heading at the top.
-      */}
+            {/* HEADER SECTION */}
 
             <div className="elements-panel__header">
-
                 <span className="elements-panel__section-icon">
                     <Icon source={LayoutSectionIcon} />
                 </span>
@@ -214,18 +341,11 @@ const addPage = () => {
                 <Text as="span" fontWeight="semibold">
                     Header
                 </Text>
-
             </div>
 
-            {/* Horizontal divider below Header */}
             <Divider />
 
-
-            {/* ----------------------------------------------
-          ELEMENTS HEADING
-          ----------------------------------------------
-          Displays the heading above the page list.
-      */}
+            {/* ELEMENTS HEADING */}
 
             <div className="elements-panel__section-title">
                 <Text as="span" variant="bodySm" tone="subdued">
@@ -233,281 +353,57 @@ const addPage = () => {
                 </Text>
             </div>
 
-
-            {/* ----------------------------------------------
-          PAGES CONTAINER
-          ----------------------------------------------
-          pages.map() creates the UI for every page
-          stored in our pages state.
-      */}
+            {/* ==================================================
+          PAGES LIST
+          This context allows the pages to be reordered.
+         ================================================== */}
 
             <div className="element-tree">
-
-                {pages.map((page) => (
-
-                    // React needs a unique key for each page.
-                    <div key={page.id}>
-
-                        {/* ----------------------------------------
-                PAGE HEADING
-                ----------------------------------------
-                Clicking this button opens or closes
-                this specific page.
-            */}
-
-                        <button
-                            type="button"
-                            className="element-tree__page"
-                            onClick={() => togglePage(page.id)}
-                        >
-
-                            {/* Show a down arrow when open.
-                  Show a right arrow when closed. */}
-
-                            <span className="element-tree__chevron">
-                                <Icon
-                                    source={
-                                        page.open
-                                            ? ChevronDownIcon
-                                            : ChevronRightIcon
-                                    }
-                                />
-                            </span>
-
-                            {/* Page icon */}
-                            <span className="element-tree__node-icon">
-                                <Icon source={FileIcon} />
-                            </span>
-
-                            {/* Page name comes from state */}
-                            <span className="element-tree__node-label">
-                                {page.label}
-                            </span>
-
-                        </button>
-
-
-                        {/* ----------------------------------------
-                PAGE CONTENT
-                ----------------------------------------
-                Render this section only when the page
-                is open.
-            */}
-
-                        {page.open && (
-
-                            <div className="element-tree__page-content">
-
-
-                                {/* ====================================
-                    STEP 7: DISPLAY THE EXISTING ROWS
-                    ====================================
-                    page.rows contains the rows belonging
-                    to this page.
-
-                    We display them with map().
-
-                    There is NO Add Row button.
-                */}
-
-                                {page.rows.map((row, index) => (
-
-                                    <div
-                                        key={row.id}
-                                        className="element-tree__row"
-                                    >
-
-                                        {/* Show the row number */}
-                                        <div className="element-tree__row-heading">
-                                            <span className="element-tree__row-icon">
-                                                <Icon source={FolderIcon} />
-                                            </span>
-
-                                            <Text as="span" variant="bodySm">
-                                                Row
-                                            </Text>
-                                        </div>
-
-
-                                        {/* --------------------------------
-                        DISPLAY FIELDS AND NEW ELEMENTS
-                        --------------------------------
-                        row.fields contains the original
-                        field names.
-
-                        row.elements contains the extra
-                        elements added by the user.
-                    */}
-
-                                        <div className="element-tree__row-fields">
-
-                                            {/* Display the original fields */}
-                                            {row.fields.map((field) => (
-
-                                                <div
-                                                    key={`${row.id}-${field}`}
-                                                    className="element-tree__field"
-                                                >
-
-                                                    <span className="element-tree__field-icon">
-                                                        <Icon source={FileIcon} />
-                                                    </span>
-
-                                                    <span className="element-tree__field-label">
-                                                        {field}
-                                                    </span>
-
-                                                </div>
-
-                                            ))}
-
-
-                                            {/* Display elements added to this row */}
-                                            {row.elements.map((element) => (
-
-                                                <div
-                                                    key={element.id}
-                                                    className="element-tree__field"
-                                                >
-
-                                                    <span className="element-tree__field-icon">
-                                                        <Icon source={FileIcon} />
-                                                    </span>
-
-                                                    <span className="element-tree__field-label">
-                                                        {element.label}
-                                                    </span>
-
-                                                </div>
-
-                                            ))}
-
-                                        </div>
-
-
-                                        {/* --------------------------------
-                        ADD ELEMENTS BUTTON FOR THIS ROW
-                        --------------------------------
-                        row.id tells the function which
-                        row needs the new element.
-
-                        page.id tells it which page
-                        contains that row.
-                    */}
-
-                                        <button
-                                            type="button"
-                                            className="element-tree__add"
-                                            onClick={() =>
-                                                addRowElement(page.id, row.id)
-                                            }
-                                        >
-
-                                            <Icon source={PlusCircleIcon} />
-
-                                            <span>Add elements</span>
-
-                                        </button>
-
-                                    </div>
-
-                                ))}
-
-
-                                {/* ====================================
-                    STEP 8: DISPLAY OUTSIDE ELEMENTS
-                    ====================================
-                    rootElements belongs to the page,
-                    not to any row.
-
-                    These elements appear after the rows.
-                */}
-
-                                {page.rootElements.map((element) => (
-
-                                    <div
-                                        key={element.id}
-                                        className="element-tree__field"
-                                    >
-
-                                        <span className="element-tree__field-icon">
-                                            <Icon source={FileIcon} />
-                                        </span>
-
-                                        <span className="element-tree__field-label">
-                                            {element.label}
-                                        </span>
-
-                                    </div>
-
-                                ))}
-
-
-                                {/* ------------------------------------
-                    FULL-WIDTH ADD ELEMENTS BUTTON
-                    ------------------------------------
-                    This button calls addRootElement().
-
-                    Notice that we pass only page.id.
-                    We do NOT pass row.id because this
-                    element belongs outside the rows.
-                */}
-
-                                <button
-                                    type="button"
-                                    className="element-tree__add element-tree__add--root"
-                                    onClick={() => addRootElement(page.id)}
-                                >
-
-                                    <Icon source={PlusCircleIcon} />
-
-                                    <span>Add elements</span>
-
-                                </button>
-
-                            </div>
-
-                        )}
-
-                    </div>
-
-                ))}
-
-
-                {/* --------------------------------------------
-            ADD PAGE BUTTON
-            --------------------------------------------
-            This button is outside the page content,
-            so it remains visible when pages are closed.
-        */}
+                <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handlePageDragEnd}
+                >
+                    <SortableContext
+                        items={pages.map((page) => `page-${page.id}`)}
+                        strategy={verticalListSortingStrategy}
+                    >
+                        {/* Render each page as a draggable component. */}
+
+                        {pages.map((page) => (
+                            <SortablePage
+                                key={page.id}
+                                page={page}
+                                sensors={sensors}
+                                togglePage={togglePage}
+                                handleRowDragEnd={handleRowDragEnd}
+                                handleFieldDragEnd={handleFieldDragEnd}
+                                handleElementDragEnd={handleElementDragEnd}
+                                addRowElement={addRowElement}
+                                addRootElement={addRootElement}
+                            />
+                        ))}
+                    </SortableContext>
+                </DndContext>
+
+                {/* ADD PAGE BUTTON */}
 
                 <button
                     type="button"
-                    className="element-tree__add element-tree__add--page"
+                    className="element-tree__add element-tree__add--page last_add_page"
                     onClick={addPage}
                 >
-
                     <Icon source={PlusCircleIcon} />
-
                     <span>Add page</span>
-
                 </button>
-
             </div>
 
-
-            {/* ----------------------------------------------
-          FOOTER SECTION
-          ----------------------------------------------
-          Displays the Footer heading at the bottom.
-      */}
+            {/* FOOTER SECTION */}
 
             <div className="elements-panel__footer">
-
                 <Divider />
 
                 <div className="elements-panel__header">
-
                     <span className="elements-panel__section-icon">
                         <Icon source={LayoutSectionIcon} />
                     </span>
@@ -515,11 +411,414 @@ const addPage = () => {
                     <Text as="span" fontWeight="semibold">
                         Footer
                     </Text>
-
                 </div>
+            </div>
+        </div>
+    );
+}
 
+// ======================================================
+// COMPONENT: SORTABLE PAGE
+// Makes the page draggable using its drag handle.
+// Its rows and elements remain inside the page.
+// ======================================================
+
+function SortablePage({
+    page,
+    sensors,
+    togglePage,
+    handleRowDragEnd,
+    handleFieldDragEnd,
+    handleElementDragEnd,
+    addRowElement,
+    addRootElement,
+}) {
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging,
+    } = useSortable({
+        id: `page-${page.id}`,
+    });
+
+    // Apply the drag position and visual feedback.
+    const pageStyle = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.55 : 1,
+    };
+
+    return (
+        <div
+            ref={setNodeRef}
+            style={pageStyle}
+            className="element-tree__sortable-page"
+        >
+            {/* PAGE HEADER */}
+
+
+            {/* PAGE HEADER */}
+            <div className={`element-tree__page ${page.open ? "element-tree__page--active" : ""}`}>
+                {/* Expand/collapse arrow */}
+                <button
+                    type="button"
+                    className="element-tree__chevron"
+                    onClick={() => togglePage(page.id)}
+                >
+                    <Icon source={page.open ? ChevronDownIcon : ChevronRightIcon} />
+                </button>
+
+                {/* Page icon changes to drag icon on hover */}
+                <span
+                    className="element-tree__field-icon element-tree__page-icon"
+                    {...attributes}
+                    {...listeners}
+                >
+                    <span className="element-tree__default-icon">
+                        <Icon source={FileIcon} />
+                    </span>
+                    <span className="element-tree__drag-icon">⠿</span>
+                </span>
+
+                {/* Page name */}
+                <button
+                    type="button"
+                    className="element-tree__page-toggle"
+                    onClick={() => togglePage(page.id)}
+                >
+                    {page.label}
+                </button>
+            </div>
+            {/* PAGE CONTENT
+          Rows and root elements are shown only when open. */}
+
+            {page.open && (
+                <div className="element-tree__page-content">
+
+                    {/* ==============================================
+              ROWS LIST
+              This context allows rows to be reordered
+              within the current page.
+             ============================================== */}
+
+                    <DndContext
+                        sensors={sensors}
+                        collisionDetection={closestCenter}
+                        onDragEnd={(event) =>
+                            handleRowDragEnd(event, page.id)
+                        }
+                    >
+                        <SortableContext
+                            items={page.rows.map((row) => `row-${row.id}`)}
+                            strategy={verticalListSortingStrategy}
+                        >
+                            {/* Render each row as a sortable component. */}
+
+                            {page.rows.map((row) => (
+                                <SortableRow
+                                    key={row.id}
+                                    row={row}
+                                    pageId={page.id}
+                                    sensors={sensors}
+                                    handleFieldDragEnd={handleFieldDragEnd}
+                                    handleElementDragEnd={handleElementDragEnd}
+                                    addRowElement={addRowElement}
+                                />
+                            ))}
+                        </SortableContext>
+                    </DndContext>
+
+                    {/* ==============================================
+              ROOT ELEMENTS LIST
+              These elements belong directly to the page,
+              rather than to an individual row.
+             ============================================== */}
+
+                    <DndContext
+                        sensors={sensors}
+                        collisionDetection={closestCenter}
+                        onDragEnd={(event) =>
+                            handleElementDragEnd(event, page.id)
+                        }
+                    >
+                        <SortableContext
+                            items={(page.rootElements || []).map(
+                                (element) => `element-${element.id}`
+                            )}
+                            strategy={verticalListSortingStrategy}
+                        >
+                            {/* Render every root element as draggable. */}
+
+                            {(page.rootElements || []).map((element) => (
+                                <SortableCreatedElement
+                                    key={element.id}
+                                    element={element}
+                                />
+                            ))}
+                        </SortableContext>
+                    </DndContext>
+
+                    {/* ADD ELEMENT OUTSIDE ROWS */}
+
+                    <button
+                        type="button"
+                        className="element-tree__add element-tree__add--root"
+                        onClick={() => addRootElement(page.id)}
+                    >
+                        <Icon source={PlusCircleIcon} />
+                        <span>Add elements</span>
+                    </button>
+                </div>
+            )}
+        </div>
+    );
+}
+
+// ======================================================
+// COMPONENT: SORTABLE ROW
+// Makes a complete row draggable using its row handle.
+// The fields and elements move together with their row.
+// ======================================================
+
+function SortableRow({
+    row,
+    pageId,
+    sensors,
+    handleFieldDragEnd,
+    handleElementDragEnd,
+    addRowElement,
+}) {
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging,
+    } = useSortable({
+        id: `row-${row.id}`,
+    });
+
+    // Apply the drag position and visual feedback.
+    const rowStyle = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.55 : 1,
+    };
+
+    return (
+        <div
+            ref={setNodeRef}
+            style={rowStyle}
+            className="element-tree__row"
+        >
+            {/* ROW HEADING AND DRAG HANDLE */}
+
+
+            {/* ROW HEADING */}
+            <div className="element-tree__row-heading">
+                {/* Folder icon changes to drag icon on hover */}
+                <span
+                    className="element-tree__field-icon element-tree__row-drag-icon"
+                    {...attributes}
+                    {...listeners}
+                >
+                    <span className="element-tree__default-icon">
+                        <Icon source={FolderIcon} />
+                    </span>
+
+                    <span className="element-tree__drag-icon">⠿</span>
+                </span>
+
+                {/* Row label */}
+                <Text as="span" variant="bodySm">
+                    Row
+                </Text>
             </div>
 
+
+            {/* ROW FIELDS AND CREATED ELEMENTS */}
+
+            <div className="element-tree__row-fields">
+
+                {/* ==============================================
+            ORIGINAL FIELDS
+            Reorders fields within this row only.
+           ============================================== */}
+
+                <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={(event) =>
+                        handleFieldDragEnd(event, pageId, row.id)
+                    }
+                >
+                    <SortableContext
+                        items={(row.fields || []).map(
+                            (_, index) => `${row.id}-field-${index}`
+                        )}
+                        strategy={verticalListSortingStrategy}
+                    >
+                        {/* Render each original field as draggable. */}
+
+                        {(row.fields || []).map((field, index) => (
+                            <SortableSidebarField
+                                key={`${row.id}-field-${index}`}
+                                id={`${row.id}-field-${index}`}
+                                field={field}
+                            />
+                        ))}
+                    </SortableContext>
+                </DndContext>
+
+                {/* ==============================================
+            CREATED ELEMENTS
+            Reorders created elements within this row.
+           ============================================== */}
+
+                <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={(event) =>
+                        handleElementDragEnd(event, pageId, row.id)
+                    }
+                >
+                    <SortableContext
+                        items={(row.elements || []).map(
+                            (element) => `element-${element.id}`
+                        )}
+                        strategy={verticalListSortingStrategy}
+                    >
+                        {/* Render every created element as draggable. */}
+
+                        {(row.elements || []).map((element) => (
+                            <SortableCreatedElement
+                                key={element.id}
+                                element={element}
+                            />
+                        ))}
+                    </SortableContext>
+                </DndContext>
+            </div>
+
+            {/* ADD ELEMENT TO THIS ROW */}
+
+            <button
+                type="button"
+                className="element-tree__add"
+                onClick={() => addRowElement(pageId, row.id)}
+            >
+                <Icon source={PlusCircleIcon} />
+                <span>Add elements</span>
+            </button>
+        </div>
+    );
+}
+
+// ======================================================
+// COMPONENT: SORTABLE SIDEBAR FIELD
+// Makes an original field draggable.
+// Shows the drag icon instead of the file icon on hover.
+// ======================================================
+
+function SortableSidebarField({ id, field }) {
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging,
+    } = useSortable({ id });
+
+    // Apply the drag position and visual feedback.
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.5 : 1,
+    };
+
+    return (
+        <div
+            ref={setNodeRef}
+            style={style}
+            className="element-tree__field element-tree__field--draggable"
+            {...attributes}
+            {...listeners}
+        >
+            {/* Default file icon and hover drag icon. */}
+
+            <span className="element-tree__field-icon">
+                <span className="element-tree__default-icon">
+                    <Icon source={FileIcon} />
+                </span>
+
+                <span className="element-tree__drag-icon">
+                    ⠿
+                </span>
+            </span>
+
+            {/* Display the field name. */}
+
+            <span className="element-tree__field-label">
+                {field}
+            </span>
+        </div>
+    );
+}
+
+// ======================================================
+// COMPONENT: SORTABLE CREATED ELEMENT
+// Makes an element created by Add elements draggable.
+// ======================================================
+
+function SortableCreatedElement({ element }) {
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging,
+    } = useSortable({
+        id: `element-${element.id}`,
+    });
+
+    // Apply the drag position and visual feedback.
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.5 : 1,
+    };
+
+    return (
+        <div
+            ref={setNodeRef}
+            style={style}
+            className="element-tree__field element-tree__field--draggable"
+            {...attributes}
+            {...listeners}
+        >
+            {/* Default file icon and hover drag icon. */}
+
+            <span className="element-tree__field-icon">
+                <span className="element-tree__default-icon">
+                    <Icon source={FileIcon} />
+                </span>
+
+                <span className="element-tree__drag-icon">
+                    ⠿
+                </span>
+            </span>
+
+            {/* Display the created element's label. */}
+
+            <span className="element-tree__field-label">
+                {element.label}
+            </span>
         </div>
     );
 }

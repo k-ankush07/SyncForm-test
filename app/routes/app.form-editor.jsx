@@ -6,11 +6,22 @@ import {
   Box,
   Button,
   Divider,
-  InlineStack,
   Text,
   Icon,
   Tooltip,
 } from "@shopify/polaris";
+
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+
+import {
+  arrayMove,
+} from "@dnd-kit/sortable";
 
 import {
   FormsIcon,
@@ -80,6 +91,51 @@ export default function FormEditor() {
       rootElements: [],
     },
   ]);
+
+  // function to handles the drag and drop 
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5,
+      },
+    })
+  );
+
+  const handleDragEnd = (event, pageId, rowId) => {
+    const { active, over } = event;
+
+    if (!over || active.id === over.id) return;
+
+    setPages((previousPages) =>
+      previousPages.map((page) => {
+        if (page.id !== pageId) return page;
+
+        return {
+          ...page,
+          rows: page.rows.map((row) => {
+            if (row.id !== rowId) return row;
+
+            const oldIndex = row.fields.findIndex(
+              (_, index) => `${rowId}-${index}` === active.id
+            );
+
+            const newIndex = row.fields.findIndex(
+              (_, index) => `${rowId}-${index}` === over.id
+            );
+
+            if (oldIndex === -1 || newIndex === -1) {
+              return row;
+            }
+
+            return {
+              ...row,
+              fields: arrayMove(row.fields, oldIndex, newIndex),
+            };
+          }),
+        };
+      })
+    );
+  };
 
   return (
     <div className="template-editor">
@@ -180,6 +236,8 @@ export default function FormEditor() {
             {selectedOption === "Elements" && (<ElementsPanel
               pages={pages}
               setPages={setPages}
+              sensors={sensors}
+              handleDragEnd={handleDragEnd}
             />
             )}
 
@@ -228,16 +286,9 @@ export default function FormEditor() {
         </div>
 
         {/* Live preview */}
-        {/* <div className="template-editor__preview">
-
-          <iframe
-            title={`${templateTitle} preview`}
-            src={previewUrl}
-            className="template-editor__iframe"
-          />
-        </div> */}
         <div className="template-editor__preview">
-          <LivePreview pages={pages} templateTitle={templateTitle} />
+          <LivePreview pages={pages} templateTitle={templateTitle} sensors={sensors}
+            handleDragEnd={handleDragEnd} />
         </div>
 
       </div>
