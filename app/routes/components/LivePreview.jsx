@@ -1,100 +1,77 @@
 
 import React from "react";
+import {
+    Text,
+    Badge,
+    Button,
+    ButtonGroup,
+    InlineStack,
+    Box,
+    Divider,
+} from "@shopify/polaris";
 
-export default function LivePreview({ pages,templateTitle }) {
-  // Find the currently open page.
-  const currentPage = pages.find((page) => page.open);
+export default function LivePreview({
+    pages,
+    templateTitle,
+}) {
+    return (
+        <div className="live-preview">
 
-  if (!currentPage) {
-    return <p>Select a page to preview</p>;
-  }
+            {/* Toolbar above live preview */}
+            <Box background="bg-surface" padding="300">
+                <InlineStack align="space-between" blockAlign="center" gap="400">
+                    {/* Left side */}
+                    <InlineStack blockAlign="center" gap="200">
+                        <Text variant="bodyMd" fontWeight="semibold">
+                            {templateTitle}
+                        </Text>
 
-  return (
-    <div
-      style={{
-        background: "#f4f4f4",
-        padding: "24px",
-        borderRadius: "12px",
-        minHeight: "400px",
-      }}
-    >
-         <h2>{templateTitle}</h2>
-      <div
-        style={{
-          background: "#ffffff",
-          padding: "24px",
-          borderRadius: "8px",
-          maxWidth: "500px",
-          margin: "0 auto",
-        }}
-      >
-        <h2>{currentPage.label}</h2>
-       
+                        <Badge>Draft</Badge>
+                    </InlineStack>
 
-        {/* Display elements outside rows */}
-        {currentPage.rootElements.map((element) => (
-          <div key={element.id} style={{ marginBottom: "16px" }}>
-            <label>{element.label}</label>
-            <input
-              type="text"
-              placeholder={element.label}
-              style={{
-                display: "block",
-                width: "100%",
-                padding: "10px",
-                marginTop: "6px",
-                boxSizing: "border-box",
-              }}
-            />
-          </div>
-        ))}
+                    {/* Right side */}
+                    <InlineStack blockAlign="center" gap="200">
+                        <ButtonGroup>
+                            <Button>Mobile</Button>
+                            <Button variant="primary">Desktop</Button>
+                        </ButtonGroup>
 
-        {/* Display rows and their fields */}
-        {currentPage.rows.map((row) => (
-          <div
-            key={row.id}
-            style={{
-              display: "flex",
-              gap: "12px",
-              marginBottom: "16px",
-            }}
-          >
-            {row.fields.map((field) => (
-              <div key={field} style={{ flex: 1, minWidth: 0 }}>
-                <label>{field}</label>
-                <input
-                  type="text"
-                  placeholder={field}
-                  style={{
-                    display: "block",
-                    width: "100%",
-                    padding: "10px",
-                    marginTop: "6px",
-                    boxSizing: "border-box",
-                  }}
-                />
-              </div>
-            ))}
+                        <Button>English</Button>
+                        <Button disabled>Undo</Button>
+                        <Button disabled>Redo</Button>
+                    </InlineStack>
+                </InlineStack>
+            </Box>
 
-            {row.elements.map((element) => (
-              <div key={element.id} style={{ flex: 1, minWidth: 0 }}>
-                <label>{element.label}</label>
-                <input
-                  type="text"
-                  placeholder={element.label}
-                  style={{
-                    display: "block",
-                    width: "100%",
-                    padding: "10px",
-                    marginTop: "6px",
-                    boxSizing: "border-box",
-                  }}
-                />
-              </div>
-            ))}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+            <Divider />
+
+            {/* Actual preview content */}
+            <div className="live-preview__content">
+                {pages
+                    .filter((page) => page.open)
+                    .map((page) => (
+                        <div key={page.id}>
+                            <h2>{page.label}</h2>
+
+                            {page.rows.map((row) => (
+                                <div key={row.id}>
+                                    {row.fields.map((field) => (
+                                        <p key={field}>{field}</p>
+                                    ))}
+
+                                    {row.elements.map((element) => (
+                                        <p key={element.id}>{element.label}</p>
+                                    ))}
+                                </div>
+                            ))}
+
+                            {page.rootElements.map((element) => (
+                                <p key={element.id}>{element.label}</p>
+                            ))}
+                        </div>
+                    ))}
+            </div>
+
+        </div>
+    );
 }

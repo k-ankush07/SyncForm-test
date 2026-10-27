@@ -29,13 +29,7 @@ function Formtemplate() {
       description: "Basic contact form",
       category: "contact",
       image: "/images/contact.fc71ad9f717b4b182c75.png",
-      fields: [
-        { id: "firstName", label: "First Name", type: "text" },
-        { id: "lastName", label: "Last Name", type: "text" },
-        { id: "email", label: "Email", type: "email" },
-        { id: "phone", label: "Phone", type: "tel" },
-        { id: "message", label: "Message", type: "textarea" },
-      ],
+     
     },
     {
       id: 2,
