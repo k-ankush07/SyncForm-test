@@ -1,5 +1,7 @@
-import { BlockStack, Box, Button, Card, Divider, Grid, InlineStack, Modal, Page, Tabs, Text, Icon, Tooltip } from '@shopify/polaris'
+import { BlockStack, Box, Button, Card, Divider, Grid, InlineStack, Page, Tabs, Text, Icon, Tooltip } from '@shopify/polaris'
+
 import React, { useState } from 'react'
+import { Modal, TitleBar } from "@shopify/app-bridge-react";
 
 import {
   FormsIcon,
@@ -110,316 +112,134 @@ function Formtemplate() {
   const [activeTemplate, setActiveTemplate] = useState(null);
   const navigate = useNavigate();
   return (
-    <Page>
-      <Box paddingBlockEnd={400}>
-        <InlineStack gap="200" blockAlign="center">
-          <Button
-            icon={ArrowLeftIcon}
-            variant="plain"
-            onClick={() => navigate("/app/forms")}
-            accessibilityLabel="Go back to Forms"
-          />
+    <>
+      <Page>
+        <Box paddingBlockEnd={400}>
+          <InlineStack gap="200" blockAlign="center">
+            <Button
+              icon={ArrowLeftIcon}
+              variant="plain"
+              onClick={() => navigate("/app/forms")}
+              accessibilityLabel="Go back to Forms"
+            />
 
-          <Text as="h1" variant="headingLg">
-            Forms Templates
-          </Text>
-        </InlineStack>
-      </Box>
-      <BlockStack>
-        {/* //tabs */}
-        <Tabs tabs={tabs}
-          selected={selectedCategory}
-          onSelect={(selectedTabIndex) =>
-            setSelectedCategory(selectedTabIndex)
-          } />
-      </BlockStack>
+            <Text as="h1" variant="headingLg">
+              Forms Templates
+            </Text>
+          </InlineStack>
+        </Box>
+        <BlockStack>
+          {/* //tabs */}
+          <Tabs tabs={tabs}
+            selected={selectedCategory}
+            onSelect={(selectedTabIndex) =>
+              setSelectedCategory(selectedTabIndex)
+            } />
+        </BlockStack>
 
-      <Grid>
-        {filteredTemplates.map((filterproduct) => (
-          <Grid.Cell columnSpan={{ xs: 6, sm: 6, md: 4, lg: 4, xl: 4 }} key={filterproduct.id}>
-            <Card padding="0">
-              <BlockStack gap="0">
-                {/* Form preview image */}
-                <Box padding="300">
-                  <img
-                    src={filterproduct.image}
-                    alt={filterproduct.title}
-                    style={{
-                      width: "100%",
-                      height: "260px",
-                      objectFit: "contain",
-                    }}
-                  />
-                </Box>
+        <Grid>
+          {filteredTemplates.map((filterproduct) => (
+            <Grid.Cell columnSpan={{ xs: 6, sm: 6, md: 4, lg: 4, xl: 4 }} key={filterproduct.id}>
+              <Card padding="0">
+                <BlockStack gap="0">
+                  {/* Form preview image */}
+                  <Box padding="300">
+                    <img
+                      src={filterproduct.image}
+                      alt={filterproduct.title}
+                      style={{
+                        width: "100%",
+                        height: "260px",
+                        objectFit: "contain",
+                      }}
+                    />
+                  </Box>
 
-                <Divider />
+                  <Divider />
 
-                {/* Template information and actions */}
-                <Box padding="300">
-                  <BlockStack gap="200">
-                    <BlockStack gap="100">
-                      <InlineStack gap="200" blockAlign="center">
-                        <Text as="p" variant="bodyMd">
-                          ♧
-                        </Text>
-                        <Text as="p">{filterproduct.title}</Text>
-                      </InlineStack>
+                  {/* Template information and actions */}
+                  <Box padding="300">
+                    <BlockStack gap="200">
+                      <BlockStack gap="100">
+                        <InlineStack gap="200" blockAlign="center">
+                          <Text as="p" variant="bodyMd">
+                            ♧
+                          </Text>
+                          <Text as="p">{filterproduct.title}</Text>
+                        </InlineStack>
 
-                      <InlineStack gap="200" blockAlign="center">
-                        <Text as="p" variant="bodyMd">
-                          ✉
-                        </Text>
-                        <Text as="p">{filterproduct.description}</Text>
+                        <InlineStack gap="200" blockAlign="center">
+                          <Text as="p" variant="bodyMd">
+                            ✉
+                          </Text>
+                          <Text as="p">{filterproduct.description}</Text>
+                        </InlineStack>
+                      </BlockStack>
+
+                      <InlineStack gap="200" blockAlign="center" wrap={false}>
+                        <Button
+                          icon={ChevronLeftIcon}
+                          disabled
+                          accessibilityLabel="Previous preview"
+                        />
+                        <Button
+                          icon={ChevronRightIcon}
+                          disabled
+                          accessibilityLabel="Next preview"
+                        />
+
+                        <Box width="100%">
+                          <Button fullWidth onClick={() => setActiveTemplate(filterproduct)}>Select</Button>
+                        </Box>
+
+                        <Button
+                          icon={ViewIcon}
+                          accessibilityLabel="Preview template"
+                        />
                       </InlineStack>
                     </BlockStack>
+                  </Box>
+                </BlockStack>
+              </Card>
+            </Grid.Cell>
+          ))}
+        </Grid>
 
-                    <InlineStack gap="200" blockAlign="center" wrap={false}>
-                      <Button
-                        icon={ChevronLeftIcon}
-                        disabled
-                        accessibilityLabel="Previous preview"
-                      />
-                      <Button
-                        icon={ChevronRightIcon}
-                        disabled
-                        accessibilityLabel="Next preview"
-                      />
-
-                      <Box width="100%">
-                        <Button fullWidth onClick={() => setActiveTemplate(filterproduct)}>Select</Button>
-                      </Box>
-
-                      <Button
-                        icon={ViewIcon}
-                        accessibilityLabel="Preview template"
-                      />
-                    </InlineStack>
-                  </BlockStack>
-                </Box>
-              </BlockStack>
-            </Card>
-          </Grid.Cell>
-        ))}
-      </Grid>
-
+      </Page>
       {/* //modal */}
       {activeTemplate && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 1000,
-            background: "#fff",
-            display: "flex",
-            flexDirection: "column",
-          }}
+        <Modal
+          id="form-template-editor"
+          variant="max"
+          open={true}
+          src={`/app/form-editor?templateId=${activeTemplate.id}&title=${encodeURIComponent(activeTemplate.title)}`}
+          onHide={() => setActiveTemplate(null)}
         >
-          {/* Header */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              padding: "16px 24px",
-              borderBottom: "1px solid #e1e3e5",
-              flexShrink: 0,
-            }}
-          >
-            <InlineStack gap="200" blockAlign="center">
-              <Icon source={AlertTriangleIcon} />
-              <Text as="h2" variant="headingMd">
-                Unsaved changes
-              </Text>
-            </InlineStack>
-
-            <InlineStack gap="200">
-              <Button
-                onClick={() => {
-                  setActiveTemplate(null);
-                  setSelectedOption("Elements");
-                }}
-              >
-                Discard
-              </Button>
-
-              <Button
-                variant="primary"
-                onClick={() => {
-                  // Add your save logic here
-                  setActiveTemplate(null);
-                }}
-              >
-                Save
-              </Button>
-            </InlineStack>
-          </div>
-
-          {/* Main content */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: collpase
-                ? "56px 260px minmax(0, 1fr)"
-                : "220px 260px minmax(0, 1fr)",
-              transition: "grid-template-columns 0.2s ease",
-              flex: 1,
-              minHeight: 0,
-            }}
-          >
-            {/* Sidebar */}
-            <div
-              style={{
-                borderRight: "1px solid #e1e3e5",
-                padding: collpase ? "12px 4px" : "12px 8px",
-                display: "flex",
-                flexDirection: "column",
-                minHeight: 0,
-                overflowY: "auto",
+          <TitleBar title="Unsaved changes">
+            <button
+              onClick={() => {
+                setActiveTemplate(null);
+                setSelectedOption("Elements");
+                setCollapse(false);
               }}
             >
-              <div style={{ flex: 1 }}>
-                <BlockStack gap="100">
-                  {sidebarOptions.map((option, index) => (
-                    <React.Fragment key={option.label}>
-                      {index === 4 || index === 7 ? (
-                        <Box paddingBlock="200">
-                          <Divider />
-                        </Box>
-                      ) : null}
+              Discard
+            </button>
 
-                      <button
-                        type="button"
-                        onClick={() => setSelectedOption(option.label)}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: collpase ? "center" : "flex-start",
-                          gap: "8px",
-                          padding: "8px 10px",
-                          gap: "4px",
-                          width: "100%",
-                          padding: "8px 6px",
-                          border: "none",
-                          borderRadius: "6px",
-                          cursor: "pointer",
-                          textAlign: "center",
-                          background:
-                            selectedOption === option.label ? "#F0F5FD" : "transparent",
-                          fontWeight: selectedOption === option.label ? 600 : 400,
-                          color: selectedOption === option.label ? "#0051ff" : "#000",
-                        }}
-                      >
-                        <span style={{ display: "flex", flexShrink: 0 }}>
-                          <Icon source={option.icon} />
-                        </span>
-                        {!collpase && <span>{option.label}</span>}
-
-                      </button>
-                    </React.Fragment>
-                  ))}
-                </BlockStack>
-              </div>
-              {/* //collapse */}
-              <Box paddingBlockStart="200">
-                <Divider />
-                <Tooltip content={collpase ? "Expand sidebar" : "Collapse sidebar"}>
-                  <Button
-                    fullWidth
-                    variant="tertiary"
-                    icon={MenuIcon}
-                    onClick={() => setCollapse((prev) => !prev)}
-                    accessibilityLabel={collpase ? "Expand sidebar" : "Collapse sidebar"}
-                  >
-                    {collpase ? "" : "Collapse Sidebar"}
-                  </Button>
-                </Tooltip>
-              </Box>
-            </div>
-
-            {/* Settings panel */}
-            <div
-              style={{
-                borderRight: "1px solid #e1e3e5",
-                padding: "20px",
-                overflowY: "auto",
+            <button
+              variant="primary"
+              onClick={() => {
+                // Add your save logic here
+                setActiveTemplate(null);
               }}
             >
-              <Text as="h2" variant="headingMd">
-                {selectedOption}
-              </Text>
-
-              <Box paddingBlockStart="400">
-                {selectedOption === "Elements" && (
-                  <Text as="p">
-                    Add and arrange your form fields here.
-                  </Text>
-                )}
-
-                {selectedOption === "Appearance" && (
-                  <Text as="p">
-                    Customize colors, fonts, and form styles here.
-                  </Text>
-                )}
-
-                {selectedOption === "After submit" && (
-                  <Text as="p">
-                    Configure the message shown after submission.
-                  </Text>
-                )}
-
-                {selectedOption === "Mail" && (
-                  <Text as="p">
-                    Configure email notifications here.
-                  </Text>
-                )}
-
-                {selectedOption === "Integration" && (
-                  <Text as="p">
-                    Connect your form with other apps here.
-                  </Text>
-                )}
-
-                {selectedOption === "Settings" && (
-                  <Text as="p">
-                    Configure general form settings here.
-                  </Text>
-                )}
-
-                {selectedOption === "Translation" && (
-                  <Text as="p">
-                    Manage form translations here.
-                  </Text>
-                )}
-              </Box>
-            </div>
-
-            {/* Live preview */}
-            <div
-              style={{
-                background: "#f6f6f7",
-                padding: "20px",
-                minWidth: 0,
-                minHeight: 0,
-                overflow: "hidden",
-              }}
-            >
-              <iframe
-                title={`${activeTemplate.title} preview`}
-                src={activeTemplate.previewUrl || ""}
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  border: "none",
-                  background: "#fff",
-                  borderRadius: "8px",
-                }}
-              />
-            </div>
-          </div>
-        </div>
+              Save
+            </button>
+          </TitleBar>
+        </Modal>
       )}
 
-    </Page>
+    </>
   )
 }
 
