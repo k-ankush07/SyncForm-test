@@ -146,9 +146,9 @@ export default function FormEditor() {
 
         {/* Settings panel */}
         <div className="template-editor__settings">
-          <Text as="h2" variant="headingMd">
+          {/* <Text as="h2" variant="headingMd">
             {selectedOption}
-          </Text>
+          </Text> */}
 
           <Box paddingBlockStart="400">
             {selectedOption === "Elements" && ( <ElementsPanel/>
@@ -200,6 +200,7 @@ export default function FormEditor() {
 
         {/* Live preview */}
         <div className="template-editor__preview">
+          
           <iframe
             title={`${templateTitle} preview`}
             src={previewUrl}

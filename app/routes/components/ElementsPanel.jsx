@@ -1,202 +1,566 @@
 
 import React, { useState } from "react";
-import { Box, Divider, Text, Icon } from "@shopify/polaris";
+
+import { Divider, Text, Icon } from "@shopify/polaris";
+
+import "../../ElementsPanel.css"
 import {
-  PlusCircleIcon,
-  ChevronDownIcon,
-  ChevronRightIcon,
-  FileIcon,
-  TextIcon,
-  EmailIcon,
-  PhoneIcon,
-  NoteIcon,
+    PlusCircleIcon,
+    ChevronDownIcon,
+    ChevronRightIcon,
+    FileIcon,
+    FolderIcon,
+    LayoutSectionIcon,
 } from "@shopify/polaris-icons";
 
 export default function ElementsPanel() {
-  const [pageOpen, setPageOpen] = useState(true);
-  const [rowsOpen, setRowsOpen] = useState([true, true]);
 
-  const [rows, setRows] = useState([
-    [
-      { id: 1, label: "First Name", type: "text" },
-      { id: 2, label: "Last Name", type: "text" },
-    ],
-    [
-      { id: 3, label: "Email", type: "email" },
-      { id: 4, label: "Phone", type: "phone" },
-    ],
-  ]);
+    // ==================================================
+    // STEP 1: CREATE STATE FOR PAGES
+    // ==================================================
+    //
+    // useState stores the pages and their contents.
+    //
+    // Initially, we create one page:
+    // Page 1
+    //
+    // Page 1 contains:
+    // - Row 1: First Name and Last Name
+    // - Row 2: Email and Phone
+    // - rootElements: elements outside the rows
+    //
+    // open: true means the page is expanded.
+    //
+    // Each row has its own "elements" array.
+    // This array stores additional elements added to that row.
 
-  const [message, setMessage] = useState({
-    id: 5,
-    label: "Message",
-    type: "message",
-  });
+    const [pages, setPages] = useState([
+        {
+            id: 1,
+            label: "Page 1",
+            open: true,
 
-  const fieldIcons = {
-    text: TextIcon,
-    email: EmailIcon,
-    phone: PhoneIcon,
-    message: NoteIcon,
-  };
+            rows: [
+                {
+                    id: 101,
+                    fields: ["First Name", "Last Name"],
+                    elements: [],
+                },
+                {
+                    id: 102,
+                    fields: ["Email", "Phone"],
+                    elements: [],
+                },
+            ],
 
-  const addElement = (rowIndex) => {
-    const newField = {
-      id: Date.now(),
-      label: "New field",
-      type: "text",
+            // Stores elements added outside all rows.
+            rootElements: [],
+        },
+    ]);
+
+    // ==================================================
+    // STEP 2: ADD A NEW PAGE
+    // ==================================================
+    //
+    // This function runs when the user clicks "Add page".
+    //
+    // setPages updates the pages state.
+    //
+    // previousPages contains all existing pages.
+    //
+    // ...previousPages copies the existing pages.
+    //
+    // The new page is added at the end of the array.
+    //
+    // New pages start with empty rows and empty elements.
+    // Only Page 1 has the two initial rows.
+
+    const addPage = () => {
+        setPages((previousPages) => [
+            ...previousPages,
+
+            {
+                id: Date.now(),
+
+                // If there are 2 pages, the next one is Page 3.
+                label: `Page ${previousPages.length + 1}`,
+
+                open: true,
+
+                // No rows are automatically added to new pages.
+                rows: [],
+
+                // No outside elements initially.
+                rootElements: [],
+            },
+        ]);
     };
 
-    if (rowIndex === -1) {
-      setMessage(newField);
-      return;
-    }
+    // ==================================================
+    // STEP 3: OPEN OR CLOSE A PAGE
+    // ==================================================
+    //
+    // pageId tells us which page was clicked.
+    //
+    // map() checks every page.
+    //
+    // If the page ID matches, we create a copy of that
+    // page and reverse its "open" value:
+    //
+    // true  becomes false (close the page)
+    // false becomes true  (open the page)
+    //
+    // Other pages remain unchanged.
 
-    setRows((previous) =>
-      previous.map((row, index) =>
-        index === rowIndex ? [...row, newField] : row
-      )
-    );
-  };
+    const togglePage = (pageId) => {
+        setPages((previousPages) =>
+            previousPages.map((page) =>
+                page.id === pageId
+                    ? {
+                        ...page,
+                        open: !page.open,
+                    }
+                    : page
+            )
+        );
+    };
 
-  const addRow = () => {
-    setRows((previous) => [...previous, []]);
-    setRowsOpen((previous) => [...previous, true]);
-  };
+    // ==================================================
+    // STEP 4: ADD AN ELEMENT INSIDE A ROW
+    // ==================================================
+    //
+    // This function is called by the Add elements button
+    // belonging to a particular row.
+    //
+    // It receives TWO IDs:
+    //
+    // pageId = which page contains the row?
+    // rowId  = which row should receive the element?
+    //
+    // First, map() finds the correct page.
+    //
+    // Inside that page, another map() finds the correct row.
+    //
+    // Only the selected row's "elements" array changes.
+    // The other row and the other pages stay unchanged.
+    //
+    // For now, the new element is a placeholder called
+    // "New element". Later, we can open the element picker.
 
-  const addPage = () => {
-    alert("Add page functionality will be added next.");
-  };
+    const addRowElement = (pageId, rowId) => {
+        setPages((previousPages) =>
+            previousPages.map((page) => {
 
-  const renderField = (field) => {
-    const FieldIcon = fieldIcons[field.type] || TextIcon;
+                // If this is not the selected page,
+                // return it without changing anything.
+                if (page.id !== pageId) {
+                    return page;
+                }
+
+                // This is the selected page.
+                return {
+                    ...page,
+
+                    // Check each row on this page.
+                    rows: page.rows.map((row) => {
+
+                        // If this is not the selected row,
+                        // leave it unchanged.
+                        if (row.id !== rowId) {
+                            return row;
+                        }
+
+                        // This is the selected row.
+                        // Copy its existing elements and append
+                        // one new element to the end.
+                        return {
+                            ...row,
+
+                            elements: [
+                                ...row.elements,
+
+                                {
+                                    id: Date.now(),
+                                    label: "New element",
+                                },
+                            ],
+                        };
+                    }),
+                };
+            })
+        );
+    };
+
+    // ==================================================
+    // STEP 5: ADD AN ELEMENT OUTSIDE THE ROWS
+    // ==================================================
+    //
+    // This function belongs to the full-width Add elements
+    // button below the two rows.
+    //
+    // Unlike addRowElement(), this function does not
+    // search for a row.
+    //
+    // It updates the selected page's rootElements array.
+    //
+    // Therefore, the new element appears OUTSIDE the rows.
+
+    const addRootElement = (pageId) => {
+        setPages((previousPages) =>
+            previousPages.map((page) => {
+
+                // Leave other pages unchanged.
+                if (page.id !== pageId) {
+                    return page;
+                }
+
+                // Update the selected page.
+                return {
+                    ...page,
+
+                    // Copy existing outside elements and append
+                    // the newly created element.
+                    rootElements: [
+                        ...page.rootElements,
+
+                        {
+                            id: Date.now(),
+                            label: "New element",
+                        },
+                    ],
+                };
+            })
+        );
+    };
+
+    // ==================================================
+    // STEP 6: DISPLAY THE COMPONENT
+    // ==================================================
 
     return (
-      <div className="element-tree__field" key={field.id}>
-        <Icon source={FieldIcon} />
-        <Text as="span" variant="bodySm">
-          {field.label}
-        </Text>
-      </div>
-    );
-  };
+        <div className="elements-panel">
 
-  return (
-    <div className="elements-panel">
-      {/* Header */}
-      <div className="elements-panel__header">
-        <Text as="span">▧</Text>
-        <Text as="span" fontWeight="semibold">
-          Header
-        </Text>
-      </div>
+            {/* ----------------------------------------------
+          HEADER SECTION
+          ----------------------------------------------
+          Displays the Header heading at the top.
+      */}
 
-      <Divider />
+            <div className="elements-panel__header">
 
-      {/* Elements title */}
-      <Box paddingBlock="300" paddingInline="400">
-        <Text as="p" variant="bodySm" tone="subdued">
-          Elements
-        </Text>
-      </Box>
+                <span className="elements-panel__section-icon">
+                    <Icon source={LayoutSectionIcon} />
+                </span>
 
-      {/* Page and fields */}
-      <div className="element-tree">
-        <button
-          type="button"
-          className="element-tree__page"
-          onClick={() => setPageOpen((previous) => !previous)}
-        >
-          <Icon source={pageOpen ? ChevronDownIcon : ChevronRightIcon} />
-          <Icon source={FileIcon} />
-          <span>Page 1</span>
-        </button>
+                <Text as="span" fontWeight="semibold">
+                    Header
+                </Text>
 
-        {pageOpen && (
-          <div className="element-tree__page-content">
-            {rows.map((row, rowIndex) => (
-              <div className="element-tree__row" key={rowIndex}>
+            </div>
+
+            {/* Horizontal divider below Header */}
+            <Divider />
+
+
+            {/* ----------------------------------------------
+          ELEMENTS HEADING
+          ----------------------------------------------
+          Displays the heading above the page list.
+      */}
+
+            <div className="elements-panel__section-title">
+                <Text as="span" variant="bodySm" tone="subdued">
+                    Elements
+                </Text>
+            </div>
+
+
+            {/* ----------------------------------------------
+          PAGES CONTAINER
+          ----------------------------------------------
+          pages.map() creates the UI for every page
+          stored in our pages state.
+      */}
+
+            <div className="element-tree">
+
+                {pages.map((page) => (
+
+                    // React needs a unique key for each page.
+                    <div key={page.id}>
+
+                        {/* ----------------------------------------
+                PAGE HEADING
+                ----------------------------------------
+                Clicking this button opens or closes
+                this specific page.
+            */}
+
+                        <button
+                            type="button"
+                            className="element-tree__page"
+                            onClick={() => togglePage(page.id)}
+                        >
+
+                            {/* Show a down arrow when open.
+                  Show a right arrow when closed. */}
+
+                            <span className="element-tree__chevron">
+                                <Icon
+                                    source={
+                                        page.open
+                                            ? ChevronDownIcon
+                                            : ChevronRightIcon
+                                    }
+                                />
+                            </span>
+
+                            {/* Page icon */}
+                            <span className="element-tree__node-icon">
+                                <Icon source={FileIcon} />
+                            </span>
+
+                            {/* Page name comes from state */}
+                            <span className="element-tree__node-label">
+                                {page.label}
+                            </span>
+
+                        </button>
+
+
+                        {/* ----------------------------------------
+                PAGE CONTENT
+                ----------------------------------------
+                Render this section only when the page
+                is open.
+            */}
+
+                        {page.open && (
+
+                            <div className="element-tree__page-content">
+
+
+                                {/* ====================================
+                    STEP 7: DISPLAY THE EXISTING ROWS
+                    ====================================
+                    page.rows contains the rows belonging
+                    to this page.
+
+                    We display them with map().
+
+                    There is NO Add Row button.
+                */}
+
+                                {page.rows.map((row, index) => (
+
+                                    <div
+                                        key={row.id}
+                                        className="element-tree__row"
+                                    >
+
+                                        {/* Show the row number */}
+                                        <div className="element-tree__row-heading">
+                                            <span className="element-tree__row-icon">
+                                                <Icon source={FolderIcon} />
+                                            </span>
+
+                                            <Text as="span" variant="bodySm">
+                                                Row
+                                            </Text>
+                                        </div>
+
+
+                                        {/* --------------------------------
+                        DISPLAY FIELDS AND NEW ELEMENTS
+                        --------------------------------
+                        row.fields contains the original
+                        field names.
+
+                        row.elements contains the extra
+                        elements added by the user.
+                    */}
+
+                                        <div className="element-tree__row-fields">
+
+                                            {/* Display the original fields */}
+                                            {row.fields.map((field) => (
+
+                                                <div
+                                                    key={`${row.id}-${field}`}
+                                                    className="element-tree__field"
+                                                >
+
+                                                    <span className="element-tree__field-icon">
+                                                        <Icon source={FileIcon} />
+                                                    </span>
+
+                                                    <span className="element-tree__field-label">
+                                                        {field}
+                                                    </span>
+
+                                                </div>
+
+                                            ))}
+
+
+                                            {/* Display elements added to this row */}
+                                            {row.elements.map((element) => (
+
+                                                <div
+                                                    key={element.id}
+                                                    className="element-tree__field"
+                                                >
+
+                                                    <span className="element-tree__field-icon">
+                                                        <Icon source={FileIcon} />
+                                                    </span>
+
+                                                    <span className="element-tree__field-label">
+                                                        {element.label}
+                                                    </span>
+
+                                                </div>
+
+                                            ))}
+
+                                        </div>
+
+
+                                        {/* --------------------------------
+                        ADD ELEMENTS BUTTON FOR THIS ROW
+                        --------------------------------
+                        row.id tells the function which
+                        row needs the new element.
+
+                        page.id tells it which page
+                        contains that row.
+                    */}
+
+                                        <button
+                                            type="button"
+                                            className="element-tree__add"
+                                            onClick={() =>
+                                                addRowElement(page.id, row.id)
+                                            }
+                                        >
+
+                                            <Icon source={PlusCircleIcon} />
+
+                                            <span>Add elements</span>
+
+                                        </button>
+
+                                    </div>
+
+                                ))}
+
+
+                                {/* ====================================
+                    STEP 8: DISPLAY OUTSIDE ELEMENTS
+                    ====================================
+                    rootElements belongs to the page,
+                    not to any row.
+
+                    These elements appear after the rows.
+                */}
+
+                                {page.rootElements.map((element) => (
+
+                                    <div
+                                        key={element.id}
+                                        className="element-tree__field"
+                                    >
+
+                                        <span className="element-tree__field-icon">
+                                            <Icon source={FileIcon} />
+                                        </span>
+
+                                        <span className="element-tree__field-label">
+                                            {element.label}
+                                        </span>
+
+                                    </div>
+
+                                ))}
+
+
+                                {/* ------------------------------------
+                    FULL-WIDTH ADD ELEMENTS BUTTON
+                    ------------------------------------
+                    This button calls addRootElement().
+
+                    Notice that we pass only page.id.
+                    We do NOT pass row.id because this
+                    element belongs outside the rows.
+                */}
+
+                                <button
+                                    type="button"
+                                    className="element-tree__add element-tree__add--root"
+                                    onClick={() => addRootElement(page.id)}
+                                >
+
+                                    <Icon source={PlusCircleIcon} />
+
+                                    <span>Add elements</span>
+
+                                </button>
+
+                            </div>
+
+                        )}
+
+                    </div>
+
+                ))}
+
+
+                {/* --------------------------------------------
+            ADD PAGE BUTTON
+            --------------------------------------------
+            This button is outside the page content,
+            so it remains visible when pages are closed.
+        */}
+
                 <button
-                  type="button"
-                  className="element-tree__row-heading"
-                  onClick={() =>
-                    setRowsOpen((previous) =>
-                      previous.map((open, index) =>
-                        index === rowIndex ? !open : open
-                      )
-                    )
-                  }
+                    type="button"
+                    className="element-tree__add element-tree__add--page"
+                    onClick={addPage}
                 >
-                  <Icon
-                    source={
-                      rowsOpen[rowIndex]
-                        ? ChevronDownIcon
-                        : ChevronRightIcon
-                    }
-                  />
-                  <span>▱</span>
-                  <span>Row</span>
+
+                    <Icon source={PlusCircleIcon} />
+
+                    <span>Add page</span>
+
                 </button>
 
-                {rowsOpen[rowIndex] && (
-                  <div className="element-tree__row-fields">
-                    {row.map(renderField)}
+            </div>
 
-                    <button
-                      type="button"
-                      className="element-tree__add"
-                      onClick={() => addElement(rowIndex)}
-                    >
-                      <Icon source={PlusCircleIcon} />
-                      Add element
-                    </button>
-                  </div>
-                )}
-              </div>
-            ))}
 
-            {renderField(message)}
+            {/* ----------------------------------------------
+          FOOTER SECTION
+          ----------------------------------------------
+          Displays the Footer heading at the bottom.
+      */}
 
-            <button
-              type="button"
-              className="element-tree__add"
-              onClick={() => addElement(-1)}
-            >
-              <Icon source={PlusCircleIcon} />
-              Add element
-            </button>
+            <div className="elements-panel__footer">
 
-            <button
-              type="button"
-              className="element-tree__add element-tree__add--page"
-              onClick={addPage}
-            >
-              <Icon source={PlusCircleIcon} />
-              Add page
-            </button>
+                <Divider />
 
-            <button
-              type="button"
-              className="element-tree__add"
-              onClick={addRow}
-            >
-              <Icon source={PlusCircleIcon} />
-              Add row
-            </button>
-          </div>
-        )}
-      </div>
+                <div className="elements-panel__header">
 
-      {/* Footer at the bottom */}
-      <div className="elements-panel__footer">
-        <Divider />
-        <div className="elements-panel__header">
-          <Text as="span">▧</Text>
-          <Text as="span" fontWeight="semibold">
-            Footer
-          </Text>
+                    <span className="elements-panel__section-icon">
+                        <Icon source={LayoutSectionIcon} />
+                    </span>
+
+                    <Text as="span" fontWeight="semibold">
+                        Footer
+                    </Text>
+
+                </div>
+
+            </div>
+
         </div>
-      </div>
-    </div>
-  );
+    );
 }

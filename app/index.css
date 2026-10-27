@@ -88,7 +88,6 @@
 }
 
 .template-editor__settings {
-  padding: 20px;
   overflow-y: auto;
   border-right: 1px solid #e1e3e5;
 }
@@ -110,109 +109,37 @@
 }
 
 /* //element */
-
-.elements-panel {
+.template-editor__settings {
   display: flex;
   flex-direction: column;
   height: 100%;
   min-height: 0;
-  background: white;
-  color: #303030;
-  font-size: 13px;
+  overflow: hidden;
 }
 
-.elements-panel__header {
+.template-editor__settings > .Polaris-Box {
+  flex: 1;
+  min-height: 0;
   display: flex;
-  align-items: center;
-  gap: 12px;
-  min-height: 52px;
-  padding: 0 30px;
-  box-sizing: border-box;
+  flex-direction: column;
 }
 
-.element-tree {
+.template-editor__settings .elements-panel {
+  flex: 1;
+  min-height: 0;
+  height: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.template-editor__settings .element-tree {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 0 8px;
 }
 
-.element-tree button {
-  font: inherit;
-}
-
-.element-tree__page,
-.element-tree__row-heading {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  border: 0;
-  background: transparent;
-  padding: 8px 5px;
-  color: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.element-tree__page {
-  background: #f0f0f0;
-  border-radius: 5px;
-  font-weight: 600;
-}
-
-.element-tree__page-content {
-  margin-left: 27px;
-  border-left: 1px dashed #d7d7d7;
-}
-
-.element-tree__row-heading {
-  padding-top: 10px;
-  padding-bottom: 7px;
-}
-
-.element-tree__row-fields {
-  margin-left: 24px;
-  padding-left: 10px;
-  border-left: 1px dashed #d7d7d7;
-}
-
-.element-tree__field {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 32px;
-  padding: 3px 5px;
-}
-
-.element-tree__field svg {
-  width: 14px;
-  height: 14px;
-  flex-shrink: 0;
-}
-
-.element-tree__add {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 6px 0 8px 4px;
-  padding: 3px 0;
-  border: 0;
-  background: transparent;
-  color: #005bd3;
-  cursor: pointer;
-}
-
-.element-tree__add svg {
-  width: 15px;
-  height: 15px;
-}
-
-.element-tree__add--page {
-  margin-top: 12px;
-}
-
-.elements-panel__footer {
+.template-editor__settings .elements-panel__footer {
   flex-shrink: 0;
   margin-top: auto;
   background: white;

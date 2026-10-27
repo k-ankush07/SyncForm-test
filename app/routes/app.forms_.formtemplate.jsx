@@ -86,20 +86,20 @@ function Formtemplate() {
     }
   ];
   // sidebar options
-  const [selectedOption, setSelectedOption] = useState("Elements");
-  // collpase
-  const [collpase, setCollapse] = useState(false)
+  // const [selectedOption, setSelectedOption] = useState("Elements");
+  // // collpase
+  // const [collpase, setCollapse] = useState(false)
 
-  const sidebarOptions = [
-    { label: "Elements", icon: FormsIcon },
-    { label: "Edit with AI", icon: MagicIcon, },
-    { label: "Appearance", icon: PaintBrushFlatIcon },
-    { label: "After submit", icon: CheckCircleIcon },
-    { label: "Mail", icon: EmailIcon },
-    { label: "Integration", icon: AppsIcon },
-    { label: "Settings", icon: SettingsIcon },
-    { label: "Translation", icon: LanguageTranslateIcon },
-  ];
+  // const sidebarOptions = [
+  //   { label: "Elements", icon: FormsIcon },
+  //   { label: "Edit with AI", icon: MagicIcon, },
+  //   { label: "Appearance", icon: PaintBrushFlatIcon },
+  //   { label: "After submit", icon: CheckCircleIcon },
+  //   { label: "Mail", icon: EmailIcon },
+  //   { label: "Integration", icon: AppsIcon },
+  //   { label: "Settings", icon: SettingsIcon },
+  //   { label: "Translation", icon: LanguageTranslateIcon },
+  // ];
   // function to filter the categoroies
   const filteredTemplates =
     selectedCategory === 0
@@ -212,6 +212,7 @@ function Formtemplate() {
           id="form-template-editor"
           variant="max"
           open={true}
+          //use the extrnal url /app/form-editor?templateId
           src={`/app/form-editor?templateId=${activeTemplate.id}&title=${encodeURIComponent(activeTemplate.title)}`}
           onHide={() => setActiveTemplate(null)}
         >

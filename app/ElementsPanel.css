@@ -1,0 +1,317 @@
+
+.elements-panel {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: #fff;
+  color: #303030;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.elements-panel *,
+.elements-panel *::before,
+.elements-panel *::after {
+  box-sizing: border-box;
+}
+
+/* Header and footer */
+.elements-panel__header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 48px;
+  min-height: 48px;
+  padding: 0 28px;
+  flex-shrink: 0;
+}
+
+.elements-panel__section-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+}
+
+.elements-panel__section-icon > svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+}
+
+.elements-panel__footer {
+  flex: 0 0 auto;
+  margin-top: auto;
+  background: #fff;
+  border-top: 1px solid #e5e5e5;
+}
+
+.elements-panel__footer .elements-panel__header {
+  height: 52px;
+  min-height: 52px;
+}
+
+/* Elements heading */
+.elements-panel__section-title {
+  display: flex;
+  align-items: center;
+  height: 44px;
+  min-height: 44px;
+  padding: 0 25px;
+  flex-shrink: 0;
+}
+
+/* Scrollable tree */
+.element-tree {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0 8px 12px;
+  scrollbar-width: thin;
+  scrollbar-color: #c8c8c8 transparent;
+}
+
+.element-tree button {
+  font-family: inherit;
+  font-size: 13px;
+  line-height: normal;
+  font-weight: 400;
+}
+
+/* Reset button defaults */
+.element-tree__page,
+.element-tree__row-heading,
+.element-tree__add {
+  appearance: none;
+  -webkit-appearance: none;
+  border: 0;
+  font-weight: 400;
+}
+
+/* Shared icon sizing */
+.element-tree__chevron,
+.element-tree__node-icon,
+.element-tree__row-icon,
+.element-tree__field-icon,
+.element-tree__add > svg {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 14px;
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  padding: 0;
+}
+
+.element-tree__chevron > svg,
+.element-tree__node-icon > svg,
+.element-tree__row-icon > svg,
+.element-tree__field-icon > svg,
+.element-tree__add > svg {
+  display: block;
+  width: 14px;
+  height: 14px;
+  max-width: 14px;
+  max-height: 14px;
+  margin: 0;
+}
+
+/* Page heading */
+.element-tree__page {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  height: 36px;
+  padding: 0 5px;
+  border-radius: 5px;
+  background: transparent;
+  color: #303030;
+  text-align: left;
+  cursor: pointer;
+}
+
+.element-tree__page:hover {
+  background: #f6f6f6;
+}
+
+.element-tree__page .element-tree__chevron {
+  flex: 0 0 10px;
+  width: 10px;
+}
+
+.element-tree__page .element-tree__chevron > svg {
+  width: 12px;
+  height: 12px;
+}
+
+.element-tree__node-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.element-tree__page .element-tree__node-label {
+  font-weight: 600;
+}
+
+/* Page's vertical dotted guide */
+.element-tree__page-content {
+  position: relative;
+  min-width: 0;
+  margin-left: 20px;
+  padding: 0;
+  border-left: 1px dashed #d6d6d6;
+}
+
+/* Row container */
+.element-tree__row {
+  position: relative;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+}
+
+/* Folder icon and Row label */
+.element-tree__row-heading {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  height: 32px;
+  min-height: 32px;
+  margin: 0;
+  padding: 0 5px 0 25px;
+  background: transparent;
+  color: #303030;
+  text-align: left;
+  cursor: default;
+}
+
+.element-tree__row-icon {
+  color: #505050;
+  flex-shrink: 0;
+}
+
+/* Nested dotted guide for row fields */
+.element-tree__row-fields {
+  min-width: 0;
+  margin-left: 12px;
+  padding-left: 16px;
+  border-left: 1px dashed #d6d6d6;
+}
+
+/* Individual fields */
+.element-tree__field {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  min-width: 0;
+  height: 32px;
+  min-height: 32px;
+  margin: 0;
+  padding: 0 5px;
+  border-radius: 4px;
+  background: transparent;
+}
+
+.element-tree__field:hover {
+  background: #f6f6f6;
+}
+
+.element-tree__field-icon {
+  flex-shrink: 0;
+  color: #505050;
+}
+
+.element-tree__field-label {
+  min-width: 0;
+  overflow: hidden;
+  color: #303030;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Add element buttons */
+.element-tree__add {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-height: 32px;
+  margin: 0;
+  padding: 0 4px;
+  border-radius: 4px;
+  background: transparent;
+  color: #005bd3;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.element-tree__add:hover {
+  background: #f1f7ff;
+  color: #004299;
+}
+
+.element-tree__add > svg {
+  flex-shrink: 0;
+  color: #005bd3;
+}
+
+/* Add element inside a row */
+.element-tree__row > .element-tree__add {
+  margin-left: 28px;
+}
+
+/* Outside elements, such as Message */
+.element-tree__page-content > .element-tree__field {
+  width: calc(100% - 25px);
+  margin-left: 25px;
+}
+
+/* Full-width Add elements button outside rows */
+.element-tree__page-content > .element-tree__add--root {
+  width: calc(100% - 25px);
+  min-height: 32px;
+  margin-left: 25px;
+  padding: 0 4px;
+}
+
+/* Add page */
+.element-tree__add--page {
+  width: 100%;
+  min-height: 32px;
+  margin: 2px 0;
+  padding: 0 20px;
+}
+
+/* Keyboard focus */
+.element-tree button:focus-visible {
+  outline: 2px solid #005bd3;
+  outline-offset: -2px;
+}
+
+/* Smaller panels */
+@media (max-width: 600px) {
+  .elements-panel__header {
+    padding-inline: 16px;
+  }
+
+  .elements-panel__section-title {
+    padding-inline: 16px;
+  }
+
+  .element-tree {
+    padding-inline: 6px;
+  }
+}
