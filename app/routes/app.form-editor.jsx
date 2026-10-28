@@ -38,10 +38,11 @@ import {
 import ElementsPanel from "../routes/components/ElementsPanel";
 import LivePreview from '../routes/components/LivePreview'
 import { useSearchParams } from "react-router";
+import { templates } from "./app.forms_.formtemplate";
 
 export default function FormEditor() {
   const [searchParams] = useSearchParams();
-
+  const templateId = searchParams.get("templateId");
   const templateTitle = searchParams.get("title") || "Form editor";
   //const previewUrl = searchParams.get("previewUrl") || "";
 
@@ -71,32 +72,40 @@ export default function FormEditor() {
   // open: true means the page is expanded.
   //
   // Each row has its own "elements" array.
-  const [pages, setPages] = useState([
-    {
-      id: 1,
-      label: "Page 1",
-      open: true,
-      rows: [
-        {
-          id: 101,
-          fields: ["First Name", "Last Name"],
-          elements: [],
-        },
-        {
-          id: 102,
-          fields: ["Email", "Phone"],
-          elements: [],
-        },
-      ],
-      rootElements: [],
-      //
-       // Default submit button for this page
+
+  // get the selected template 
+  const selectedTemplate = templates.find(
+    (template) => String(template.id) === templateId
+  );
+  const defaultPages =
+  {
+    id: 1,
+    label: "Page 1",
+    open: true,
+    rows: [
+      {
+        id: 101,
+        fields: ["First Name", "Last Name"],
+        elements: [],
+      },
+      {
+        id: 102,
+        fields: ["Email", "Phone"],
+        elements: [],
+      },
+    ],
+    rootElements: [],
+    //
+    // Default submit button for this page
     submitButton: {
       label: "Submit",
       enabled: true,
     },
-    },
-  ]);
+  }
+    ;
+  const [pages, setPages] = useState(() =>
+    selectedTemplate?.pages ?? defaultPages
+  );
 
   // function to handles the drag and drop 
   const sensors = useSensors(
@@ -245,7 +254,7 @@ export default function FormEditor() {
               sensors={sensors}
               handleDragEnd={handleDragEnd}
             />
-            
+
             )}
 
             {selectedOption === "Edit with AI" && (
@@ -294,7 +303,7 @@ export default function FormEditor() {
 
         {/* Live preview */}
         <div className="template-editor__preview">
-          <LivePreview pages={pages} templateTitle={templateTitle} sensors={sensors}
+          <LivePreview pages={pages} templateTitle={templateTitle} sensors={sensors} formSettings={selectedTemplate}
             handleDragEnd={handleDragEnd} />
         </div>
 

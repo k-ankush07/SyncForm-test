@@ -18,48 +18,125 @@ import {
   ArrowLeftIcon
 } from "@shopify/polaris-icons";
 import { useNavigate } from 'react-router';
+ export const templates = [
+ {
+   id: 1,
+   title: "Contact form",
+   description: "Basic contact form",
+   category: "contact",
+   image: "/images/contact.fc71ad9f717b4b182c75.png",
+
+   theme: "classic",
+   layout: "stacked",
+   type: "contact",
+    pages: [
+      {
+        id: 1,
+        label: "Page 1",
+        open: true,
+        rows: [
+          {
+            id: 101,
+            fields: ["First Name", "Last Name"],
+            elements: [],
+          },
+          {
+            id: 102,
+            fields: ["Email", "Phone"],
+            elements: [],
+          },
+          {
+            id: 103,
+            fields: ["Message"],
+            elements: [],
+          },
+        ],
+        rootElements: [],
+        submitButton: {
+          label: "Send message",
+          enabled: true,
+        },
+      },
+    ],
+ },
+ {
+   id: 2,
+   title: "Multi step form",
+   description: "Form with multiple step",
+   category: "contact",
+   image: "/images/contact_2.3884ff5d377cc99e9ff8.png",
+
+   theme: "modern",
+   layout: "stacked",
+   type: "multi-step",
+ },
+ {
+   id: 3,
+   title: "Contact form with image",
+   description: "Basic contact form with image",
+   category: "contact",
+   image: "/images/contact-image.png",
+
+   theme: "image",
+   layout: "stacked",
+   type: "contact",
+ },
+ {
+   id: 4,
+   title: "Popup form",
+   description: "Popup newsletter form",
+   category: "popup",
+   image: "/images/popup.png",
+
+   theme: "popup",
+   layout: "stacked",
+   type: "newsletter",
+ },
+ {
+   id: 5,
+   title: "Registration form",
+   description: "Create an account form",
+   category: "register",
+   image: "/images/register.png",
+
+   theme: "modern",
+   layout: "split",
+   type: "registration",
+   pages: [
+      {
+        id: 1,
+        label: "Account details",
+        open: true,
+        rows: [
+          {
+            id: 501,
+            fields: ["First Name", "Last Name"],
+            elements: [],
+          },
+          {
+            id: 502,
+            fields: ["Email"],
+            elements: [],
+          },
+          {
+            id: 503,
+            fields: ["Password", "Confirm Password"],
+            elements: [],
+          },
+        ],
+        rootElements: [],
+        submitButton: {
+          label: "Create account",
+          enabled: true,
+        },
+      },
+    ],
+ },
+ 
+];
 function Formtemplate() {
   const [selectedCategory, setSelectedCategory] = useState(0);
 
-  // category 
-  const templates = [
-    {
-      id: 1,
-      title: "Contact form",
-      description: "Basic contact form",
-      category: "contact",
-      image: "/images/contact.fc71ad9f717b4b182c75.png",
-     
-    },
-    {
-      id: 2,
-      title: "Multi step form",
-      description: "Form with multiple step",
-      category: "contact",
-      image: "/images/multi-step.png",
-    },
-    {
-      id: 3,
-      title: "Contact form with image",
-      description: "Basic contact form with image",
-      category: "contact",
-      image: "/images/contact-image.png",
-    },
-    {
-      id: 4,
-      title: "Popup form",
-      description: "Popup newsletter form",
-      category: "popup",
-      image: "/images/popup.png",
-    },
-    {
-      id: 5,
-      title: "Registration form",
-      description: "Create an account form",
-      category: "register",
-      image: "/images/register.png",
-    },
-  ]
   //tabs
   const tabs = [
     {

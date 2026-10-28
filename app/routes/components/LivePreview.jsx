@@ -18,9 +18,10 @@ import PreviewField from "./PreviewField";
 export default function LivePreview({
     pages = [],
     templateTitle = "Untitled form",
+     formSettings = {},
 }) {
     return (
-        <div className="live-preview">
+        <div  className={`live-preview live-preview--${formSettings.theme || "classic"}`}>
             {/* Toolbar */}
             <Box background="bg-surface" padding="300">
                 <InlineStack
@@ -55,6 +56,7 @@ export default function LivePreview({
             <Page>
                 <Box paddingBlockEnd="800">
                     <BlockStack gap="200">
+                        <Text as="h1" variant="headingLg">{formSettings.theme || "Theme not show"}</Text>
                         <Text
                             as="h2"
                             variant="headingLg"

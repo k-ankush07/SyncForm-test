@@ -232,3 +232,278 @@
     gap: 16px;
     width: 100%;
 }
+
+
+/* =========================================
+   CUSTOM CLASSIC THEME
+========================================= */
+
+.live-preview--classic {
+  width: 100%;
+  min-width: 0;
+  background-color: #ffffff !important;
+  color: #303030;
+  font-family: Arial, Helvetica, sans-serif;
+  box-sizing: border-box;
+}
+
+.live-preview--classic *,
+.live-preview--classic *::before,
+.live-preview--classic *::after {
+  box-sizing: border-box;
+}
+
+/* =========================================
+   FORM HEADER
+========================================= */
+
+.live-preview--classic .live-preview__header {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 24px 24px 28px;
+  background: #ffffff !important;
+  text-align: center;
+}
+
+.live-preview--classic .live-preview__header h2 {
+  margin: 0;
+  color: #303030;
+  font-family: inherit;
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: center;
+}
+
+.live-preview--classic .live-preview__header p {
+  margin: 10px 0 0;
+  color: #737373;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.6;
+  text-align: center;
+}
+
+/* =========================================
+   FORM CONTENT
+========================================= */
+
+.live-preview--classic .live-preview__content {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 0 24px 32px;
+  background: #ffffff !important;
+}
+
+.live-preview--classic .preview-page {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  background: #ffffff;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.live-preview--classic .preview-page h3 {
+  margin: 0 0 16px;
+  color: #303030;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+/* =========================================
+   ROW LAYOUT
+========================================= */
+
+.live-preview--classic .preview-row {
+  width: 100%;
+  min-width: 0;
+  margin: 0 0 20px;
+}
+
+.live-preview--classic .preview-row-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px 16px;
+  width: 100%;
+  min-width: 0;
+}
+
+.live-preview--classic .preview-row-grid > div {
+  width: 100%;
+  min-width: 0;
+}
+
+.live-preview--classic .preview-row-grid > div:only-child {
+  grid-column: 1 / -1;
+}
+
+/* =========================================
+   FIELD LABELS
+========================================= */
+
+.live-preview--classic .Polaris-Label {
+  margin-bottom: 7px;
+}
+
+.live-preview--classic .Polaris-Label__Text {
+  color: #424242;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+/* =========================================
+   TEXT INPUTS
+========================================= */
+
+.live-preview--classic .Polaris-TextField {
+  width: 100%;
+}
+
+.live-preview--classic .Polaris-TextField__Input {
+  width: 100%;
+  min-height: 46px;
+  padding: 12px 14px;
+  color: #303030;
+  background-color: #f5f5f5 !important;
+  border: 1px solid #dedede;
+  border-radius: 4px;
+  box-shadow: none;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.live-preview--classic .Polaris-TextField__Input::placeholder {
+  color: #858585;
+  opacity: 1;
+}
+
+.live-preview--classic
+  .Polaris-TextField:hover
+  .Polaris-TextField__Input {
+  border-color: #b5b5b5;
+}
+
+.live-preview--classic
+  .Polaris-TextField:focus-within
+  .Polaris-TextField__Input {
+  background-color: #ffffff !important;
+  border-color: #303030;
+  box-shadow: 0 0 0 1px #303030;
+  outline: none;
+}
+
+/* =========================================
+   TEXTAREA
+========================================= */
+
+.live-preview--classic textarea.Polaris-TextField__Input {
+  min-height: 100px;
+  resize: vertical;
+}
+
+/* =========================================
+   SELECT FIELDS
+========================================= */
+
+.live-preview--classic .Polaris-Select {
+  width: 100%;
+}
+
+.live-preview--classic .Polaris-Select__Input {
+  min-height: 46px;
+  background-color: #f5f5f5 !important;
+  border-radius: 4px;
+}
+
+/* =========================================
+   CHECKBOXES AND RADIO BUTTONS
+========================================= */
+
+.live-preview--classic .Polaris-Checkbox__Label,
+.live-preview--classic .Polaris-RadioButton__Label {
+  color: #424242;
+  font-family: inherit;
+  font-size: 14px;
+}
+
+/* =========================================
+   ROOT ELEMENTS
+========================================= */
+
+.live-preview--classic .preview-page > .Polaris-BlockStack {
+  width: 100%;
+  min-width: 0;
+}
+
+/* =========================================
+   SUBMIT BUTTON
+========================================= */
+
+.live-preview--classic .preview-page .Polaris-Button--primary {
+  width: 100%;
+  min-height: 46px;
+  padding: 12px 20px;
+  color: #ffffff !important;
+  background-color: #303030 !important;
+  border: 1px solid #303030;
+  border-radius: 4px;
+  box-shadow: none;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
+  transition: background-color 0.2s ease;
+}
+
+.live-preview--classic
+  .preview-page
+  .Polaris-Button--primary:hover {
+  background-color: #1f1f1f !important;
+  border-color: #1f1f1f;
+}
+
+.live-preview--classic
+  .preview-page
+  .Polaris-Button--primary:focus-visible {
+  outline: 2px solid #303030;
+  outline-offset: 3px;
+}
+
+/* =========================================
+   RESPONSIVE DESIGN
+========================================= */
+
+@media screen and (max-width: 600px) {
+  .live-preview--classic .live-preview__content {
+    padding: 0 16px 24px;
+  }
+
+  .live-preview--classic .live-preview__header {
+    padding: 20px 16px 24px;
+  }
+
+  .live-preview--classic .live-preview__header h2 {
+    font-size: 23px;
+  }
+
+  .live-preview--classic .preview-row-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+  }
+
+  .live-preview--classic .preview-row {
+    margin-bottom: 18px;
+  }
+}
