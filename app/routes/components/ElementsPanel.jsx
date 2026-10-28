@@ -18,10 +18,19 @@ import {
 
 import { CSS } from "@dnd-kit/utilities";
 
-import { Divider, Text, Icon, Modal, Button, InlineGrid } from "@shopify/polaris";
+import {
+    Divider,
+    Text,
+    Icon,
+    Modal,
+    Button,
+    InlineGrid,
+    BlockStack,
+} from "@shopify/polaris";
 
 import { ELEMENT_TYPES } from "./elementsConfig.js";
 import "../../ElementsPanel.css";
+import ElementPickerPopover from "./ElementPickerPopover.jsx";
 
 import {
     PlusCircleIcon,
@@ -38,12 +47,16 @@ import {
 // ======================================================
 
 export default function ElementsPanel({ pages, setPages }) {
-    // show that modal is open or not 
-    const [elementPickerOpen, setElementPickerOpen] = useState(false);
-    //where the selecetd element add
-    const [elementTarget, setElementTarget] = useState(null);
-    // Configure the pointer sensor.
 
+    // Show whether the element picker modal is open or not.
+    const [elementPickerOpen, setElementPickerOpen] = useState(false);
+    const [elementTarget, setElementTarget] = useState(null);
+    // position 
+    const [elementPickerPosition, setElementPickerPosition] = useState({
+        top: 150,
+        left: 490,
+    });
+    // Configure the pointer sensor.
     // The user must move the pointer 5px before dragging starts.
     const sensors = useSensors(
         useSensor(PointerSensor, {
@@ -180,11 +193,11 @@ export default function ElementsPanel({ pages, setPages }) {
                         rows: page.rows.map((row) => {
                             if (row.id !== rowId) return row;
 
-                            const oldIndex = row.elements.findIndex(
+                            const oldIndex = (row.elements || []).findIndex(
                                 (element) => `element-${element.id}` === active.id
                             );
 
-                            const newIndex = row.elements.findIndex(
+                            const newIndex = (row.elements || []).findIndex(
                                 (element) => `element-${element.id}` === over.id
                             );
 
@@ -195,7 +208,7 @@ export default function ElementsPanel({ pages, setPages }) {
                             return {
                                 ...row,
                                 elements: arrayMove(
-                                    row.elements,
+                                    row.elements || [],
                                     oldIndex,
                                     newIndex
                                 ),
@@ -205,11 +218,13 @@ export default function ElementsPanel({ pages, setPages }) {
                 }
 
                 // CASE 2: Element belongs directly to the page.
-                const oldIndex = page.rootElements.findIndex(
+                const rootElements = page.rootElements || [];
+
+                const oldIndex = rootElements.findIndex(
                     (element) => `element-${element.id}` === active.id
                 );
 
-                const newIndex = page.rootElements.findIndex(
+                const newIndex = rootElements.findIndex(
                     (element) => `element-${element.id}` === over.id
                 );
 
@@ -220,7 +235,7 @@ export default function ElementsPanel({ pages, setPages }) {
                 return {
                     ...page,
                     rootElements: arrayMove(
-                        page.rootElements,
+                        rootElements,
                         oldIndex,
                         newIndex
                     ),
@@ -270,62 +285,151 @@ export default function ElementsPanel({ pages, setPages }) {
     // Adds a new element to the selected row.
     // ======================================================
 
-    const addRowElement = (pageId, rowId) => {
+
+    const addRowElement = (pageId, rowId, item) => {
+        if (!item?.type) return;
+
+        const newElement = {
+            id: crypto.randomUUID(),
+            type: item.type,
+            label: item.label || item.type,
+            ...(item.options ? { options: item.options } : {}),
+        };
+
         setPages((previousPages) =>
-            previousPages.map((page) => {
-                if (page.id !== pageId) return page;
-
-                return {
-                    ...page,
-
-                    rows: page.rows.map((row) => {
-                        if (row.id !== rowId) return row;
-
-                        //fn before return
-                        
-
-                        return {
-                            ...row,
-                            elements: [
-                                ...(row.elements || []),
-                                {
-                                    id: Date.now(),
-                                    label: "New element",
-                                },
-                            ],
-                        };
-                    }),
-                };
-            })
+            previousPages.map((page) =>
+                page.id !== pageId
+                    ? page
+                    : {
+                        ...page,
+                        rows: (page.rows || []).map((row) =>
+                            row.id !== rowId
+                                ? row
+                                : {
+                                    ...row,
+                                    elements: [
+                                        ...(row.elements || []),
+                                        newElement,
+                                    ],
+                                }
+                        ),
+                    }
+            )
         );
     };
 
+
     // ======================================================
-    // FUNCTION: ADD ROOT ELEMENT
-    // Adds an element directly to the page, outside rows.
+    // FUNCTION: OPEN ELEMENT PICKER
+    // Opens the modal and remembers where to add the element.
     // ======================================================
 
-    const addRootElement = (pageId) => {
+    const openElementPicker = (pageId, rowId = null, event) => {
+        if (!event?.currentTarget) return;
+
+        const buttonRect = event.currentTarget.getBoundingClientRect();
+
+        const modalWidth = Math.min(680, window.innerWidth - 24);
+        const modalHeight = Math.min(430, window.innerHeight - 24);
+
+        // Position the picker to the right of the clicked button.
+        let left =
+            rowId !== null
+                ? buttonRect.left + 200
+                : buttonRect.right + 8;
+
+        // If there is not enough room on the right,
+        // move it to the left of the button.
+        if (left + modalWidth > window.innerWidth - 12) {
+            left = buttonRect.left - modalWidth - 8;
+        }
+
+        // Keep the picker inside the screen horizontally.
+        left = Math.max(
+            12,
+            Math.min(left, window.innerWidth - modalWidth - 12)
+        );
+
+        // Align it with the clicked button when possible.
+        // Move it upward if it would extend beyond the screen.
+        const top = Math.max(
+            12,
+            Math.min(
+                buttonRect.top - 20,
+                window.innerHeight - modalHeight - 12
+            )
+        );
+
+        setElementPickerPosition({ top, left });
+        setElementTarget({ pageId, rowId });
+        setElementPickerOpen(true);
+    };
+
+    // ======================================================
+    // FUNCTION: SELECT AN ELEMENT
+    // Adds the selected element to the correct page or row.
+    // ======================================================
+
+
+    const handleSelectElement = (item) => {
+        if (!elementTarget || !item?.type) return;
+
+        const newElement = {
+            id: crypto.randomUUID(),
+            type: item.type,
+            label: item.label || item.type,
+            ...(item.options ? { options: item.options } : {}),
+        };
+
         setPages((previousPages) =>
             previousPages.map((page) => {
-                if (page.id !== pageId) return page;
+                if (page.id !== elementTarget.pageId) return page;
 
+                // Add the selected element inside the chosen row.
+                if (elementTarget.rowId != null) {
+                    return {
+                        ...page,
+                        rows: (page.rows || []).map((row) =>
+                            row.id !== elementTarget.rowId
+                                ? row
+                                : {
+                                    ...row,
+                                    elements: [
+                                        ...(row.elements || []),
+                                        newElement,
+                                    ],
+                                }
+                        ),
+                    };
+                }
+
+                // Add the selected element directly to the page.
                 return {
                     ...page,
                     rootElements: [
                         ...(page.rootElements || []),
-                        {
-                            id: Date.now(),
-                            label: "New element",
-                        },
+                        newElement,
                     ],
                 };
             })
         );
+
+        setElementPickerOpen(false);
+        setElementTarget(null);
+    };
+
+
+    // ======================================================
+    // FUNCTION: ADD ROOT ELEMENT
+    // Opens the picker to add an element directly to the page.
+    // ======================================================
+
+    const addRootElement = (pageId) => {
+        openElementPicker(pageId);
     };
 
     // ======================================================
-    // RENDER THE ELEMENTS PANEL actual content 
+    // RENDER THE ELEMENTS PANEL actual content
     // ======================================================
 
     return (
@@ -354,9 +458,9 @@ export default function ElementsPanel({ pages, setPages }) {
             </div>
 
             {/* ==================================================
-          PAGES LIST
-          This context allows the pages to be reordered.
-         ================================================== */}
+              PAGES LIST
+              This context allows the pages to be reordered.
+             ================================================== */}
 
             <div className="element-tree">
                 <DndContext
@@ -381,6 +485,7 @@ export default function ElementsPanel({ pages, setPages }) {
                                 handleElementDragEnd={handleElementDragEnd}
                                 addRowElement={addRowElement}
                                 addRootElement={addRootElement}
+                                openElementPicker={openElementPicker}
                             />
                         ))}
                     </SortableContext>
@@ -413,6 +518,19 @@ export default function ElementsPanel({ pages, setPages }) {
                     </Text>
                 </div>
             </div>
+
+            {/* ELEMENT PICKER MODAL */}
+
+            <ElementPickerPopover
+                open={elementPickerOpen}
+                position={elementPickerPosition}
+                onClose={() => {
+                    setElementPickerOpen(false);
+                    setElementTarget(null);
+                }}
+                onSelect={handleSelectElement}
+            />
+
         </div>
     );
 }
@@ -432,6 +550,7 @@ function SortablePage({
     handleElementDragEnd,
     addRowElement,
     addRootElement,
+    openElementPicker,
 }) {
     const {
         attributes,
@@ -459,19 +578,24 @@ function SortablePage({
         >
             {/* PAGE HEADER */}
 
-
-            {/* PAGE HEADER */}
-            <div className={`element-tree__page ${page.open ? "element-tree__page--active" : ""}`}>
+            <div
+                className={`element-tree__page ${page.open ? "element-tree__page--active" : ""
+                    }`}
+            >
                 {/* Expand/collapse arrow */}
+
                 <button
                     type="button"
                     className="element-tree__chevron"
                     onClick={() => togglePage(page.id)}
                 >
-                    <Icon source={page.open ? ChevronDownIcon : ChevronRightIcon} />
+                    <Icon
+                        source={page.open ? ChevronDownIcon : ChevronRightIcon}
+                    />
                 </button>
 
                 {/* Page icon changes to drag icon on hover */}
+
                 <span
                     className="element-tree__field-icon element-tree__page-icon"
                     {...attributes}
@@ -480,10 +604,12 @@ function SortablePage({
                     <span className="element-tree__default-icon">
                         <Icon source={FileIcon} />
                     </span>
+
                     <span className="element-tree__drag-icon">⠿</span>
                 </span>
 
                 {/* Page name */}
+
                 <button
                     type="button"
                     className="element-tree__page-toggle"
@@ -492,17 +618,18 @@ function SortablePage({
                     {page.label}
                 </button>
             </div>
+
             {/* PAGE CONTENT
-          Rows and root elements are shown only when open. */}
+              Rows and root elements are shown only when open. */}
 
             {page.open && (
                 <div className="element-tree__page-content">
 
                     {/* ==============================================
-              ROWS LIST
-              This context allows rows to be reordered
-              within the current page.
-             ============================================== */}
+                      ROWS LIST
+                      This context allows rows to be reordered
+                      within the current page.
+                     ============================================== */}
 
                     <DndContext
                         sensors={sensors}
@@ -512,12 +639,14 @@ function SortablePage({
                         }
                     >
                         <SortableContext
-                            items={page.rows.map((row) => `row-${row.id}`)}
+                            items={(page.rows || []).map(
+                                (row) => `row-${row.id}`
+                            )}
                             strategy={verticalListSortingStrategy}
                         >
                             {/* Render each row as a sortable component. */}
 
-                            {page.rows.map((row) => (
+                            {(page.rows || []).map((row) => (
                                 <SortableRow
                                     key={row.id}
                                     row={row}
@@ -526,16 +655,17 @@ function SortablePage({
                                     handleFieldDragEnd={handleFieldDragEnd}
                                     handleElementDragEnd={handleElementDragEnd}
                                     addRowElement={addRowElement}
+                                    openElementPicker={openElementPicker}
                                 />
                             ))}
                         </SortableContext>
                     </DndContext>
 
                     {/* ==============================================
-              ROOT ELEMENTS LIST
-              These elements belong directly to the page,
-              rather than to an individual row.
-             ============================================== */}
+                      ROOT ELEMENTS LIST
+                      These elements belong directly to the page,
+                      rather than to an individual row.
+                     ============================================== */}
 
                     <DndContext
                         sensors={sensors}
@@ -566,7 +696,9 @@ function SortablePage({
                     <button
                         type="button"
                         className="element-tree__add element-tree__add--root"
-                        onClick={() => addRootElement(page.id)}
+                        onClick={(event) => {
+                            openElementPicker(page.id, null, event);
+                        }}
                     >
                         <Icon source={PlusCircleIcon} />
                         <span>Add elements</span>
@@ -584,12 +716,14 @@ function SortablePage({
 // ======================================================
 
 function SortableRow({
+    page,
     row,
     pageId,
     sensors,
     handleFieldDragEnd,
     handleElementDragEnd,
     addRowElement,
+    openElementPicker,
 }) {
     const {
         attributes,
@@ -617,10 +751,9 @@ function SortableRow({
         >
             {/* ROW HEADING AND DRAG HANDLE */}
 
-
-            {/* ROW HEADING */}
             <div className="element-tree__row-heading">
                 {/* Folder icon changes to drag icon on hover */}
+
                 <span
                     className="element-tree__field-icon element-tree__row-drag-icon"
                     {...attributes}
@@ -634,20 +767,20 @@ function SortableRow({
                 </span>
 
                 {/* Row label */}
+
                 <Text as="span" variant="bodySm">
                     Row
                 </Text>
             </div>
-
 
             {/* ROW FIELDS AND CREATED ELEMENTS */}
 
             <div className="element-tree__row-fields">
 
                 {/* ==============================================
-            ORIGINAL FIELDS
-            Reorders fields within this row only.
-           ============================================== */}
+                  ORIGINAL FIELDS
+                  Reorders fields within this row only.
+                 ============================================== */}
 
                 <DndContext
                     sensors={sensors}
@@ -675,9 +808,9 @@ function SortableRow({
                 </DndContext>
 
                 {/* ==============================================
-            CREATED ELEMENTS
-            Reorders created elements within this row.
-           ============================================== */}
+                  CREATED ELEMENTS
+                  Reorders created elements within this row.
+                 ============================================== */}
 
                 <DndContext
                     sensors={sensors}
@@ -705,11 +838,12 @@ function SortableRow({
             </div>
 
             {/* ADD ELEMENT TO THIS ROW */}
-
             <button
                 type="button"
                 className="element-tree__add"
-                onClick={() => addRowElement(pageId, row.id)}
+                onClick={(event) => {
+                    openElementPicker(pageId, row.id, event);
+                }}
             >
                 <Icon source={PlusCircleIcon} />
                 <span>Add elements</span>
@@ -756,9 +890,7 @@ function SortableSidebarField({ id, field }) {
                     <Icon source={FileIcon} />
                 </span>
 
-                <span className="element-tree__drag-icon">
-                    ⠿
-                </span>
+                <span className="element-tree__drag-icon">⠿</span>
             </span>
 
             {/* Display the field name. */}
@@ -809,9 +941,7 @@ function SortableCreatedElement({ element }) {
                     <Icon source={FileIcon} />
                 </span>
 
-                <span className="element-tree__drag-icon">
-                    ⠿
-                </span>
+                <span className="element-tree__drag-icon">⠿</span>
             </span>
 
             {/* Display the created element's label. */}

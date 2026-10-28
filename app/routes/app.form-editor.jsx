@@ -89,6 +89,12 @@ export default function FormEditor() {
         },
       ],
       rootElements: [],
+      //
+       // Default submit button for this page
+    submitButton: {
+      label: "Submit",
+      enabled: true,
+    },
     },
   ]);
 
@@ -239,6 +245,7 @@ export default function FormEditor() {
               sensors={sensors}
               handleDragEnd={handleDragEnd}
             />
+            
             )}
 
             {selectedOption === "Edit with AI" && (

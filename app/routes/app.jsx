@@ -35,6 +35,7 @@ export default function App() {
       <s-link href="/app/forms">Forms</s-link>
     {/* /<s-link href="/app/forms/formtemplate">Formstemp</s-link> */}
     </NavMenu>
+    
         <Outlet />
       </PolarisAppProvider>
     </ShopifyAppProvider>
