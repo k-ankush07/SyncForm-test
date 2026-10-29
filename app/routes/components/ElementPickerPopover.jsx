@@ -2,7 +2,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { SearchIcon } from "@shopify/polaris-icons";
 import { Icon, Text, Badge } from "@shopify/polaris";
-import { ELEMENT_TYPES } from "./elementsConfig.js";
+import { ELEMENT_TYPES } from "../../utils/elementsConfig.js";
 
 const CATEGORY_COLUMNS = [
     ["Contact info", "Text", "Color"],
@@ -232,7 +232,7 @@ export default function ElementPickerPopover({
                                                         {item.label}
                                                     </span>
 
-                                                    {item.badge && (
+                                                    {/* {item.badge && (
                                                         <span className="element-picker-item__badge">
                                                             <Badge
                                                                 tone={
@@ -246,16 +246,16 @@ export default function ElementPickerPopover({
                                                                     : "New"}
                                                             </Badge>
                                                         </span>
-                                                    )}
+                                                    )} */}
 
-                                                    {item.disabled && (
+                                                    {/* {item.disabled && (
                                                         <span
                                                             className="element-picker-item__locked"
                                                             aria-label="Unavailable"
                                                         >
                                                             ★
                                                         </span>
-                                                    )}
+                                                    )} */}
                                                 </button>
                                             ))}
                                         </div>

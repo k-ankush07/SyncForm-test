@@ -1191,3 +1191,94 @@
     grid-template-columns: 1fr;
   }
 }
+.preview-element {
+  min-width: 0;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 2px;
+  cursor: pointer;
+}
+
+.preview-element:hover {
+  border-color: #a4a4a4;
+}
+
+.preview-element--selected {
+  border-color: #005bd3;
+  background: rgba(0, 91, 211, 0.04);
+}
+/* //toolbaroptions */
+
+.preview-element {
+  position: relative;
+  min-width: 0;
+  box-sizing: border-box;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 2px;
+}
+
+.preview-element:hover {
+  border-color: #a4a4a4;
+}
+
+.preview-element--selected {
+  border: 2px solid #2c6ecb;
+  background: rgba(44, 110, 203, 0.04);
+}
+
+.element-floating-toolbar {
+  position: absolute;
+  z-index: 50;
+  bottom: calc(100% + 6px);
+  left: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 7px;
+  background: #303030;
+  color: white;
+  border-radius: 7px;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.2);
+  white-space: nowrap;
+}
+
+.element-toolbar-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: white;
+  font-size: 17px;
+  cursor: pointer;
+}
+
+.element-toolbar-button:hover {
+  background: #505050;
+}
+
+.element-toolbar-button--delete {
+  color: #ff6b6b;
+}
+
+.element-drag-handle {
+  cursor: grab;
+}
+
+.preview-element--hidden {
+  opacity: 0.45;
+  border-style: dashed;
+}
+
+.preview-element--hidden::after {
+  content: "Hidden in form";
+  display: block;
+  margin-top: 4px;
+  color: #6d7175;
+  font-size: 11px;
+}

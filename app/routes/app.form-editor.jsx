@@ -1,6 +1,7 @@
 
 import React, { useState } from "react";
-
+import { normalizeFormPages } from "../utils/normalizeFormPages.js";
+import ElementSettings from "../routes/components/ElementSettings.jsx";
 import {
   BlockStack,
   Box,
@@ -38,7 +39,7 @@ import {
 import ElementsPanel from "../routes/components/ElementsPanel";
 import LivePreview from '../routes/components/LivePreview'
 import { useSearchParams } from "react-router";
-import { templates } from "./app.forms_.formtemplate";
+import { templates } from "../utils/templates.js";
 
 export default function FormEditor() {
   const [searchParams] = useSearchParams();
@@ -48,6 +49,7 @@ export default function FormEditor() {
 
   const [selectedOption, setSelectedOption] = useState("Elements");
   const [collpase, setCollapse] = useState(false);
+  const [selectedElement, setSelectedElement] = useState(null);
 
   const sidebarOptions = [
     { label: "Elements", icon: FormsIcon },
@@ -104,7 +106,10 @@ export default function FormEditor() {
   }
     ;
   const [pages, setPages] = useState(() =>
-    selectedTemplate?.pages ?? defaultPages
+    //it will normalize the one that alrady exist
+    normalizeFormPages(
+      selectedTemplate?.pages ?? [defaultPages]
+    )
   );
 
   // function to handles the drag and drop 
@@ -150,6 +155,39 @@ export default function FormEditor() {
         };
       })
     );
+  };
+
+  // function to select pass eleemnt info to updateSettings 
+  const updateSelectedElement = (updatedElement) => {
+    setPages((previousPages) =>
+      previousPages.map((page) => ({
+        ...page,
+
+        rows: (page.rows || []).map((row) => ({
+          ...row,
+
+          fields: (row.fields || []).map((field) =>
+            field?.id === updatedElement.id
+              ? updatedElement
+              : field
+          ),
+
+          elements: (row.elements || []).map((element) =>
+            element.id === updatedElement.id
+              ? updatedElement
+              : element
+          ),
+        })),
+
+        rootElements: (page.rootElements || []).map((element) =>
+          element.id === updatedElement.id
+            ? updatedElement
+            : element
+        ),
+      }))
+    );
+
+    setSelectedElement(updatedElement);
   };
 
   return (
@@ -247,63 +285,75 @@ export default function FormEditor() {
             {selectedOption}
           </Text> */}
 
+
           <Box paddingBlockStart="400">
-            {selectedOption === "Elements" && (<ElementsPanel
-              pages={pages}
-              setPages={setPages}
-              sensors={sensors}
-              handleDragEnd={handleDragEnd}
-            />
+            {selectedElement ? (
+              <ElementSettings
+                element={selectedElement}
+                onChange={updateSelectedElement}
+                onClose={() => setSelectedElement(null)}
+              />
+            ) : (
+              <>
+                {selectedOption === "Elements" && (
+                  <ElementsPanel
+                    pages={pages}
+                    setPages={setPages}
+                    sensors={sensors}
+                    handleDragEnd={handleDragEnd}
+                  />
+                )}
 
-            )}
+                {selectedOption === "Edit with AI" && (
+                  <Text as="p">
+                    Use AI to help build and customize your form.
+                  </Text>
+                )}
 
-            {selectedOption === "Edit with AI" && (
-              <Text as="p">
-                Use AI to help build and customize your form.
-              </Text>
-            )}
+                {selectedOption === "Appearance" && (
+                  <Text as="p">
+                    Customize colors, fonts, and form styles here.
+                  </Text>
+                )}
 
-            {selectedOption === "Appearance" && (
-              <Text as="p">
-                Customize colors, fonts, and form styles here.
-              </Text>
-            )}
+                {selectedOption === "After submit" && (
+                  <Text as="p">
+                    Configure the message shown after submission.
+                  </Text>
+                )}
 
-            {selectedOption === "After submit" && (
-              <Text as="p">
-                Configure the message shown after submission.
-              </Text>
-            )}
+                {selectedOption === "Mail" && (
+                  <Text as="p">
+                    Configure email notifications here.
+                  </Text>
+                )}
 
-            {selectedOption === "Mail" && (
-              <Text as="p">
-                Configure email notifications here.
-              </Text>
-            )}
+                {selectedOption === "Integration" && (
+                  <Text as="p">
+                    Connect your form with other apps here.
+                  </Text>
+                )}
 
-            {selectedOption === "Integration" && (
-              <Text as="p">
-                Connect your form with other apps here.
-              </Text>
-            )}
+                {selectedOption === "Settings" && (
+                  <Text as="p">
+                    Configure general form settings here.
+                  </Text>
+                )}
 
-            {selectedOption === "Settings" && (
-              <Text as="p">
-                Configure general form settings here.
-              </Text>
-            )}
-
-            {selectedOption === "Translation" && (
-              <Text as="p">
-                Manage form translations here.
-              </Text>
+                {selectedOption === "Translation" && (
+                  <Text as="p">
+                    Manage form translations here.
+                  </Text>
+                )}
+              </>
             )}
           </Box>
         </div>
 
         {/* Live preview */}
         <div className="template-editor__preview">
-          <LivePreview pages={pages} templateTitle={templateTitle} sensors={sensors} formSettings={selectedTemplate}
+          <LivePreview pages={pages} templateTitle={templateTitle} sensors={sensors} formSettings={selectedTemplate} selectedElementId={selectedElement?.id}
+            onSelectElement={setSelectedElement}
             handleDragEnd={handleDragEnd} />
         </div>
 

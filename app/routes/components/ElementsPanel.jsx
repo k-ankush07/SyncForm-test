@@ -28,7 +28,9 @@ import {
     BlockStack,
 } from "@shopify/polaris";
 
-import { ELEMENT_TYPES } from "./elementsConfig.js";
+import { ELEMENT_TYPES } from "../../utils/elementsConfig.js";
+// import the create element config 
+import { createElementConfig } from "../../utils/elementHelpers.js"
 import "../../ElementsPanel.css";
 import ElementPickerPopover from "./ElementPickerPopover.jsx";
 
@@ -144,17 +146,22 @@ export default function ElementsPanel({ pages, setPages }) {
 
                 return {
                     ...page,
-
-                    // Find the row whose fields need reordering.
-                    rows: page.rows.map((row) => {
+                    rows: (page.rows || []).map((row) => {
                         if (row.id !== rowId) return row;
 
+                        const getFieldId = (field, index) =>
+                            typeof field === "object" && field?.id != null
+                                ? `field-${field.id}`
+                                : `${rowId}-field-${index}`;
+
                         const oldIndex = row.fields.findIndex(
-                            (_, index) => `${rowId}-field-${index}` === active.id
+                            (field, index) =>
+                                getFieldId(field, index) === active.id
                         );
 
                         const newIndex = row.fields.findIndex(
-                            (_, index) => `${rowId}-field-${index}` === over.id
+                            (field, index) =>
+                                getFieldId(field, index) === over.id
                         );
 
                         if (oldIndex === -1 || newIndex === -1) {
@@ -163,7 +170,11 @@ export default function ElementsPanel({ pages, setPages }) {
 
                         return {
                             ...row,
-                            fields: arrayMove(row.fields, oldIndex, newIndex),
+                            fields: arrayMove(
+                                row.fields,
+                                oldIndex,
+                                newIndex
+                            ),
                         };
                     }),
                 };
@@ -285,16 +296,10 @@ export default function ElementsPanel({ pages, setPages }) {
     // Adds a new element to the selected row.
     // ======================================================
 
-
     const addRowElement = (pageId, rowId, item) => {
         if (!item?.type) return;
 
-        const newElement = {
-            id: crypto.randomUUID(),
-            type: item.type,
-            label: item.label || item.type,
-            ...(item.options ? { options: item.options } : {}),
-        };
+        const newElement = createElementConfig(item);
 
         setPages((previousPages) =>
             previousPages.map((page) =>
@@ -317,6 +322,7 @@ export default function ElementsPanel({ pages, setPages }) {
             )
         );
     };
+
 
 
     // ======================================================
@@ -367,25 +373,18 @@ export default function ElementsPanel({ pages, setPages }) {
 
     // ======================================================
     // FUNCTION: SELECT AN ELEMENT
-    // Adds the selected element to the correct page or row.
+    // Adds the selected element to the correct page or row. pick from popover modal
     // ======================================================
-
 
     const handleSelectElement = (item) => {
         if (!elementTarget || !item?.type) return;
 
-        const newElement = {
-            id: crypto.randomUUID(),
-            type: item.type,
-            label: item.label || item.type,
-            ...(item.options ? { options: item.options } : {}),
-        };
+        const newElement = createElementConfig(item);
 
         setPages((previousPages) =>
             previousPages.map((page) => {
                 if (page.id !== elementTarget.pageId) return page;
 
-                // Add the selected element inside the chosen row.
                 if (elementTarget.rowId != null) {
                     return {
                         ...page,
@@ -403,7 +402,6 @@ export default function ElementsPanel({ pages, setPages }) {
                     };
                 }
 
-                // Add the selected element directly to the page.
                 return {
                     ...page,
                     rootElements: [
@@ -790,20 +788,27 @@ function SortableRow({
                     }
                 >
                     <SortableContext
-                        items={(row.fields || []).map(
-                            (_, index) => `${row.id}-field-${index}`
+                        items={(row.fields || []).map((field, index) =>
+                            typeof field === "object" && field?.id != null
+                                ? `field-${field.id}`
+                                : `${row.id}-field-${index}`
                         )}
                         strategy={verticalListSortingStrategy}
                     >
-                        {/* Render each original field as draggable. */}
+                        {(row.fields || []).map((field, index) => {
+                            const fieldId =
+                                typeof field === "object" && field?.id != null
+                                    ? `field-${field.id}`
+                                    : `${row.id}-field-${index}`;
 
-                        {(row.fields || []).map((field, index) => (
-                            <SortableSidebarField
-                                key={`${row.id}-field-${index}`}
-                                id={`${row.id}-field-${index}`}
-                                field={field}
-                            />
-                        ))}
+                            return (
+                                <SortableSidebarField
+                                    key={fieldId}
+                                    id={fieldId}
+                                    field={field}
+                                />
+                            );
+                        })}
                     </SortableContext>
                 </DndContext>
 
@@ -896,7 +901,9 @@ function SortableSidebarField({ id, field }) {
             {/* Display the field name. */}
 
             <span className="element-tree__field-label">
-                {field}
+                {typeof field === "string"
+                    ? field
+                    : field?.label || field?.type || "Untitled field"}
             </span>
         </div>
     );
