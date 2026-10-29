@@ -25,99 +25,102 @@ export default function LivePreview({
   onDeleteElement,
 }) {
   // Select an element when the user clicks it in the preview.
- 
-const renderElement = (element, key) => {
-  if (!element || typeof element !== "object") {
+
+  const renderElement = (element, key) => {
+    if (!element || typeof element !== "object") {
+      return (
+        <div key={key} className="preview-element">
+          <PreviewField field={element} />
+        </div>
+      );
+    }
+
+    const isSelected = element.id === selectedElementId;
+    const isHidden = element.visible === false;
+
     return (
-      <div key={key} className="preview-element">
-        <PreviewField field={element} />
+      <div
+        key={key}
+        className={[
+          //if want to show as preview but still its disable bz we use style to complte hide it displynone
+          "preview-element",
+          isSelected ? "preview-element--selected" : "",
+          isHidden ? "preview-element--hidden" : "",
+        ].filter(Boolean).join(" ")}
+        onClick={() => onSelectElement?.(element)}
+        style={{
+          display: isHidden ? "none" : undefined,
+        }}
+      >
+        {isSelected && (
+          <div
+            className="element-floating-toolbar"
+            contentEditable={false}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              title="Drag field"
+              aria-label="Drag field"
+              className="element-toolbar-button element-drag-handle"
+            >
+              ⠿
+            </button>
+
+            <button
+              type="button"
+              title="Layout settings"
+              aria-label="Layout settings"
+              className="element-toolbar-button"
+              onClick={() => {
+                onSelectElement?.(element);
+              }}
+            >
+              ◫
+            </button>
+
+            <button
+              type="button"
+              title="Duplicate field"
+              aria-label="Duplicate field"
+              className="element-toolbar-button"
+              onClick={() => onDuplicateElement?.(element)}
+            >
+              ▢
+            </button>
+
+            <button
+              type="button"
+              title={isHidden ? "Show field" : "Hide field"}
+              aria-label={isHidden ? "Show field" : "Hide field"}
+              className="element-toolbar-button"
+              onClick={() => onToggleElementVisibility?.(element)}
+            >
+              {isHidden ? "◉" : "◌"}
+            </button>
+
+            <button
+              type="button"
+              title="Delete field"
+              aria-label="Delete field"
+              className="element-toolbar-button element-toolbar-button--delete"
+              onClick={() => onDeleteElement?.(element)}
+            >
+              🗑
+            </button>
+          </div>
+        )}
+
+        <PreviewField element={element} />
       </div>
     );
-  }
-
-  const isSelected = element.id === selectedElementId;
-  const isHidden = element.visible === false;
-
-  return (
-    <div
-      key={key}
-      className={[
-        "preview-element",
-        isSelected ? "preview-element--selected" : "",
-        isHidden ? "preview-element--hidden" : "",
-      ].filter(Boolean).join(" ")}
-      onClick={() => onSelectElement?.(element)}
-    >
-      {isSelected && (
-        <div
-          className="element-floating-toolbar"
-          contentEditable={false}
-          onClick={(event) => event.stopPropagation()}
-        >
-          <button
-            type="button"
-            title="Drag field"
-            aria-label="Drag field"
-            className="element-toolbar-button element-drag-handle"
-          >
-            ⠿
-          </button>
-
-          <button
-            type="button"
-            title="Layout settings"
-            aria-label="Layout settings"
-            className="element-toolbar-button"
-            onClick={() => {
-              onSelectElement?.(element);
-            }}
-          >
-            ◫
-          </button>
-
-          <button
-            type="button"
-            title="Duplicate field"
-            aria-label="Duplicate field"
-            className="element-toolbar-button"
-            onClick={() => onDuplicateElement?.(element)}
-          >
-            ▢
-          </button>
-
-          <button
-            type="button"
-            title={isHidden ? "Show field" : "Hide field"}
-            aria-label={isHidden ? "Show field" : "Hide field"}
-            className="element-toolbar-button"
-            onClick={() => onToggleElementVisibility?.(element)}
-          >
-            {isHidden ? "◉" : "◌"}
-          </button>
-
-          <button
-            type="button"
-            title="Delete field"
-            aria-label="Delete field"
-            className="element-toolbar-button element-toolbar-button--delete"
-            onClick={() => onDeleteElement?.(element)}
-          >
-            🗑
-          </button>
-        </div>
-      )}
-
-      <PreviewField element={element} />
-    </div>
-  );
-};
+  };
 
 
   return (
     <div
-      className={`live-preview live-preview--${
-        formSettings.theme || "classic"
-      }`}
+      className={`live-preview live-preview--${formSettings.theme || "classic"
+        }`}
     >
       <Box background="bg-surface" padding="300">
         <InlineStack

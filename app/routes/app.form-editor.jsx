@@ -190,6 +190,119 @@ export default function FormEditor() {
     setSelectedElement(updatedElement);
   };
 
+  // three function to make changes when toolbar open on click button 
+
+  const updateElementInPages = (pages, elementId, updater) =>
+    pages.map((page) => ({
+      ...page,
+      rows: (page.rows ?? []).map((row) => ({
+        ...row,
+        fields: (row.fields ?? []).map((item) =>
+          item?.id === elementId ? updater(item) : item
+        ),
+        elements: (row.elements ?? []).map((item) =>
+          item?.id === elementId ? updater(item) : item
+        ),
+      })),
+      rootElements: (page.rootElements ?? []).map((item) =>
+        item?.id === elementId ? updater(item) : item
+      ),
+    }));
+
+  // show or hide
+  const handleToggleElementVisibility = (element) => {
+    const updatedElement = {
+      ...element,
+      visible: element.visible === false,
+    };
+
+    setPages((previousPages) =>
+      updateElementInPages(
+        previousPages,
+        element.id,
+        () => updatedElement
+      )
+    );
+
+    setSelectedElement(updatedElement);
+  };
+
+  // remove the elemnts
+  const handleDeleteElement = (element) => {
+    const removeElement = (items) =>
+      items.filter((item) => item?.id !== element.id);
+
+    setPages((previousPages) =>
+      previousPages.map((page) => ({
+        ...page,
+        rows: (page.rows ?? []).map((row) => ({
+          ...row,
+          fields: removeElement(row.fields ?? []),
+          elements: removeElement(row.elements ?? []),
+        })),
+        rootElements: removeElement(page.rootElements ?? []),
+      }))
+    );
+
+    setSelectedElement(null);
+  };
+  //handle the duplicates crete duplicates
+ const handleDuplicateElement = (element) => {
+  const duplicate = {
+    ...element,
+    id: crypto.randomUUID(),
+    label: `${element.label || "Field"}`,
+    options: (element.options ?? []).map((option) =>
+      typeof option === "object"
+        ? { ...option, id: crypto.randomUUID() }
+        : option
+    ),
+  };
+
+  setPages((previousPages) =>
+    previousPages.map((page) => ({
+      ...page,
+      rows: (page.rows ?? []).map((row) => {
+        const insertAfter = (items) => {
+          const index = items.findIndex(
+            (item) => item?.id === element.id
+          );
+
+          if (index === -1) return items;
+
+          return [
+            ...items.slice(0, index + 1),
+            duplicate,
+            ...items.slice(index + 1),
+          ];
+        };
+
+        return {
+          ...row,
+          fields: insertAfter(row.fields ?? []),
+          elements: insertAfter(row.elements ?? []),
+        };
+      }),
+      rootElements: (() => {
+        const items = page.rootElements ?? [];
+        const index = items.findIndex(
+          (item) => item?.id === element.id
+        );
+
+        if (index === -1) return items;
+
+        return [
+          ...items.slice(0, index + 1),
+          duplicate,
+          ...items.slice(index + 1),
+        ];
+      })(),
+    }))
+  );
+
+  setSelectedElement(duplicate);
+};
+
   return (
     <div className="template-editor">
       {/* Main content */}
@@ -354,7 +467,10 @@ export default function FormEditor() {
         <div className="template-editor__preview">
           <LivePreview pages={pages} templateTitle={templateTitle} sensors={sensors} formSettings={selectedTemplate} selectedElementId={selectedElement?.id}
             onSelectElement={setSelectedElement}
-            handleDragEnd={handleDragEnd} />
+            handleDragEnd={handleDragEnd}
+            onDuplicateElement={handleDuplicateElement}
+            onToggleElementVisibility={handleToggleElementVisibility}
+            onDeleteElement={handleDeleteElement} />
         </div>
 
       </div>
