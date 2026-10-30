@@ -1,6 +1,8 @@
 
-import React from "react";
-
+import React, { useState } from "react";
+import SelectIcon from "./SelectIcon";
+import { Icon } from "@shopify/polaris";
+import * as PolarisIcons from "@shopify/polaris-icons";
 import {
     BlockStack,
     TextField,
@@ -32,7 +34,7 @@ import { getElementSettingsType } from "./elementsettings/utils/elementSettingsC
    COMMON SETTINGS - ALL ELEMENTS
 ========================================= */
 
-function CommonSettings({ element, onChange }) {
+function CommonSettings({ element, onChange, onOpenSelectIcon }) {
 
     const update = (key, value) => {
         onChange({
@@ -44,9 +46,9 @@ function CommonSettings({ element, onChange }) {
     // type specific to hide some settings from common settings
     const type = String(element.type || "").toLowerCase();
 
-    const isName = type === "name" || "first_name";
+    const isName = ["name", "first_name", "last_name"].includes(type);
     const isEmail = type === "email";
-    const isPhone = type === "phone";
+    const isPhone = ["phone", "tel"].includes(type);
     const isPassword = type === "password";
 
     const isContactInput = isName || isEmail || isPhone || isPassword;
@@ -117,26 +119,39 @@ function CommonSettings({ element, onChange }) {
                     />
 
                     {element.limitCharacters && (
-                        <BlockStack gap="200">
+                        <div className="character-limit-settings">
 
-                            <TextField
-                                label="Min characters"
-                                type="number"
-                                value={String(element.minCharacters ?? "")}
-                                onChange={(value) => update("minCharacters", value)}
-                                autoComplete="off"
-                            />
+                            <div className="character-limit-settings__fields">
 
-                            <TextField
-                                label="Max characters"
-                                type="number"
-                                value={String(element.maxCharacters ?? "")}
-                                onChange={(value) => update("maxCharacters", value)}
-                                autoComplete="off"
-                                helpText="If you don't want to set a maximum number of characters, leave this field blank instead of setting it to 0."
-                            />
+                                <TextField
+                                    label="Min characters"
+                                    type="number"
+                                    value={String(element.minCharacters ?? "")}
+                                    onChange={(value) =>
+                                        update("minCharacters", value)
+                                    }
+                                    autoComplete="off"
+                                />
 
-                        </BlockStack>
+                                <TextField
+                                    label="Max characters"
+                                    type="number"
+                                    value={String(element.maxCharacters ?? "")}
+                                    onChange={(value) =>
+                                        update("maxCharacters", value)
+                                    }
+                                    autoComplete="off"
+                                />
+
+                            </div>
+
+                            <Text as="p" tone="subdued">
+                                Note: If you don't want to set a maximum number
+                                of characters, please leave this field blank
+                                instead of setting it to 0.
+                            </Text>
+
+                        </div>
                     )}
                 </>
             )}
@@ -203,18 +218,26 @@ function CommonSettings({ element, onChange }) {
 
             {/* Select icon - Name, Email, Phone, Password */}
             {showSelectIcon && (
-                <Select
-                    label="Select icon"
-                    value={element.selectIcon || ""}
-                    options={[
-                        { label: "No icon", value: "" },
-                        { label: "Person", value: "person" },
-                        { label: "Email", value: "email" },
-                        { label: "Phone", value: "phone" },
-                        { label: "Lock", value: "lock" },
-                    ]}
-                    onChange={(value) => update("selectIcon", value)}
+                <BlockStack gap="200">
+                    <Text as="p" variant="bodyMd">
+                        Select icon
+                    </Text>
+
+                     <Button
+            fullWidth
+            onClick={onOpenSelectIcon}
+        >
+            {element.selectIcon &&
+            PolarisIcons[element.selectIcon] ? (
+                <Icon
+                    source={PolarisIcons[element.selectIcon]}
+                    tone="base"
                 />
+            ) : (
+                "Select icon"
+            )}
+        </Button>
+                </BlockStack>
             )}
 
             <Divider />
@@ -223,18 +246,31 @@ function CommonSettings({ element, onChange }) {
                 LAYOUT SETTINGS
             ================================= */}
 
-            <Select
-                label="Column width"
-                value={String(element.columnWidth || "100")}
-                options={[
-                    { label: "100%", value: "100" },
-                    { label: "75%", value: "75" },
-                    { label: "50%", value: "50" },
-                    { label: "33%", value: "33" },
-                    { label: "25%", value: "25" },
-                ]}
-                onChange={(value) => update("columnWidth", value)}
-            />
+            <BlockStack gap="200">
+                <Text as="p" variant="bodyMd">
+                    Column width
+                </Text>
+
+                <div className="column-width-selector">
+                    {["33", "50", "100"].map((width) => {
+                        const selected =
+                            String(element.columnWidth || "100") === width;
+
+                        return (
+                            <button
+                                key={width}
+                                type="button"
+                                className={`column-width-selector__option ${selected ? "is-selected" : ""
+                                    }`}
+                                onClick={() => update("columnWidth", width)}
+                            >
+                                {width}%
+                            </button>
+                        );
+                    })}
+                </div>
+            </BlockStack>
+
 
             <TextField
                 label="Custom CSS class"
@@ -254,10 +290,14 @@ function CommonSettings({ element, onChange }) {
 
 export default function ElementSettings({ element, onChange, onClose }) {
 
+    // to show icon
+    const [activeSection, setActiveSection] = useState("main");
+
     if (!element) return null;
 
     // Get group name from config
     const groupType = getElementSettingsType(element.type);
+
     console.log("========== ELEMENT SETTINGS ==========");
     console.log("Element:", element);
     console.log("Element type:", element.type);
@@ -278,6 +318,31 @@ export default function ElementSettings({ element, onChange, onClose }) {
     };
 
     const GroupComponent = settingsGroups[groupType];
+
+
+    /* =========================================
+       SELECT ICON SECTION
+    ========================================= */
+
+    if (activeSection === "selectIcon") {
+        return (
+            <div className="element-settings">
+
+                <SelectIcon
+                    value={element.selectIcon || ""}
+                    onChange={(value) =>
+                        onChange({
+                            ...element,
+                            selectIcon: value,
+                        })
+                    }
+                    onBack={() => setActiveSection("main")}
+                />
+
+            </div>
+        );
+    }
+
 
     return (
         <div className="element-settings">
@@ -310,6 +375,9 @@ export default function ElementSettings({ element, onChange, onClose }) {
                     <CommonSettings
                         element={element}
                         onChange={onChange}
+                        onOpenSelectIcon={() =>
+                            setActiveSection("selectIcon")
+                        }
                     />
 
                     <Divider />
