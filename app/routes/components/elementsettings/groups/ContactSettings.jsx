@@ -30,14 +30,8 @@ export default function ContactSettings({ element, onChange }) {
 
             {/* =================================
                 COMMON CONTACT SETTINGS
+                Read only remains contact-specific
             ================================= */}
-
-            <TextField
-                label="Placeholder"
-                value={element.placeholder || ""}
-                onChange={(value) => update("placeholder", value)}
-                autoComplete="off"
-            />
 
             <Checkbox
                 label="Read only"
@@ -67,7 +61,7 @@ export default function ContactSettings({ element, onChange }) {
                     />
 
                     <Checkbox
-                        label="Confirm email"
+                        label="Also create confirm email input"
                         checked={element.confirmEmail || false}
                         onChange={(value) =>
                             update("confirmEmail", value)
@@ -75,14 +69,36 @@ export default function ContactSettings({ element, onChange }) {
                     />
 
                     {element.confirmEmail && (
-                        <TextField
-                            label="Confirmation field label"
-                            value={element.confirmEmailLabel || ""}
-                            onChange={(value) =>
-                                update("confirmEmailLabel", value)
-                            }
-                            autoComplete="off"
-                        />
+                        <BlockStack gap="200">
+
+                            <TextField
+                                label="Label confirm"
+                                value={element.confirmEmailLabel || ""}
+                                onChange={(value) =>
+                                    update("confirmEmailLabel", value)
+                                }
+                                autoComplete="off"
+                            />
+
+                            <TextField
+                                label="Placeholder confirm"
+                                value={element.confirmEmailPlaceholder || ""}
+                                onChange={(value) =>
+                                    update("confirmEmailPlaceholder", value)
+                                }
+                                autoComplete="off"
+                            />
+
+                            <TextField
+                                label="Description confirm"
+                                value={element.confirmEmailDescription || ""}
+                                onChange={(value) =>
+                                    update("confirmEmailDescription", value)
+                                }
+                                autoComplete="off"
+                            />
+
+                        </BlockStack>
                     )}
 
                 </BlockStack>
@@ -121,6 +137,27 @@ export default function ContactSettings({ element, onChange }) {
                         />
                     )}
 
+                    <Checkbox
+                        label="Enter numbers only"
+                        checked={element.numbersOnly || false}
+                        onChange={(value) =>
+                            update("numbersOnly", value)
+                        }
+                    />
+
+                    <Select
+                        label="Name validation"
+                        value={element.nameValidation || "none"}
+                        options={[
+                            { label: "None", value: "none" },
+                            { label: "Letters only", value: "letters" },
+                            { label: "Letters and spaces", value: "letters_spaces" },
+                        ]}
+                        onChange={(value) =>
+                            update("nameValidation", value)
+                        }
+                    />
+
                 </BlockStack>
             )}
 
@@ -136,6 +173,14 @@ export default function ContactSettings({ element, onChange }) {
                     </Text> */}
 
                     <Checkbox
+                        label="Validate international telephone numbers"
+                        checked={element.phoneValidation !== false}
+                        onChange={(value) =>
+                            update("phoneValidation", value)
+                        }
+                    />
+
+                    <Checkbox
                         label="Show country code"
                         checked={element.showCountryCode !== false}
                         onChange={(value) =>
@@ -143,11 +188,19 @@ export default function ContactSettings({ element, onChange }) {
                         }
                     />
 
-                    <Checkbox
-                        label="Enable phone validation"
-                        checked={element.phoneValidation !== false}
+                    <Select
+                        label="Select default country"
+                        value={element.defaultCountry || ""}
+                        options={[
+                            { label: "Select country", value: "" },
+                            { label: "India", value: "IN" },
+                            { label: "United States", value: "US" },
+                            { label: "United Kingdom", value: "GB" },
+                            { label: "Canada", value: "CA" },
+                            { label: "Australia", value: "AU" },
+                        ]}
                         onChange={(value) =>
-                            update("phoneValidation", value)
+                            update("defaultCountry", value)
                         }
                     />
 
@@ -165,47 +218,66 @@ export default function ContactSettings({ element, onChange }) {
                         Password settings
                     </Text> */}
 
-                    <TextField
-                        label="Minimum length"
-                        type="number"
-                        value={String(element.minLength ?? 8)}
+                    <Select
+                        label="Validate"
+                        value={element.passwordValidation || "none"}
+                        options={[
+                            { label: "No additional validation", value: "none" },
+                            { label: "Letters and numbers", value: "letters_numbers" },
+                            { label: "Uppercase and lowercase", value: "upper_lower" },
+                            { label: "Special characters", value: "special" },
+                        ]}
                         onChange={(value) =>
-                            update("minLength", value)
-                        }
-                        autoComplete="off"
-                    />
-
-                    <TextField
-                        label="Maximum length"
-                        type="number"
-                        value={String(element.maxLength ?? 50)}
-                        onChange={(value) =>
-                            update("maxLength", value)
-                        }
-                        autoComplete="off"
-                    />
-
-                    <Checkbox
-                        label="Require uppercase letter"
-                        checked={element.requireUppercase || false}
-                        onChange={(value) =>
-                            update("requireUppercase", value)
+                            update("passwordValidation", value)
                         }
                     />
 
                     <Checkbox
-                        label="Require number"
-                        checked={element.requireNumber || false}
+                        label="Also create confirm password input"
+                        checked={element.confirmPassword || false}
                         onChange={(value) =>
-                            update("requireNumber", value)
+                            update("confirmPassword", value)
                         }
                     />
 
+                    {element.confirmPassword && (
+                        <BlockStack gap="200">
+
+                            <TextField
+                                label="Label confirm"
+                                value={element.confirmPasswordLabel || ""}
+                                onChange={(value) =>
+                                    update("confirmPasswordLabel", value)
+                                }
+                                autoComplete="off"
+                            />
+
+                            <TextField
+                                label="Placeholder confirm"
+                                value={element.confirmPasswordPlaceholder || ""}
+                                onChange={(value) =>
+                                    update("confirmPasswordPlaceholder", value)
+                                }
+                                autoComplete="off"
+                            />
+
+                            <TextField
+                                label="Description confirm"
+                                value={element.confirmPasswordDescription || ""}
+                                onChange={(value) =>
+                                    update("confirmPasswordDescription", value)
+                                }
+                                autoComplete="off"
+                            />
+
+                        </BlockStack>
+                    )}
+
                     <Checkbox
-                        label="Require special character"
-                        checked={element.requireSpecialCharacter || false}
+                        label="Store password data"
+                        checked={element.storePassword || false}
                         onChange={(value) =>
-                            update("requireSpecialCharacter", value)
+                            update("storePassword", value)
                         }
                     />
 
