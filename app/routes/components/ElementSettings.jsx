@@ -18,9 +18,9 @@ import { ArrowLeftIcon } from "@shopify/polaris-icons";
 import ContactSettings from "./elementsettings/groups/ContactSettings";
 import TextSettings from "./elementsettings/groups/TextSettings";
 import ChoiceSettings from "./elementsettings/groups/ChoiceSettings";
-// import NumberSettings from "./groups/NumberSettings";
-// import DateSettings from "./groups/DateSettings";
-// import FileSettings from "./groups/FileSettings";
+import NumberSettings from "./elementsettings/groups/NumberSettings";
+import DateSettings  from "./elementsettings/groups/DateSettings";
+import FileSettings from "./elementsettings/groups/FileUploadSettings";
 // import RatingSettings from "./groups/RatingSettings";
 // import ContentSettings from "./groups/ContentSettings";
 // import ImageChoiceSettings from "./groups/ImageChoiceSettings";
@@ -138,9 +138,9 @@ console.log("======================================");
         contact: ContactSettings,
         text: TextSettings,
         choice: ChoiceSettings,
-        // number: NumberSettings,
-        // date: DateSettings,
-        // file: FileSettings,
+        number: NumberSettings,
+        date: DateSettings,
+        file: FileSettings,
         // rating: RatingSettings,
         // content: ContentSettings,
         // imageChoice: ImageChoiceSettings,

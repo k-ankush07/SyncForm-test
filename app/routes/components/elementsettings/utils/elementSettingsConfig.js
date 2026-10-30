@@ -46,6 +46,7 @@ const FILE_TYPES = [
     "file",
     "file_upload",
     "upload",
+    "url"
 ];
 
 const RATING_TYPES = [
