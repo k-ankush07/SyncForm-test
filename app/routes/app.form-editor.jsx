@@ -247,23 +247,44 @@ export default function FormEditor() {
     setSelectedElement(null);
   };
   //handle the duplicates crete duplicates
- const handleDuplicateElement = (element) => {
-  const duplicate = {
-    ...element,
-    id: crypto.randomUUID(),
-    label: `${element.label || "Field"}`,
-    options: (element.options ?? []).map((option) =>
-      typeof option === "object"
-        ? { ...option, id: crypto.randomUUID() }
-        : option
-    ),
-  };
+  const handleDuplicateElement = (element) => {
+    const duplicate = {
+      ...element,
+      id: crypto.randomUUID(),
+      label: `${element.label || "Field"}`,
+      options: (element.options ?? []).map((option) =>
+        typeof option === "object"
+          ? { ...option, id: crypto.randomUUID() }
+          : option
+      ),
+    };
 
-  setPages((previousPages) =>
-    previousPages.map((page) => ({
-      ...page,
-      rows: (page.rows ?? []).map((row) => {
-        const insertAfter = (items) => {
+    setPages((previousPages) =>
+      previousPages.map((page) => ({
+        ...page,
+        rows: (page.rows ?? []).map((row) => {
+          const insertAfter = (items) => {
+            const index = items.findIndex(
+              (item) => item?.id === element.id
+            );
+
+            if (index === -1) return items;
+
+            return [
+              ...items.slice(0, index + 1),
+              duplicate,
+              ...items.slice(index + 1),
+            ];
+          };
+
+          return {
+            ...row,
+            fields: insertAfter(row.fields ?? []),
+            elements: insertAfter(row.elements ?? []),
+          };
+        }),
+        rootElements: (() => {
+          const items = page.rootElements ?? [];
           const index = items.findIndex(
             (item) => item?.id === element.id
           );
@@ -275,33 +296,12 @@ export default function FormEditor() {
             duplicate,
             ...items.slice(index + 1),
           ];
-        };
+        })(),
+      }))
+    );
 
-        return {
-          ...row,
-          fields: insertAfter(row.fields ?? []),
-          elements: insertAfter(row.elements ?? []),
-        };
-      }),
-      rootElements: (() => {
-        const items = page.rootElements ?? [];
-        const index = items.findIndex(
-          (item) => item?.id === element.id
-        );
-
-        if (index === -1) return items;
-
-        return [
-          ...items.slice(0, index + 1),
-          duplicate,
-          ...items.slice(index + 1),
-        ];
-      })(),
-    }))
-  );
-
-  setSelectedElement(duplicate);
-};
+    setSelectedElement(duplicate);
+  };
 
   return (
     <div className="template-editor">
@@ -394,8 +394,7 @@ export default function FormEditor() {
 
         {/* Settings panel */}
         <div className="template-editor__settings">
-  <div className="template-editor__settings-inner">
-    <Box paddingBlockStart="400" height="100%">
+          <div className="template-editor__settings-inner">
             {selectedElement ? (
               <ElementSettings
                 element={selectedElement}
@@ -403,7 +402,7 @@ export default function FormEditor() {
                 onClose={() => setSelectedElement(null)}
               />
             ) : (
-              <>
+              <Box paddingBlockStart="400">
                 {selectedOption === "Elements" && (
                   <ElementsPanel
                     pages={pages}
@@ -454,12 +453,10 @@ export default function FormEditor() {
                     Manage form translations here.
                   </Text>
                 )}
-              </>
+              </Box>
             )}
-          </Box>
+          </div>
         </div>
-        </div>
-
         {/* Live preview */}
         <div className="template-editor__preview">
           <LivePreview pages={pages} templateTitle={templateTitle} sensors={sensors} formSettings={selectedTemplate} selectedElementId={selectedElement?.id}

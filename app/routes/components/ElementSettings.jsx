@@ -17,7 +17,7 @@ import { ArrowLeftIcon } from "@shopify/polaris-icons";
 
 import ContactSettings from "./elementsettings/groups/ContactSettings";
 import TextSettings from "./elementsettings/groups/TextSettings";
-// import ChoiceSettings from "./groups/ChoiceSettings";
+import ChoiceSettings from "./elementsettings/groups/ChoiceSettings";
 // import NumberSettings from "./groups/NumberSettings";
 // import DateSettings from "./groups/DateSettings";
 // import FileSettings from "./groups/FileSettings";
@@ -127,12 +127,17 @@ export default function ElementSettings({ element, onChange, onClose }) {
 
     // Get group name from config
     const groupType = getElementSettingsType(element.type);
+    console.log("========== ELEMENT SETTINGS ==========");
+console.log("Element:", element);
+console.log("Element type:", element.type);
+console.log("Settings group:", groupType);
+console.log("======================================");
 
     // Select component according to group
     const settingsGroups = {
         contact: ContactSettings,
         text: TextSettings,
-        // choice: ChoiceSettings,
+        choice: ChoiceSettings,
         // number: NumberSettings,
         // date: DateSettings,
         // file: FileSettings,
@@ -143,9 +148,11 @@ export default function ElementSettings({ element, onChange, onClose }) {
 
     const GroupComponent = settingsGroups[groupType];
 
-    return (
-        <BlockStack gap="400">
+   return (
+    <div className="element-settings">
 
+        {/* Fixed header */}
+        <div className="element-settings__header">
             <Box paddingBlock="300">
                 <InlineStack align="start" blockAlign="center" gap="200">
                     <Button
@@ -162,23 +169,31 @@ export default function ElementSettings({ element, onChange, onClose }) {
             </Box>
 
             <Divider />
+        </div>
 
-            {/* Common settings for every element */}
-            <CommonSettings
-                element={element}
-                onChange={onChange}
-            />
+        {/* Scrollable content */}
+        <div className="element-settings__content">
 
-            <Divider />
+            <BlockStack gap="400">
 
-            {/* Settings according to selected element group */}
-            {GroupComponent && (
-                <GroupComponent
+                <CommonSettings
                     element={element}
                     onChange={onChange}
                 />
-            )}
 
-        </BlockStack>
-    );
+                <Divider />
+
+                {GroupComponent && (
+                    <GroupComponent
+                        element={element}
+                        onChange={onChange}
+                    />
+                )}
+
+            </BlockStack>
+
+        </div>
+
+    </div>
+);
 }

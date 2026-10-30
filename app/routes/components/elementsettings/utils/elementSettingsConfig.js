@@ -23,6 +23,7 @@ const CHOICE_TYPES = [
     "radio",
     "radio_group",
     "checkbox",
+    "checkboxes",
     "checkbox_group",
     "switch",
     "consent",
