@@ -1,4 +1,4 @@
-
+// to normalize the new created fields elemnts in the format we need like with unique id and more fields
 const DEFAULT_ELEMENT_SETTINGS = {
   placeholder: "",
   description: "",

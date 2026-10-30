@@ -114,6 +114,7 @@ export default function PreviewField({ element, field }) {
           autoComplete="email"
           value={value}
           onChange={setValue}
+          readOnly
         />
       );
 
@@ -177,6 +178,7 @@ export default function PreviewField({ element, field }) {
           value={value}
           onChange={setValue}
           readOnly
+          disabled
         />
       );
 
@@ -515,6 +517,7 @@ export default function PreviewField({ element, field }) {
           {...commonTextFieldProps}
           value={value}
           onChange={setValue}
+          readOnly
         />
       );
   }

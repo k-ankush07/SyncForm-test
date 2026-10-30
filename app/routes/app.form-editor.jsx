@@ -394,12 +394,8 @@ export default function FormEditor() {
 
         {/* Settings panel */}
         <div className="template-editor__settings">
-          {/* <Text as="h2" variant="headingMd">
-            {selectedOption}
-          </Text> */}
-
-
-          <Box paddingBlockStart="400">
+  <div className="template-editor__settings-inner">
+    <Box paddingBlockStart="400" height="100%">
             {selectedElement ? (
               <ElementSettings
                 element={selectedElement}
@@ -461,6 +457,7 @@ export default function FormEditor() {
               </>
             )}
           </Box>
+        </div>
         </div>
 
         {/* Live preview */}

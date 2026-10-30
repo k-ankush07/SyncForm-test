@@ -10,7 +10,16 @@ import {
   Box,
   Divider,
   BlockStack,
+  Icon,
 } from "@shopify/polaris";
+import {
+  DragHandleIcon,
+  LayoutColumns3Icon,
+  DuplicateIcon,
+  HideIcon,
+  ViewIcon,
+  DeleteIcon,
+} from "@shopify/polaris-icons";
 
 import PreviewField from "./PreviewField";
 
@@ -42,7 +51,7 @@ export default function LivePreview({
       <div
         key={key}
         className={[
-          //if want to show as preview but still its disable bz we use style to complte hide it displynone
+
           "preview-element",
           isSelected ? "preview-element--selected" : "",
           isHidden ? "preview-element--hidden" : "",
@@ -52,10 +61,10 @@ export default function LivePreview({
           display: isHidden ? "none" : undefined,
         }}
       >
+
         {isSelected && (
           <div
             className="element-floating-toolbar"
-            contentEditable={false}
             onClick={(event) => event.stopPropagation()}
           >
             <button
@@ -64,7 +73,7 @@ export default function LivePreview({
               aria-label="Drag field"
               className="element-toolbar-button element-drag-handle"
             >
-              ⠿
+              <Icon source={DragHandleIcon} />
             </button>
 
             <button
@@ -72,11 +81,9 @@ export default function LivePreview({
               title="Layout settings"
               aria-label="Layout settings"
               className="element-toolbar-button"
-              onClick={() => {
-                onSelectElement?.(element);
-              }}
+              onClick={() => onSelectElement?.(element)}
             >
-              ◫
+              <Icon source={LayoutColumns3Icon} />
             </button>
 
             <button
@@ -86,7 +93,7 @@ export default function LivePreview({
               className="element-toolbar-button"
               onClick={() => onDuplicateElement?.(element)}
             >
-              ▢
+              <Icon source={DuplicateIcon} />
             </button>
 
             <button
@@ -96,7 +103,7 @@ export default function LivePreview({
               className="element-toolbar-button"
               onClick={() => onToggleElementVisibility?.(element)}
             >
-              {isHidden ? "◉" : "◌"}
+              <Icon source={isHidden ? ViewIcon : HideIcon} />
             </button>
 
             <button
@@ -106,10 +113,11 @@ export default function LivePreview({
               className="element-toolbar-button element-toolbar-button--delete"
               onClick={() => onDeleteElement?.(element)}
             >
-              🗑
+              <Icon source={DeleteIcon} />
             </button>
           </div>
         )}
+
 
         <PreviewField element={element} />
       </div>

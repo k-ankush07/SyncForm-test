@@ -1,4 +1,4 @@
-
+// to normalize the pre defined fields elemnts in the format we need like with unique id and more fields
 import { createElementConfig } from "./elementHelpers.js";
 
 function normalizeElement(element) {
