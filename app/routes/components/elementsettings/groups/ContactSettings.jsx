@@ -6,9 +6,8 @@ import {
     TextField,
     Checkbox,
     Select,
-    Divider,
-    Text,
 } from "@shopify/polaris";
+import { countryOptions } from "../utils/countries.js";
 
 export default function ContactSettings({ element, onChange }) {
 
@@ -19,27 +18,14 @@ export default function ContactSettings({ element, onChange }) {
         });
     };
 
-    const type = element.type;
+    const type = String(element.type || "")
+        .toLowerCase()
+        .replace(/[\s-]+/g, "_");
+
+    const isName = ["name", "first_name", "last_name"].includes(type);
 
     return (
         <BlockStack gap="300">
-
-            {/* <Text variant="headingMd" as="h3">
-                Input settings
-            </Text> */}
-
-            {/* =================================
-                COMMON CONTACT SETTINGS
-                Read only remains contact-specific
-            ================================= */}
-
-            <Checkbox
-                label="Read only"
-                checked={element.readOnly || false}
-                onChange={(value) => update("readOnly", value)}
-            />
-
-            <Divider />
 
             {/* =================================
                 EMAIL SETTINGS
@@ -47,10 +33,6 @@ export default function ContactSettings({ element, onChange }) {
 
             {type === "email" && (
                 <BlockStack gap="300">
-
-                    {/* <Text variant="headingMd" as="h3">
-                        Email settings
-                    </Text> */}
 
                     <Checkbox
                         label="Enable email validation"
@@ -104,38 +86,43 @@ export default function ContactSettings({ element, onChange }) {
                 </BlockStack>
             )}
 
-            {/* =================================
-                NAME SETTINGS
-            ================================= */}
 
-            {type === "name" && (
+            {/* =================================
+    NAME SETTINGS
+================================= */}
+
+            {isName && (
                 <BlockStack gap="300">
 
-                    {/* <Text variant="headingMd" as="h3">
-                        Name settings
-                    </Text> */}
+                    {/* NAME FORMAT - COMBINED NAME ONLY */}
 
-                    <Select
-                        label="Name format"
-                        value={element.nameFormat || "full"}
-                        options={[
-                            { label: "Full name", value: "full" },
-                            { label: "First and last name", value: "split" },
-                        ]}
-                        onChange={(value) =>
-                            update("nameFormat", value)
-                        }
-                    />
+                    {type === "name" && (
+                        <>
+                            <Select
+                                label="Name format"
+                                value={element.nameFormat || "full"}
+                                options={[
+                                    { label: "Full name", value: "full" },
+                                    { label: "First and last name", value: "split" },
+                                ]}
+                                onChange={(value) =>
+                                    update("nameFormat", value)
+                                }
+                            />
 
-                    {element.nameFormat === "split" && (
-                        <Checkbox
-                            label="Require last name"
-                            checked={element.requireLastName || false}
-                            onChange={(value) =>
-                                update("requireLastName", value)
-                            }
-                        />
+                            {element.nameFormat === "split" && (
+                                <Checkbox
+                                    label="Require last name"
+                                    checked={element.requireLastName || false}
+                                    onChange={(value) =>
+                                        update("requireLastName", value)
+                                    }
+                                />
+                            )}
+                        </>
                     )}
+
+                    {/* ENTER NUMBERS ONLY */}
 
                     <Checkbox
                         label="Enter numbers only"
@@ -145,14 +132,11 @@ export default function ContactSettings({ element, onChange }) {
                         }
                     />
 
-                    <Select
+                    {/* NAME VALIDATION */}
+
+                    <Checkbox
                         label="Name validation"
-                        value={element.nameValidation || "none"}
-                        options={[
-                            { label: "None", value: "none" },
-                            { label: "Letters only", value: "letters" },
-                            { label: "Letters and spaces", value: "letters_spaces" },
-                        ]}
+                        checked={element.nameValidation !== false}
                         onChange={(value) =>
                             update("nameValidation", value)
                         }
@@ -161,16 +145,13 @@ export default function ContactSettings({ element, onChange }) {
                 </BlockStack>
             )}
 
+
             {/* =================================
                 PHONE SETTINGS
             ================================= */}
 
             {type === "phone" && (
                 <BlockStack gap="300">
-{/* 
-                    <Text variant="headingMd" as="h3">
-                        Phone settings
-                    </Text> */}
 
                     <Checkbox
                         label="Validate international telephone numbers"
@@ -190,17 +171,10 @@ export default function ContactSettings({ element, onChange }) {
 
                     <Select
                         label="Select default country"
-                        value={element.defaultCountry || ""}
-                        options={[
-                            { label: "Select country", value: "" },
-                            { label: "India", value: "IN" },
-                            { label: "United States", value: "US" },
-                            { label: "United Kingdom", value: "GB" },
-                            { label: "Canada", value: "CA" },
-                            { label: "Australia", value: "AU" },
-                        ]}
+                        value={element.defaultCountryCode || "auto"}
+                        options={countryOptions}
                         onChange={(value) =>
-                            update("defaultCountry", value)
+                            update("defaultCountryCode", value)
                         }
                     />
 
@@ -213,10 +187,6 @@ export default function ContactSettings({ element, onChange }) {
 
             {type === "password" && (
                 <BlockStack gap="300">
-
-                    {/* <Text variant="headingMd" as="h3">
-                        Password settings
-                    </Text> */}
 
                     <Select
                         label="Validate"
@@ -290,10 +260,6 @@ export default function ContactSettings({ element, onChange }) {
 
             {type === "country" && (
                 <BlockStack gap="300">
-
-                    {/* <Text variant="headingMd" as="h3">
-                        Country settings
-                    </Text> */}
 
                     <Checkbox
                         label="Show country flags"

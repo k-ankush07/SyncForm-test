@@ -4,8 +4,9 @@ import {
     BlockStack,
     TextField,
     Select,
+    Checkbox,
 } from "@shopify/polaris";
-
+import ColorPickerField from "../../RichTextEditor/ColorPickerField";
 export default function StaticTextSettings({ element, onChange }) {
 
     const type = String(element.type || "")
@@ -29,12 +30,12 @@ export default function StaticTextSettings({ element, onChange }) {
             {/* HEADING SETTINGS */}
             {isHeading && (
                 <BlockStack gap="300">
-                    {/* <TextField
+                    <TextField
                         label="Heading text"
                         value={element.content || ""}
                         onChange={(value) => update("content", value)}
                         autoComplete="off"
-                    /> */}
+                    />
 
                     <Select
                         label="Heading size"
@@ -63,16 +64,20 @@ export default function StaticTextSettings({ element, onChange }) {
             {/* DIVIDER SETTINGS */}
             {isDivider && (
                 <BlockStack gap="300">
-                    <Select
-                        label="Divider style"
-                        options={[
-                            { label: "Solid", value: "solid" },
-                            { label: "Dashed", value: "dashed" },
-                            { label: "Dotted", value: "dotted" },
-                        ]}
-                        value={element.dividerStyle || "solid"}
-                        onChange={(value) => update("dividerStyle", value)}
+
+                    <ColorPickerField
+                        label="Divider color"
+                        value={element.dividerColor || ""}
+                        onChange={(value) => update("dividerColor", value)}
+                        helpText="If no color is set, the default is the text color."
                     />
+
+                    <Checkbox
+                        label="Hide divider"
+                        checked={element.hideDivider || false}
+                        onChange={(value) => update("hideDivider", value)}
+                    />
+
                 </BlockStack>
             )}
 

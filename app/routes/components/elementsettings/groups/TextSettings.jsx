@@ -1,4 +1,3 @@
-
 import React from "react";
 
 import {
@@ -24,10 +23,6 @@ export default function TextSettings({ element, onChange }) {
     return (
         <BlockStack gap="300">
 
-            {/* <Text variant="headingMd" as="h3">
-                Input settings
-            </Text> */}
-
             {/* Shared Text and Textarea settings */}
 
             <TextField
@@ -44,76 +39,13 @@ export default function TextSettings({ element, onChange }) {
                 autoComplete="off"
             />
 
-            <Divider />
-
-            {/* Text-only settings */}
+            {/* Normal Text settings */}
 
             {isText && (
                 <BlockStack gap="300">
 
-                    <Text variant="headingMd" as="h3">
-                        Text validation
-                    </Text>
-
                     <Checkbox
-                        label="Allow numbers"
-                        checked={element.allowNumbers || false}
-                        onChange={(value) =>
-                            update("allowNumbers", value)
-                        }
-                    />
-
-                    <Checkbox
-                        label="Allow special characters"
-                        checked={element.allowSpecialCharacters !== false}
-                        onChange={(value) =>
-                            update("allowSpecialCharacters", value)
-                        }
-                    />
-
-                    <Checkbox
-                        label="Show icon"
-                        checked={element.showIcon || false}
-                        onChange={(value) =>
-                            update("showIcon", value)
-                        }
-                    />
-
-                    {element.showIcon && (
-                        <TextField
-                            label="Icon name"
-                            value={element.iconName || ""}
-                            onChange={(value) =>
-                                update("iconName", value)
-                            }
-                            autoComplete="off"
-                        />
-                    )}
-
-                </BlockStack>
-            )}
-
-            {/* Textarea-only settings */}
-
-            {isTextarea && (
-                <BlockStack gap="300">
-
-                    {/* <Text variant="headingMd" as="h3">
-                        Textarea settings
-                    </Text> */}
-
-                    <TextField
-                        label="Number of rows"
-                        type="number"
-                        value={String(element.rows ?? 4)}
-                        onChange={(value) =>
-                            update("rows", value)
-                        }
-                        autoComplete="off"
-                    />
-
-                    <Checkbox
-                        label="Enable character limit"
+                        label="Limit characters"
                         checked={element.enableCharacterLimit || false}
                         onChange={(value) =>
                             update("enableCharacterLimit", value)
@@ -124,12 +56,78 @@ export default function TextSettings({ element, onChange }) {
                         <TextField
                             label="Maximum characters"
                             type="number"
-                            value={String(element.maxLength ?? 500)}
+                            value={String(element.maxLength ?? 100)}
                             onChange={(value) =>
                                 update("maxLength", value)
                             }
                             autoComplete="off"
                         />
+                    )}
+
+                    <Checkbox
+                        label="Enter numbers only"
+                        checked={element.numbersOnly || false}
+                        onChange={(value) =>
+                            update("numbersOnly", value)
+                        }
+                    />
+
+                    <Checkbox
+                        label="Name validation"
+                        checked={element.nameValidation || false}
+                        onChange={(value) =>
+                            update("nameValidation", value)
+                        }
+                    />
+
+                </BlockStack>
+            )}
+
+            {/* Textarea settings */}
+
+            {isTextarea && (
+                <BlockStack gap="200">
+
+                    <Checkbox
+                        label="Limit characters"
+                        checked={element.limitCharacters || false}
+                        onChange={(value) =>
+                            update("limitCharacters", value)
+                        }
+                    />
+
+                    {element.limitCharacters && (
+                        <div className="character-limit-settings">
+                            <div className="character-limit-settings__fields">
+
+                                <TextField
+                                    label="Min characters"
+                                    type="number"
+                                    value={String(element.minCharacters ?? "")}
+                                    onChange={(value) =>
+                                        update("minCharacters", value)
+                                    }
+                                    autoComplete="off"
+                                />
+
+                                <TextField
+                                    label="Max characters"
+                                    type="number"
+                                    value={String(element.maxCharacters ?? "")}
+                                    onChange={(value) =>
+                                        update("maxCharacters", value)
+                                    }
+                                    autoComplete="off"
+                                />
+
+                            </div>
+
+                            <Text as="p" tone="subdued">
+                                Note: If you don't want to set a maximum
+                                number of characters, leave this field
+                                blank instead of setting it to 0.
+                            </Text>
+                        </div>
                     )}
 
                 </BlockStack>

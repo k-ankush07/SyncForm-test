@@ -306,12 +306,15 @@ export default function FormEditor() {
   return (
     <div className="template-editor">
       {/* Main content */}
-      <div
-        className={`template-editor__main ${collpase
-          ? "template-editor__main--collapsed"
-          : "template-editor__main--expanded"
-          }`}
-      >
+    <div
+    className={`template-editor__main ${
+        collpase
+            ? "template-editor__main--collapsed"
+            : selectedElement?.type === "paragraph"
+                ? "template-editor__main--paragraph"
+                : "template-editor__main--expanded"
+    }`}
+>
 
         {/* Sidebar */}
         <div

@@ -1,6 +1,9 @@
 
 import React, { useEffect, useState } from "react";
+import * as PolarisIcons from "@shopify/polaris-icons";
+import { Icon } from "@shopify/polaris";
 import DOMPurify from "dompurify";
+import ReactCountryFlag from "react-country-flag";
 import {
   Text,
   Divider,
@@ -12,6 +15,7 @@ import {
   Button,
   BlockStack,
 } from "@shopify/polaris";
+import { countries } from "../components/elementsettings/utils/countries.js";
 
 export default function PreviewField({ element, field }) {
   const currentElement = element ?? field;
@@ -38,9 +42,35 @@ export default function PreviewField({ element, field }) {
 
   const hideLabel = Boolean(normalizedElement.hideLabel);
   const description = normalizedElement.description || "";
-  const placeholder = normalizedElement.placeholder || "";
+  const placeholder = normalizedElement.placeholder || label;
   const defaultValue = normalizedElement.defaultValue ?? "";
   const required = Boolean(normalizedElement.required);
+
+  //if icon is selected
+  const selectedIcon = normalizedElement.selectIcon
+    ? PolarisIcons[normalizedElement.selectIcon]
+    : null;
+
+  const fieldLabelWithIcon = !hideLabel && (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "6px",
+        marginBottom: "6px",
+      }}
+    >
+      {selectedIcon && <Icon source={selectedIcon} />}
+      <Text as="label" variant="bodyMd">
+        {label}
+      </Text>
+      {required && (
+        <span style={{ color: "var(--p-color-text-critical)" }}>
+          *
+        </span>
+      )}
+    </div>
+  );
 
   const [checked, setChecked] = useState(false);
   const [selected, setSelected] = useState([]);
@@ -84,7 +114,7 @@ export default function PreviewField({ element, field }) {
   const fieldLabel = hideLabel ? "" : label;
 
   const commonTextFieldProps = {
-    label: fieldLabel,
+    label: fieldLabelWithIcon,
     labelHidden: hideLabel,
     placeholder: placeholder || undefined,
     helpText: description || undefined,
@@ -93,7 +123,7 @@ export default function PreviewField({ element, field }) {
   };
 
   const commonSelectProps = {
-    label: fieldLabel,
+    label: fieldLabelWithIcon,
     labelHidden: hideLabel,
     helpText: description || undefined,
     requiredIndicator: required,
@@ -104,6 +134,12 @@ export default function PreviewField({ element, field }) {
       {description}
     </Text>
   ) : null;
+
+  //get country from the country.js get the selected value 
+  const selectedCountry = countries.find(
+    (country) =>
+      country.value === normalizedElement.defaultCountryCode
+  );
 
   switch (type) {
     case "email":
@@ -141,17 +177,48 @@ export default function PreviewField({ element, field }) {
         />
       );
 
-    case "phone":
-      return (
-        <TextField
-          {...commonTextFieldProps}
-          type="tel"
-          autoComplete="tel"
-          value={value}
-          onChange={setValue}
-          readOnly
-        />
-      );
+   case "phone":
+    return (
+        <BlockStack gap="200">
+            {!hideLabel && (
+                <div
+                    style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        width: "fit-content",
+                    }}
+                >
+                    {selectedCountry && (
+                        <>
+                            <ReactCountryFlag
+                                countryCode={selectedCountry.value.toUpperCase()}
+                                svg
+                                style={{
+                                    width: "20px",
+                                    height: "15px",
+                                    objectFit: "cover",
+                                }}
+                            />
+
+                            <span>{selectedCountry.dialCode}</span>
+                        </>
+                    )}
+
+                    <span>{label}</span>
+                </div>
+            )}
+
+            <TextField
+                type="tel"
+                labelHidden
+                placeholder={placeholder || label}
+                value={value}
+                onChange={setValue}
+                readOnly
+            />
+        </BlockStack>
+    );
 
     case "password":
       return (
@@ -322,32 +389,62 @@ export default function PreviewField({ element, field }) {
         </BlockStack>
       );
 
-    case "heading":
+    case "heading": {
+      const headingConfig = {
+        h1: { tag: "h1", variant: "heading2xl" },
+        h2: { tag: "h2", variant: "headingXl" },
+        h3: { tag: "h3", variant: "headingLg" },
+        h4: { tag: "h4", variant: "headingMd" },
+        h5: { tag: "h5", variant: "headingSm" },
+        h6: { tag: "h6", variant: "headingXs" },
+      };
+
+      const config = headingConfig[element.headingTag] || headingConfig.h2;
+
       return (
         <BlockStack gap="200">
-          <Text as="h2" variant="headingMd">
-            {label}
+          <Text as={config.tag} variant={config.variant}>
+            {element.content || "Heading"}
           </Text>
+
+          {element.description && (
+            <Text as="p" variant="bodyMd">
+              {element.description}
+            </Text>
+          )}
+        </BlockStack>
+      );
+    }
+
+    case "paragraph":
+    case "html":
+      return (
+        <BlockStack gap="200">
+          <div
+            className="rich-text-preview"
+            dangerouslySetInnerHTML={{
+              __html: DOMPurify.sanitize(
+                normalizedElement.content || `<p>${label}</p>`
+              ),
+            }}
+          />
           {descriptionText}
         </BlockStack>
       );
-
-  case "paragraph":
-case "html":
-  return (
-    <BlockStack gap="200">
-      <div
-        dangerouslySetInnerHTML={{
-          __html: DOMPurify.sanitize(
-            normalizedElement.content || `<p>${label}</p>`
-          ),
-        }}
-      />
-      {descriptionText}
-    </BlockStack>
-  );
+    // i use custom css here to style the divder preview
     case "divider":
-      return <Divider />;
+      return (
+        <hr
+          style={{
+            border: "none",
+            borderTop: `2px ${element.dividerStyle || "solid"} ${element.dividerColor || "currentColor"
+              }`,
+            display: element.hideDivider ? "none" : "block",
+            width: "100%",
+            margin: 0,
+          }}
+        />
+      );
 
     case "text":
     case "short_text":
@@ -386,17 +483,13 @@ case "html":
     case "rating_star":
       return (
         <BlockStack gap="200">
-          {!hideLabel && (
-            <Text as="p" variant="bodyMd">
-              {label}
-            </Text>
-          )}
+          {fieldLabelWithIcon}
+
           <div style={{ display: "flex", gap: "8px" }}>
             {[1, 2, 3, 4, 5].map((star) => (
               <button
                 key={star}
                 type="button"
-                aria-label={`${star} stars`}
                 onClick={() => setRating(star)}
                 style={{
                   border: "none",
@@ -411,6 +504,7 @@ case "html":
               </button>
             ))}
           </div>
+
           {descriptionText}
         </BlockStack>
       );
