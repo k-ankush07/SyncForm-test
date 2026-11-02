@@ -1,5 +1,5 @@
 import React from "react";
-
+import RichTextEditor from "../../RichTextEditor/RichTextEditor"
 import {
     BlockStack,
     TextField,
@@ -54,12 +54,9 @@ export default function StaticTextSettings({ element, onChange }) {
 
             {/* PARAGRAPH SETTINGS */}
             {isParagraph && (
-                <TextField
-                    label="Paragraph text"
+                <RichTextEditor
                     value={element.content || ""}
                     onChange={(value) => update("content", value)}
-                    multiline={4}
-                    autoComplete="off"
                 />
             )}
 

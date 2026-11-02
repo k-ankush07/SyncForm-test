@@ -1,0 +1,153 @@
+
+.rich-editor {
+    width: 100%;
+    border: 1px solid #8c9196;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #fff;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.rich-editor:focus-within {
+    border-color: #458fff;
+    box-shadow: 0 0 0 1px #458fff;
+}
+
+.rich-editor-toolbar {
+    min-height: 38px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    background: #fff;
+    border-bottom: 1px solid #e1e3e5;
+}
+
+.rich-editor-toolbar button {
+    width: 29px;
+    height: 29px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border: none;
+    border-radius: 5px;
+    background: transparent;
+    color: #303030;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.rich-editor-toolbar button:hover,
+.rich-editor-toolbar button.active {
+    background: #e4e5e7;
+}
+
+.rich-editor-toolbar select {
+    height: 30px;
+    min-width: 105px;
+    max-width: 145px;
+    padding: 0 5px;
+    border: none;
+    outline: none;
+    background: transparent;
+    color: #303030;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.rich-editor-divider {
+    height: 22px;
+    width: 1px;
+    flex-shrink: 0;
+    background: #e1e3e5;
+    margin: 0 4px;
+}
+
+.rich-editor-color {
+    width: 28px;
+    height: 29px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.rich-editor-color:hover {
+    background: #e4e5e7;
+}
+
+.rich-editor-color input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.rich-editor-spacer {
+    flex: 1;
+}
+
+.rich-editor .tiptap {
+    min-height: 150px;
+    padding: 16px;
+    outline: none;
+    color: #303030;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.rich-editor .tiptap p {
+    margin: 0 0 8px;
+}
+
+.rich-editor .tiptap h1 {
+    font-size: 2em;
+}
+
+.rich-editor .tiptap h2 {
+    font-size: 1.6em;
+}
+
+.rich-editor .tiptap h3 {
+    font-size: 1.35em;
+}
+
+.rich-editor .tiptap h4 {
+    font-size: 1.15em;
+}
+
+.rich-editor .tiptap h5 {
+    font-size: 1em;
+}
+
+.rich-editor .tiptap h6 {
+    font-size: 0.875em;
+}
+
+.rich-editor .tiptap blockquote {
+    margin: 8px 0;
+    padding: 8px 12px;
+    border-left: 3px solid #8c9196;
+    background: #f6f6f7;
+    color: #616161;
+}
+
+.rich-editor-html {
+    display: block;
+    width: 100%;
+    min-height: 150px;
+    padding: 16px;
+    box-sizing: border-box;
+    resize: vertical;
+    border: none;
+    outline: none;
+    font-family: monospace;
+    font-size: 13px;
+}

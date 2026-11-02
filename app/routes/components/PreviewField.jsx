@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from "react";
-
+import DOMPurify from "dompurify";
 import {
   Text,
   Divider,
@@ -332,17 +332,20 @@ export default function PreviewField({ element, field }) {
         </BlockStack>
       );
 
-    case "paragraph":
-    case "html":
-      return (
-        <BlockStack gap="200">
-          <Text as="p" variant="bodyMd">
-            {normalizedElement.content || label}
-          </Text>
-          {descriptionText}
-        </BlockStack>
-      );
-
+  case "paragraph":
+case "html":
+  return (
+    <BlockStack gap="200">
+      <div
+        dangerouslySetInnerHTML={{
+          __html: DOMPurify.sanitize(
+            normalizedElement.content || `<p>${label}</p>`
+          ),
+        }}
+      />
+      {descriptionText}
+    </BlockStack>
+  );
     case "divider":
       return <Divider />;
 
