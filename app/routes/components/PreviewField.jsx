@@ -19,12 +19,12 @@ export default function PreviewField({ element, field }) {
   const normalizedElement =
     typeof currentElement === "string"
       ? {
-          type: currentElement
-            .toLowerCase()
-            .trim()
-            .replace(/[\s-]+/g, "_"),
-          label: currentElement,
-        }
+        type: currentElement
+          .toLowerCase()
+          .trim()
+          .replace(/[\s-]+/g, "_"),
+        label: currentElement,
+      }
       : currentElement ?? {};
 
   const type = normalizedElement.type
@@ -64,9 +64,9 @@ export default function PreviewField({ element, field }) {
   const rawOptions = normalizedElement.options?.length
     ? normalizedElement.options
     : [
-        { label: "Option 1", value: "option1" },
-        { label: "Option 2", value: "option2" },
-      ];
+      { label: "Option 1", value: "option1" },
+      { label: "Option 2", value: "option2" },
+    ];
 
   const options = rawOptions.map((option, index) => {
     if (typeof option === "string") {
@@ -189,7 +189,7 @@ export default function PreviewField({ element, field }) {
         <Select
           {...commonSelectProps}
           options={[
-            { label: "Choose an option", value: "" },
+            { label: "Dropdown", value: "" },
             ...options,
           ]}
           value={value}
@@ -324,9 +324,12 @@ export default function PreviewField({ element, field }) {
 
     case "heading":
       return (
-        <Text as="h2" variant="headingMd">
-          {label}
-        </Text>
+        <BlockStack gap="200">
+          <Text as="h2" variant="headingMd">
+            {label}
+          </Text>
+          {descriptionText}
+        </BlockStack>
       );
 
     case "paragraph":

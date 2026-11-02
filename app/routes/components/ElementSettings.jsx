@@ -23,6 +23,7 @@ import ChoiceSettings from "./elementsettings/groups/ChoiceSettings";
 import NumberSettings from "./elementsettings/groups/NumberSettings";
 import DateSettings from "./elementsettings/groups/DateSettings";
 import FileSettings from "./elementsettings/groups/FileUploadSettings";
+import StaticTextSettings from  "./elementsettings/groups/StaticTextSettings";
 // import RatingSettings from "./groups/RatingSettings";
 // import ContentSettings from "./groups/ContentSettings";
 // import ImageChoiceSettings from "./groups/ImageChoiceSettings";
@@ -66,7 +67,10 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
         .replace(/[\s-]+/g, "_");
 
 
-    // Contact types
+    // =========================================
+    // CONTACT TYPES
+    // =========================================
+
     const isName = ["name", "first_name", "last_name"].includes(type);
     const isEmail = type === "email";
     const isPhone = ["phone", "tel"].includes(type);
@@ -76,7 +80,10 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
         isName || isEmail || isPhone || isPassword;
 
 
-    // Choice types
+    // =========================================
+    // CHOICE TYPES
+    // =========================================
+
     const isDropdown = ["dropdown", "select"].includes(type);
 
     const isRadio = ["radio", "radio_group"].includes(type);
@@ -92,18 +99,34 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
 
 
     // =========================================
+    // STATIC TEXT TYPES
+    // =========================================
+
+    const isHeading = type === "heading";
+    const isParagraph = type === "paragraph";
+    const isDivider = type === "divider";
+
+    const isStaticText = [
+        "heading",
+        "paragraph",
+        "divider",
+    ].includes(type);
+
+
+    // =========================================
     // CONDITIONAL SETTINGS
     // =========================================
 
     const showDefaultValue =
-        isName || isEmail || isPhone || isChoiceInput;
+        isName || isEmail || isPhone || isCheckbox;
 
     const showKeepLabelPosition =
         isEmail || isPhone || isPassword || isChoiceInput;
 
     const showCharacterLimit = isContactInput;
 
-    const showSelectIcon = isContactInput;
+    const showSelectIcon =
+        isContactInput || isDropdown;
 
     const showRequiredNote =
         isContactInput || isChoiceInput;
@@ -114,7 +137,7 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
 
     const showLimitSelections = isCheckbox;
 
-
+    const showHeadingSize = isHeading;
     // =========================================
     // CHOICE OPTIONS DATA
     // =========================================
@@ -238,8 +261,6 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
 
                             <BlockStack gap="200">
 
-                                {/* Option label heading */}
-
                                 {/* OPTION LABEL HEADING */}
 
                                 <InlineStack
@@ -248,10 +269,9 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
                                     gap="200"
                                     wrap={false}
                                 >
-                                    {/* Empty space for drag handle */}
+
                                     <Box width="12px" />
 
-                                    {/* Center label above input */}
                                     <Box flex="1">
                                         <InlineStack
                                             align="center"
@@ -269,12 +289,12 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
                                         </InlineStack>
                                     </Box>
 
-                                    {/* Empty space for delete icon */}
                                     <Box width="20px" />
+
                                 </InlineStack>
 
 
-                                {/* Options list */}
+                                {/* OPTIONS LIST */}
 
                                 {options.map((option, index) => (
 
@@ -302,7 +322,9 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
                                                 labelHidden
                                                 value={option.label || ""}
                                                 suffix="en"
-                                                onChange={(value) => updateOption(index, value)}
+                                                onChange={(value) =>
+                                                    updateOption(index, value)
+                                                }
                                                 autoComplete="off"
                                             />
                                         </Box>
@@ -325,17 +347,22 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
                                 ))}
 
 
-                                {/* Add buttons */}
+                                {/* ADD BUTTONS */}
 
                                 <InlineStack gap="200">
 
-                                    <Button size="slim" onClick={addOption}>
+                                    <Button
+                                        size="slim"
+                                        onClick={addOption}
+                                    >
                                         Add Option
                                     </Button>
 
                                     <Button
                                         size="slim"
-                                        onClick={() => setBulkAddOpen(!bulkAddOpen)}
+                                        onClick={() =>
+                                            setBulkAddOpen(!bulkAddOpen)
+                                        }
                                     >
                                         Bulk add Option
                                     </Button>
@@ -343,7 +370,7 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
                                 </InlineStack>
 
 
-                                {/* Bulk add */}
+                                {/* BULK ADD */}
 
                                 {bulkAddOpen && (
 
@@ -431,6 +458,7 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
                 {/* OPTIONS PER LINE */}
 
                 {showOptionsPerLine && (
+
                     <BlockStack gap="200">
 
                         <Text variant="bodyMd">
@@ -438,22 +466,31 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
                         </Text>
 
                         <div className="column-width-selector">
+
                             {[5, 4, 3, 2, 1].map((number) => (
+
                                 <div
                                     key={number}
-                                    className={`chooseItem ${Number(element.optionsPerLine || 1) === number
+                                    className={`chooseItem ${
+                                        Number(element.optionsPerLine || 1) === number
                                             ? "active"
                                             : ""
-                                        }`}
-                                    onClick={() => update("optionsPerLine", number)}
+                                    }`}
+                                    onClick={() =>
+                                        update("optionsPerLine", number)
+                                    }
                                 >
                                     {number}
                                 </div>
+
                             ))}
+
                         </div>
 
                     </BlockStack>
+
                 )}
+
 
                 {/* LIMIT SELECTIONS - CHECKBOX ONLY */}
 
@@ -471,29 +508,39 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
 
                         {element.limitSelections && (
 
-                            <BlockStack gap="200">
+                            <InlineStack gap="300" wrap={false}>
 
-                                <TextField
-                                    label="Minimum selections"
-                                    type="number"
-                                    value={String(element.minSelections ?? "")}
-                                    onChange={(value) =>
-                                        update("minSelections", value)
-                                    }
-                                    autoComplete="off"
-                                />
+                                <Box width="50%">
+                                    <TextField
+                                        label="Min selections"
+                                        type="number"
+                                        placeholder="0-2"
+                                        value={String(element.minSelections ?? "")}
+                                        onChange={(value) =>
+                                            update("minSelections", value)
+                                        }
+                                        autoComplete="off"
+                                        max={2}
+                                        condensed
+                                    />
+                                </Box>
 
-                                <TextField
-                                    label="Maximum selections"
-                                    type="number"
-                                    value={String(element.maxSelections ?? "")}
-                                    onChange={(value) =>
-                                        update("maxSelections", value)
-                                    }
-                                    autoComplete="off"
-                                />
+                                <Box width="50%">
+                                    <TextField
+                                        label="Max selections"
+                                        type="number"
+                                        placeholder="0-2"
+                                        value={String(element.maxSelections ?? "")}
+                                        onChange={(value) =>
+                                            update("maxSelections", value)
+                                        }
+                                        autoComplete="off"
+                                        max={2}
+                                        condensed
+                                    />
+                                </Box>
 
-                            </BlockStack>
+                            </InlineStack>
 
                         )}
 
@@ -515,15 +562,19 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
         <BlockStack gap="300">
 
             {/* =================================
-                LABEL
+                LABEL / HEADING
             ================================= */}
 
-            <TextField
-                label="Label"
-                value={element.label || ""}
-                onChange={(value) => update("label", value)}
-                autoComplete="off"
-            />
+            {!isParagraph && !isDivider && (
+
+                <TextField
+                    label={isHeading ? "Heading" : "Label"}
+                    value={element.label || ""}
+                    onChange={(value) => update("label", value)}
+                    autoComplete="off"
+                />
+
+            )}
 
 
             {/* =================================
@@ -569,190 +620,200 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
 
 
             {/* =================================
-                DESCRIPTION
+                DESCRIPTION / CAPTION
             ================================= */}
 
-            <TextField
-                label="Description"
-                value={element.description || ""}
-                onChange={(value) => update("description", value)}
-                multiline={3}
-                autoComplete="off"
-            />
+            {(!isStaticText || isHeading) && (
+
+                <TextField
+                    label={isHeading ? "Caption" : "Description"}
+                    value={element.description || ""}
+                    onChange={(value) => update("description", value)}
+                    multiline={3}
+                    autoComplete="off"
+                />
+
+            )}
 
 
             {/* =================================
-                CHARACTER LIMIT - CONTACT
+                INPUT-SPECIFIC SETTINGS
+                HIDDEN FOR STATIC TEXT ELEMENTS
             ================================= */}
 
-            {showCharacterLimit && (
+            {!isStaticText && (
 
-                <BlockStack gap="200">
+                <>
 
-                    <Checkbox
-                        label="Limit characters"
-                        checked={element.limitCharacters || false}
-                        onChange={(value) =>
-                            update("limitCharacters", value)
-                        }
-                    />
+                    {/* CHARACTER LIMIT - CONTACT */}
 
-                    {element.limitCharacters && (
+                    {showCharacterLimit && (
 
-                        <div className="character-limit-settings">
+                        <BlockStack gap="200">
 
-                            <div className="character-limit-settings__fields">
+                            <Checkbox
+                                label="Limit characters"
+                                checked={element.limitCharacters || false}
+                                onChange={(value) =>
+                                    update("limitCharacters", value)
+                                }
+                            />
 
-                                <TextField
-                                    label="Min characters"
-                                    type="number"
-                                    value={String(element.minCharacters ?? "")}
-                                    onChange={(value) =>
-                                        update("minCharacters", value)
-                                    }
-                                    autoComplete="off"
-                                />
+                            {element.limitCharacters && (
 
-                                <TextField
-                                    label="Max characters"
-                                    type="number"
-                                    value={String(element.maxCharacters ?? "")}
-                                    onChange={(value) =>
-                                        update("maxCharacters", value)
-                                    }
-                                    autoComplete="off"
-                                />
+                                <div className="character-limit-settings">
 
-                            </div>
+                                    <div className="character-limit-settings__fields">
 
-                            <Text as="p" tone="subdued">
-                                Note: If you don't want to set a maximum
-                                number of characters, leave this field
-                                blank instead of setting it to 0.
-                            </Text>
+                                        <TextField
+                                            label="Min characters"
+                                            type="number"
+                                            value={String(element.minCharacters ?? "")}
+                                            onChange={(value) =>
+                                                update("minCharacters", value)
+                                            }
+                                            autoComplete="off"
+                                        />
 
-                        </div>
+                                        <TextField
+                                            label="Max characters"
+                                            type="number"
+                                            value={String(element.maxCharacters ?? "")}
+                                            onChange={(value) =>
+                                                update("maxCharacters", value)
+                                            }
+                                            autoComplete="off"
+                                        />
+
+                                    </div>
+
+                                    <Text as="p" tone="subdued">
+                                        Note: If you don't want to set a maximum
+                                        number of characters, leave this field
+                                        blank instead of setting it to 0.
+                                    </Text>
+
+                                </div>
+
+                            )}
+
+                        </BlockStack>
 
                     )}
 
-                </BlockStack>
+
+                    <Divider />
+
+
+                    {/* LABEL SETTINGS */}
+
+                    <Checkbox
+                        label="Hide label"
+                        checked={element.hideLabel || false}
+                        onChange={(value) =>
+                            update("hideLabel", value)
+                        }
+                    />
+
+
+                    {showKeepLabelPosition && (
+
+                        <Checkbox
+                            label="Keep position of label"
+                            checked={element.keepLabelPosition || false}
+                            onChange={(value) =>
+                                update("keepLabelPosition", value)
+                            }
+                        />
+
+                    )}
+
+
+                    {/* REQUIRED SETTINGS */}
+
+                    <Divider />
+
+                    <Checkbox
+                        label="Required"
+                        checked={element.required || false}
+                        onChange={(value) =>
+                            update("required", value)
+                        }
+                    />
+
+
+                    {element.required && (
+
+                        <TextField
+                            label="Required error message"
+                            value={element.requiredMessage || ""}
+                            onChange={(value) =>
+                                update("requiredMessage", value)
+                            }
+                            autoComplete="off"
+                            helpText="Shown when this field is required and left empty on submit."
+                        />
+
+                    )}
+
+
+                    {showRequiredNote && (
+
+                        <Checkbox
+                            label="Show required note if hide label?"
+                            checked={element.showRequiredNote || false}
+                            onChange={(value) =>
+                                update("showRequiredNote", value)
+                            }
+                        />
+
+                    )}
+
+
+                    <Divider />
+
+
+                    {/* SELECT ICON - CONTACT */}
+
+                    {showSelectIcon && (
+
+                        <BlockStack gap="200">
+
+                            <Text as="p" variant="bodyMd">
+                                Select icon
+                            </Text>
+
+                            <Button
+                                fullWidth
+                                onClick={onOpenSelectIcon}
+                            >
+                                {element.selectIcon &&
+                                    PolarisIcons[element.selectIcon] ? (
+
+                                    <Icon
+                                        source={PolarisIcons[element.selectIcon]}
+                                        tone="base"
+                                    />
+
+                                ) : (
+                                    "Select icon"
+                                )}
+
+                            </Button>
+
+                        </BlockStack>
+
+                    )}
+
+                    <Divider />
+
+                </>
 
             )}
-
-
-            <Divider />
 
 
             {/* =================================
-                LABEL SETTINGS
-            ================================= */}
-
-            <Checkbox
-                label="Hide label"
-                checked={element.hideLabel || false}
-                onChange={(value) =>
-                    update("hideLabel", value)
-                }
-            />
-
-
-            {showKeepLabelPosition && (
-
-                <Checkbox
-                    label="Keep position of label"
-                    checked={element.keepLabelPosition || false}
-                    onChange={(value) =>
-                        update("keepLabelPosition", value)
-                    }
-                />
-
-            )}
-
-
-            {/* =================================
-                REQUIRED SETTINGS
-            ================================= */}
-
-            <Checkbox
-                label="Required"
-                checked={element.required || false}
-                onChange={(value) =>
-                    update("required", value)
-                }
-            />
-
-
-            {element.required && (
-
-                <TextField
-                    label="Required error message"
-                    value={element.requiredMessage || ""}
-                    onChange={(value) =>
-                        update("requiredMessage", value)
-                    }
-                    autoComplete="off"
-                    helpText="Shown when this field is required and left empty on submit."
-                />
-
-            )}
-
-
-            {showRequiredNote && (
-
-                <Checkbox
-                    label="Show required note if hide label?"
-                    checked={element.showRequiredNote || false}
-                    onChange={(value) =>
-                        update("showRequiredNote", value)
-                    }
-                />
-
-            )}
-
-
-            <Divider />
-
-
-            {/* =================================
-                SELECT ICON - CONTACT
-            ================================= */}
-
-            {showSelectIcon && (
-
-                <BlockStack gap="200">
-
-                    <Text as="p" variant="bodyMd">
-                        Select icon
-                    </Text>
-
-                    <Button
-                        fullWidth
-                        onClick={onOpenSelectIcon}
-                    >
-                        {element.selectIcon &&
-                            PolarisIcons[element.selectIcon] ? (
-
-                            <Icon
-                                source={PolarisIcons[element.selectIcon]}
-                                tone="base"
-                            />
-
-                        ) : (
-                            "Select icon"
-                        )}
-
-                    </Button>
-
-                </BlockStack>
-
-            )}
-
-
-            <Divider />
-
-
-            {/* =================================
-                LAYOUT SETTINGS
+                LAYOUT SETTINGS - SHARED
             ================================= */}
 
             <BlockStack gap="200">
@@ -773,8 +834,9 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
                             <button
                                 key={width}
                                 type="button"
-                                className={`column-width-selector__option ${selected ? "is-selected" : ""
-                                    }`}
+                                className={`column-width-selector__option ${
+                                    selected ? "is-selected" : ""
+                                }`}
                                 onClick={() =>
                                     update("columnWidth", width)
                                 }
@@ -793,7 +855,7 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
 
 
             {/* =================================
-                CUSTOM CSS CLASS
+                CUSTOM CSS CLASS - SHARED
             ================================= */}
 
             <TextField
@@ -809,6 +871,7 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
 
     );
 }
+
 
 
 /* =========================================
@@ -839,6 +902,7 @@ export default function ElementSettings({ element, onChange, onClose }) {
         number: NumberSettings,
         date: DateSettings,
         file: FileSettings,
+        static: StaticTextSettings,
         // rating: RatingSettings,
         // content: ContentSettings,
         // imageChoice: ImageChoiceSettings,
