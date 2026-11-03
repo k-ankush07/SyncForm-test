@@ -28,6 +28,7 @@ import NumberSettings from "./elementsettings/groups/NumberSettings";
 import DateSettings from "./elementsettings/groups/DateSettings";
 import FileSettings from "./elementsettings/groups/FileUploadSettings";
 import StaticTextSettings from "./elementsettings/groups/StaticTextSettings";
+import RatingStarSettings from "./elementsettings/groups/RatingStarSettings";
 
 import { getElementSettingsType } from "./elementsettings/utils/elementSettingsConfig";
 
@@ -90,9 +91,28 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
         "divider",
     ].includes(type);
 
-     //URL and FILE
+    //URL and FILE
     const isFileUpload = type === "file_upload";
     const isUrl = type === "url";
+
+    //STAR RATING
+    const isStarRating = [
+        "rating",
+        "rating_star",
+        "star_rating",
+    ].includes(type);
+
+    //Number
+    const isNumber = type === "number";
+    const isQuantity = type === "quantity";
+
+    // DATE AND TIME
+    const isDateTime = [
+        "date",
+        "date_time",
+        "datetime",
+        "time",
+    ].includes(type);
 
     // CONDITIONAL SETTINGS
     const showDefaultValue =
@@ -100,15 +120,15 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
 
     const showKeepLabelPosition =
         isName || isEmail || isPhone || isPassword ||
-        isChoiceInput || isCountry;
+        isChoiceInput || isCountry || isStarRating;
 
     const showCharacterLimit = isContactInput;
 
     const showSelectIcon =
-        isContactInput || isDropdown || isCountry || isUrl;
+        isContactInput || isDropdown || isCountry || isUrl || isNumber;
 
     const showRequiredNote =
-        isContactInput || isChoiceInput;
+        isContactInput || isChoiceInput || isStarRating;
 
     const showOtherOption = isRadio || isCheckbox;
     const showLimitSelections = isCheckbox;
@@ -175,7 +195,7 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
         setBulkAddOpen(false);
     };
 
-   
+
 
     // CHOICE SETTINGS
     const renderChoiceSettings = () => {
@@ -443,21 +463,24 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
             {renderChoiceSettings()}
 
             {/* PLACEHOLDER */}
+            {!isQuantity && (
+                isContactInput ||
+                isCountry ||
+                isDropdown ||
+                isDateTime
+            ) && (
+                    <TextField
+                        label="Placeholder"
+                        value={element.placeholder || ""}
+                        onChange={(value) => update("placeholder", value)}
+                        autoComplete="off"
+                    />
+                )}
 
-            {(isContactInput || isCountry || isDropdown) && (
-                <TextField
-                    label="Placeholder"
-                    value={element.placeholder || ""}
-                    onChange={(value) => update("placeholder", value)}
-                    autoComplete="off"
-                />
-            )}
 
             {/* DEFAULT VALUE */}
 
-            {/* DEFAULT VALUE */}
-
-            {showDefaultValue && (
+            {!isQuantity && showDefaultValue && (
                 isCountry ? (
                     <Select
                         label="Default value"
@@ -626,8 +649,13 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
 
                             {/* Selected icon preview */}
                             <div className="select-icon-wrapper">
-                                {element.selectIcon && PolarisIcons[element.selectIcon] ? (
-                                    <Icon source={PolarisIcons[element.selectIcon]} />
+                                {(element.ratingIcon || element.selectIcon) &&
+                                    PolarisIcons[element.ratingIcon || element.selectIcon] ? (
+                                    <Icon
+                                        source={
+                                            PolarisIcons[element.ratingIcon || element.selectIcon]
+                                        }
+                                    />
                                 ) : (
                                     <Button onClick={onOpenSelectIcon}>
                                         Select icon
@@ -754,6 +782,7 @@ export default function ElementSettings({ element, onChange, onClose }) {
         date: DateSettings,
         file: FileSettings,
         static: StaticTextSettings,
+        rating: RatingStarSettings,
     };
 
     const GroupComponent = settingsGroups[groupType];
@@ -769,6 +798,24 @@ export default function ElementSettings({ element, onChange, onClose }) {
                         onChange({
                             ...element,
                             selectIcon: value,
+                        })
+                    }
+                    onBack={() => setActiveSection("main")}
+                />
+            </div>
+        );
+    }
+    // RATING ICON SECTION
+
+    if (activeSection === "ratingIcon") {
+        return (
+            <div className="element-settings">
+                <SelectIcon
+                    value={element.ratingIcon || ""}
+                    onChange={(value) =>
+                        onChange({
+                            ...element,
+                            ratingIcon: value,
                         })
                     }
                     onBack={() => setActiveSection("main")}
@@ -826,6 +873,9 @@ export default function ElementSettings({ element, onChange, onClose }) {
                         <GroupComponent
                             element={element}
                             onChange={onChange}
+                            onOpenRatingIcon={() =>
+                                setActiveSection("ratingIcon")
+                            }
                         />
                     )}
 

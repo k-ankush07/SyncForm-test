@@ -12,7 +12,7 @@ import {
 } from "@shopify/polaris";
 
 const NumberSettings = ({ element, onChange, onOpenIconPicker }) => {
-    console.log("number")
+    const isQuantity = element.type === "quantity";
 
     const update = (key, value) => {
         onChange({
@@ -25,21 +25,24 @@ const NumberSettings = ({ element, onChange, onOpenIconPicker }) => {
         <BlockStack gap="400">
 
             {/* Placeholder */}
-            <TextField
-                label="Placeholder"
-                value={element.placeholder || ""}
-                onChange={(value) => update("placeholder", value)}
-                autoComplete="off"
-            />
+            {!isQuantity && (
+                <TextField
+                    label="Placeholder"
+                    value={element.placeholder || ""}
+                    onChange={(value) => update("placeholder", value)}
+                    autoComplete="off"
+                />
+            )}
 
             {/* Default Value */}
-            <TextField
-                label="Default value"
-                type="number"
-                value={String(element.defaultValue ?? "")}
-                onChange={(value) => update("defaultValue", value)}
-                autoComplete="off"
-            />
+            {!isQuantity && (
+                <TextField
+                    label="Default value"
+                    value={element.defaultValue || ""}
+                    onChange={(value) => update("defaultValue", value)}
+                    autoComplete="off"
+                />
+            )}
 
             {/* Minimum Value */}
             <BlockStack gap="200">
@@ -85,51 +88,7 @@ const NumberSettings = ({ element, onChange, onOpenIconPicker }) => {
 
             <Divider />
 
-            {/* Select Icon */}
-            <BlockStack gap="200">
-                <Text as="span" variant="bodyMd">
-                    Select icon
-                </Text>
 
-                <InlineStack align="end" gap="300">
-                    <Button
-                        variant="plain"
-                        onClick={onOpenIconPicker}
-                    >
-                        Change
-                    </Button>
-
-                    {element.icon && (
-                        <Button
-                            variant="plain"
-                            tone="critical"
-                            onClick={() => update("icon", null)}
-                        >
-                            Remove
-                        </Button>
-                    )}
-                </InlineStack>
-
-                <Box
-                    background="bg-surface-secondary"
-                    borderColor="border"
-                    borderWidth="025"
-                    borderRadius="200"
-                    padding="400"
-                >
-                    <BlockStack align="center">
-                        {element.icon ? (
-                            <Text as="span" variant="bodyMd">
-                                Icon selected
-                            </Text>
-                        ) : (
-                            <Text as="span" variant="bodyMd" tone="subdued">
-                                No icon selected
-                            </Text>
-                        )}
-                    </BlockStack>
-                </Box>
-            </BlockStack>
 
         </BlockStack>
     );

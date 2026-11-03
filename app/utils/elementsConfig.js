@@ -24,7 +24,7 @@ import {
     TextIcon,
     NoteIcon,
     HashtagDecimalIcon,
-    //OrderedListIcon,
+   //OrderedListIcon,
    // EmojiHappyIcon,
     //GridIcon,
     ChartVerticalIcon,
@@ -76,7 +76,7 @@ export const ELEMENT_TYPES = [
 
     // Number
     { type: "number", label: "Number", category: "Number", icon: HashtagDecimalIcon },
-    // { type: "quantity", label: "Quantity", category: "Number", icon: OrderedListIcon, badge: "Hot" },
+    { type: "quantity", label: "Quantity", category: "Number", icon: HashtagDecimalIcon, badge: "Hot" },
 
     // Ratings
     // { type: "feedback", label: "Feedback", category: "Ratings", icon: EmojiHappyIcon, disabled: true, badge: "Hot" },

@@ -87,7 +87,7 @@ export default function PreviewField({ element, field }) {
   useEffect(() => {
     setValue(normalizedElement.defaultValue ?? "");
     setDateValue(normalizedElement.defaultValue ?? "");
-     setConfirmPasswordValue("")
+    setConfirmPasswordValue("")
   }, [normalizedElement.id, normalizedElement.defaultValue]);
 
   useEffect(() => {
@@ -231,45 +231,45 @@ export default function PreviewField({ element, field }) {
         </BlockStack>
       );
 
-case "password":
-    return (
+    case "password":
+      return (
         <BlockStack gap="300">
 
-            {/* Original Password Field */}
-            <TextField
-                {...commonTextFieldProps}
-                type="password"
-                autoComplete="new-password"
-                value={value}
-                onChange={setValue}
-                readOnly
-            />
+          {/* Original Password Field */}
+          <TextField
+            {...commonTextFieldProps}
+            type="password"
+            autoComplete="new-password"
+            value={value}
+            onChange={setValue}
+            readOnly
+          />
 
-            {/* Confirm Password Field */}
-            {normalizedElement.confirmPassword && (
-                <TextField
-                    type="password"
-                    label={
-                        normalizedElement.confirmPasswordLabel ||
-                        "Confirm Password"
-                    }
-                    placeholder={
-                        normalizedElement.confirmPasswordPlaceholder ||
-                        "Confirm your password"
-                    }
-                    helpText={
-                        normalizedElement.confirmPasswordDescription ||
-                        undefined
-                    }
-                    value={confirmPasswordValue}
-                    onChange={setConfirmPasswordValue}
-                    autoComplete="new-password"
-                    readOnly
-                />
-            )}
+          {/* Confirm Password Field */}
+          {normalizedElement.confirmPassword && (
+            <TextField
+              type="password"
+              label={
+                normalizedElement.confirmPasswordLabel ||
+                "Confirm Password"
+              }
+              placeholder={
+                normalizedElement.confirmPasswordPlaceholder ||
+                "Confirm your password"
+              }
+              helpText={
+                normalizedElement.confirmPasswordDescription ||
+                undefined
+              }
+              value={confirmPasswordValue}
+              onChange={setConfirmPasswordValue}
+              autoComplete="new-password"
+              readOnly
+            />
+          )}
 
         </BlockStack>
-    );
+      );
 
     case "country": {
       const selectedCountries = Array.isArray(normalizedElement.defaultValue)
@@ -580,7 +580,6 @@ case "password":
       );
 
     case "number":
-    case "quantity":
       return (
         <TextField
           {...commonTextFieldProps}
@@ -591,61 +590,257 @@ case "password":
         />
       );
 
-    case "rating_star":
+    case "quantity": {
+      const min = normalizedElement.setMinValue
+        ? Number(normalizedElement.minValue || 0)
+        : 0;
+
+      const max = normalizedElement.setMaxValue &&
+        normalizedElement.maxValue !== ""
+        ? Number(normalizedElement.maxValue)
+        : Infinity;
+
+      // Start from minimum value
+      const currentValue =
+        value === "" || value === undefined || value === null
+          ? min
+          : Number(value);
+
+      // Keep value within min and max
+      const safeValue = Math.min(max, Math.max(min, currentValue));
+
+      const decreaseValue = () => {
+        setValue(String(Math.max(min, safeValue - 1)));
+      };
+
+      const increaseValue = () => {
+        setValue(String(Math.min(max, safeValue + 1)));
+      };
+
+      return (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            width: "100%",
+            minHeight: "54px",
+            padding: "0 14px",
+            background: "#eeeeee",
+            borderRadius: "9px",
+            boxSizing: "border-box",
+          }}
+        >
+          <button
+            type="button"
+            disabled={safeValue <= min}
+            onClick={decreaseValue}
+            style={{
+              border: "none",
+              background: "transparent",
+              color: safeValue <= min ? "#C9CCCF" : "#555",
+              fontSize: "20px",
+              cursor: safeValue <= min ? "not-allowed" : "pointer",
+            }}
+          >
+            −
+          </button>
+
+          <span
+            style={{
+              flex: 1,
+              marginLeft: "12px",
+              fontSize: "14px",
+              color: "#303030",
+            }}
+          >
+            {commonTextFieldProps.label || "Quantity"}
+          </span>
+
+          <span
+            style={{
+              fontSize: "14px",
+              fontWeight: 500,
+              color: "#303030",
+              marginRight: "12px",
+            }}
+          >
+            {safeValue}
+          </span>
+
+          <button
+            type="button"
+            disabled={safeValue >= max}
+            onClick={increaseValue}
+            style={{
+              border: "none",
+              background: "transparent",
+              color: safeValue >= max ? "#C9CCCF" : "#555",
+              fontSize: "20px",
+              cursor: safeValue >= max ? "not-allowed" : "pointer",
+            }}
+          >
+            +
+          </button>
+        </div>
+      );
+    }
+
+    case "rating_star": {
+      const customRatingIcon =
+        normalizedElement.useCustomRatingIcon &&
+          normalizedElement.ratingIcon
+          ? PolarisIcons[normalizedElement.ratingIcon]
+          : null;
+
       return (
         <BlockStack gap="200">
           {fieldLabelWithIcon}
 
-          <div style={{ display: "flex", gap: "8px" }}>
+          <div style={{ display: "flex", gap: "9px", alignItems: "center" }}>
             {[1, 2, 3, 4, 5].map((star) => (
-              <button
+              <div
                 key={star}
-                type="button"
-                onClick={() => setRating(star)}
                 style={{
-                  border: "none",
-                  background: "transparent",
-                  cursor: "pointer",
-                  fontSize: "26px",
-                  color: star <= rating ? "#F5A623" : "#C9CCCF",
-                  padding: 0,
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: "30px",
                 }}
               >
-                ★
-              </button>
+                <button
+                  type="button"
+                  onClick={() => setRating(star)}
+                  style={{
+                    border: "none",
+                    background: "transparent",
+                    cursor: "pointer",
+                    padding: 0,
+                    transform: "scale(2.3)", transformOrigin: "center",
+                    color: star <= rating ? "#F5A623" : "#C9CCCF",
+                  }}
+                >
+                  {customRatingIcon ? (
+                    <span
+                      style={{
+                        display: "flex",
+                        width: "80px",
+                        height: "80px",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <Icon source={customRatingIcon} />
+                    </span>
+                  ) : (
+                    <span style={{
+                      display: "flex",
+                      width: "68px",
+                      height: "68px",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}>★</span>
+                  )}
+                </button>
+
+                {normalizedElement.showNumberUnderIcon && (
+                  <span style={{ fontSize: "14px", color: "#6D7175" }}>
+                    {star}
+                  </span>
+                )}
+              </div>
             ))}
           </div>
 
           {descriptionText}
         </BlockStack>
       );
+    }
 
-    case "file_upload":
+    case "file_upload": {
+      const buttonText = normalizedElement.buttonText || "Browse file";
+
+      const placeholder =
+        normalizedElement.placeholder || "Choose file or drag here";
+
+      const hint = normalizedElement.hint || "PNG, GIF, SVG.";
+
+      const acceptedFileTypes = Array.isArray(
+        normalizedElement.acceptedFileTypes
+      )
+        ? normalizedElement.acceptedFileTypes
+        : [];
+
+      const fileSizeLimit = normalizedElement.fileSizeLimit;
+      const numberOfFilesLimit = normalizedElement.numberOfFilesLimit;
+
+      const allowMultiple = Boolean(normalizedElement.allowMultiple);
+
       return (
         <BlockStack gap="200">
+          {/* Field label */}
           {!hideLabel && (
             <Text as="p" variant="bodyMd">
-              {label}
+              {label || "Attachments"}
+              {required && (
+                <span style={{ color: "var(--p-color-text-critical)" }}>
+                  {" "}*
+                </span>
+              )}
             </Text>
           )}
-          <DropZone
-            allowMultiple={false}
-            onDrop={(files) => setUploadedFiles(files)}
+
+          {/* Upload preview */}
+          <div
+            style={{
+              width: "100%",
+              minHeight: "150px",
+              background: "#eeeeee",
+              border: "1px dashed #8c9196",
+              borderRadius: "8px",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "10px",
+              padding: "16px",
+              boxSizing: "border-box",
+            }}
           >
-            {uploadedFiles.length > 0 ? (
-              <Text as="p" variant="bodyMd">
-                {uploadedFiles[0].name}
-              </Text>
-            ) : (
-              <DropZone.FileUpload
-                actionTitle={placeholder || "Add file"}
-                actionHint="or drop a file to upload"
-              />
-            )}
-          </DropZone>
+            {/* Placeholder */}
+            <Text as="p" variant="bodyMd">
+              {placeholder}
+            </Text>
+
+            {/* Hint */}
+            <Text as="p" variant="bodySm" tone="subdued">
+              {acceptedFileTypes.length > 0
+                ? `Supported formats: ${acceptedFileTypes.join(", ").toUpperCase()}`
+                : hint}
+            </Text>
+
+            {/* Browse button */}
+            <div
+              style={{
+                padding: "7px 14px",
+                border: "1px solid #8c9196",
+                borderRadius: "5px",
+                color: "#303030",
+                fontSize: "14px",
+                background: "#ffffff",
+              }}
+            >
+              {buttonText}
+            </div>
+
+
+          </div>
+
+          {/* Description */}
           {descriptionText}
         </BlockStack>
       );
+    }
 
     case "color_swatch":
       return (
