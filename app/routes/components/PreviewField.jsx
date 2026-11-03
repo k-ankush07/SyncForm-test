@@ -76,6 +76,7 @@ export default function PreviewField({ element, field }) {
   const [checked, setChecked] = useState(false);
   const [selected, setSelected] = useState([]);
   const [value, setValue] = useState(defaultValue);
+  const [confirmPasswordValue, setConfirmPasswordValue] = useState("");
   const [dateValue, setDateValue] = useState(defaultValue);
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [rangeValue, setRangeValue] = useState(50);
@@ -86,6 +87,7 @@ export default function PreviewField({ element, field }) {
   useEffect(() => {
     setValue(normalizedElement.defaultValue ?? "");
     setDateValue(normalizedElement.defaultValue ?? "");
+     setConfirmPasswordValue("")
   }, [normalizedElement.id, normalizedElement.defaultValue]);
 
   useEffect(() => {
@@ -229,17 +231,45 @@ export default function PreviewField({ element, field }) {
         </BlockStack>
       );
 
-    case "password":
-      return (
-        <TextField
-          {...commonTextFieldProps}
-          type="password"
-          autoComplete="new-password"
-          value={value}
-          onChange={setValue}
-          readOnly
-        />
-      );
+case "password":
+    return (
+        <BlockStack gap="300">
+
+            {/* Original Password Field */}
+            <TextField
+                {...commonTextFieldProps}
+                type="password"
+                autoComplete="new-password"
+                value={value}
+                onChange={setValue}
+                readOnly
+            />
+
+            {/* Confirm Password Field */}
+            {normalizedElement.confirmPassword && (
+                <TextField
+                    type="password"
+                    label={
+                        normalizedElement.confirmPasswordLabel ||
+                        "Confirm Password"
+                    }
+                    placeholder={
+                        normalizedElement.confirmPasswordPlaceholder ||
+                        "Confirm your password"
+                    }
+                    helpText={
+                        normalizedElement.confirmPasswordDescription ||
+                        undefined
+                    }
+                    value={confirmPasswordValue}
+                    onChange={setConfirmPasswordValue}
+                    autoComplete="new-password"
+                    readOnly
+                />
+            )}
+
+        </BlockStack>
+    );
 
     case "country": {
       const selectedCountries = Array.isArray(normalizedElement.defaultValue)

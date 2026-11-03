@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import SelectIcon from "./SelectIcon";
 import { Icon } from "@shopify/polaris";
 import * as PolarisIcons from "@shopify/polaris-icons";
-import {countries} from "../components/elementsettings/utils/countries.js"
+import { countries } from "../components/elementsettings/utils/countries.js"
 
 
 import {
@@ -83,24 +83,29 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
     const isParagraph = type === "paragraph";
     const isDivider = type === "divider";
 
+    // TEXT and Textarea
     const isStaticText = [
         "heading",
         "paragraph",
         "divider",
     ].includes(type);
 
+     //URL and FILE
+    const isFileUpload = type === "file_upload";
+    const isUrl = type === "url";
+
     // CONDITIONAL SETTINGS
     const showDefaultValue =
         isName || isEmail || isPhone || isChoiceInput || isCountry;
 
-  const showKeepLabelPosition =
-    isName || isEmail || isPhone || isPassword ||
-    isChoiceInput || isCountry;
+    const showKeepLabelPosition =
+        isName || isEmail || isPhone || isPassword ||
+        isChoiceInput || isCountry;
 
     const showCharacterLimit = isContactInput;
 
     const showSelectIcon =
-        isContactInput || isDropdown || isCountry;
+        isContactInput || isDropdown || isCountry || isUrl;
 
     const showRequiredNote =
         isContactInput || isChoiceInput;
@@ -169,6 +174,8 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
         setBulkOptionsText("");
         setBulkAddOpen(false);
     };
+
+   
 
     // CHOICE SETTINGS
     const renderChoiceSettings = () => {

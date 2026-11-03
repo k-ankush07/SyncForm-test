@@ -82,61 +82,7 @@ const FileUploadSettings = ({
 
             <Divider />
 
-            {/* Select Icon */}
-            <BlockStack gap="200">
-
-                <Text as="span" variant="bodyMd">
-                    Select icon
-                </Text>
-
-                <InlineStack align="end" gap="300">
-
-                    <Button
-                        variant="plain"
-                        onClick={onOpenIconPicker}
-                    >
-                        Change
-                    </Button>
-
-                    {element.icon && (
-                        <Button
-                            variant="plain"
-                            tone="critical"
-                            onClick={() => update("icon", null)}
-                        >
-                            Remove
-                        </Button>
-                    )}
-
-                </InlineStack>
-
-                <Box
-                    background="bg-surface-secondary"
-                    borderColor="border"
-                    borderWidth="025"
-                    borderRadius="200"
-                    padding="400"
-                >
-                    <BlockStack align="center">
-                        {element.icon ? (
-                            <Text as="span" variant="bodyMd">
-                                Icon selected
-                            </Text>
-                        ) : (
-                            <Text
-                                as="span"
-                                variant="bodyMd"
-                                tone="subdued"
-                            >
-                                No icon selected
-                            </Text>
-                        )}
-                    </BlockStack>
-                </Box>
-
-            </BlockStack>
-
-        </BlockStack>
+           </BlockStack>
     );
 };
 

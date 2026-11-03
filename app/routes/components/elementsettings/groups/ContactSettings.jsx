@@ -181,9 +181,11 @@ export default function ContactSettings({ element, onChange }) {
                 </BlockStack>
             )}
 
+
+
             {/* =================================
-                PASSWORD SETTINGS
-            ================================= */}
+                     PASSWORD SETTINGS
+                ================================= */}
 
             {type === "password" && (
                 <BlockStack gap="300">
@@ -192,10 +194,37 @@ export default function ContactSettings({ element, onChange }) {
                         label="Validate"
                         value={element.passwordValidation || "none"}
                         options={[
-                            { label: "No additional validation", value: "none" },
-                            { label: "Letters and numbers", value: "letters_numbers" },
-                            { label: "Uppercase and lowercase", value: "upper_lower" },
-                            { label: "Special characters", value: "special" },
+                            { label: "None", value: "false" },
+
+                            {
+                                label: "Minimum 6 characters",
+                                value: "^.{6,}$",
+                            },
+
+                            {
+                                label: "Minimum 6 characters, at least one letter and one number",
+                                value: "^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d]{6,}$",
+                            },
+
+                            {
+                                label: "Minimum 6 characters, at least one letter, one number and one special character",
+                                value: "^(?=.*[A-Za-z])(?=.*\\d)(?=.*[@$!%*#?&])[A-Za-z\\d@$!%*#?&]{6,}$",
+                            },
+
+                            {
+                                label: "Minimum 6 characters, at least one uppercase letter, one lowercase letter and one number",
+                                value: "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)[a-zA-Z\\d]{6,}$",
+                            },
+
+                            {
+                                label: "Minimum 6 characters, at least one uppercase letter, one lowercase letter, one number and one special character",
+                                value: "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{6,}$",
+                            },
+
+                            {
+                                label: "Advanced validate rule",
+                                value: "advancedValidateRule",
+                            },
                         ]}
                         onChange={(value) =>
                             update("passwordValidation", value)
@@ -204,7 +233,7 @@ export default function ContactSettings({ element, onChange }) {
 
                     <Checkbox
                         label="Also create confirm password input"
-                        checked={element.confirmPassword || false}
+                        checked={Boolean(element.confirmPassword)}
                         onChange={(value) =>
                             update("confirmPassword", value)
                         }
@@ -215,7 +244,7 @@ export default function ContactSettings({ element, onChange }) {
 
                             <TextField
                                 label="Label confirm"
-                                value={element.confirmPasswordLabel || ""}
+                                value={element.confirmPasswordLabel ?? "Confirm Password"}
                                 onChange={(value) =>
                                     update("confirmPasswordLabel", value)
                                 }
@@ -224,7 +253,7 @@ export default function ContactSettings({ element, onChange }) {
 
                             <TextField
                                 label="Placeholder confirm"
-                                value={element.confirmPasswordPlaceholder || ""}
+                                value={element.confirmPasswordPlaceholder ?? "Confirm your password"}
                                 onChange={(value) =>
                                     update("confirmPasswordPlaceholder", value)
                                 }
@@ -244,8 +273,8 @@ export default function ContactSettings({ element, onChange }) {
                     )}
 
                     <Checkbox
-                        label="Store password data"
-                        checked={element.storePassword || false}
+                        label="Store password for purpose"
+                        checked={Boolean(element.storePassword)}
                         onChange={(value) =>
                             update("storePassword", value)
                         }
