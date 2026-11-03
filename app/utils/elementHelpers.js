@@ -1,4 +1,7 @@
-// to normalize the new created fields elemnts in the format we need like with unique id and more fields
+
+// To normalize newly created field elements into the format we need,
+// with unique IDs and default settings.
+
 const DEFAULT_ELEMENT_SETTINGS = {
   placeholder: "",
   description: "",
@@ -17,7 +20,40 @@ export function createElementConfig(item) {
 
   const type = item.type.toLowerCase().replace(/[\s-]+/g, "_");
 
-  const options = (item.options || []).map((option, index) => {
+  // Element types that need default choice options
+  const choiceTypes = [
+    "checkboxes",
+    "checkbox_group",
+    "radio",
+    "radio_group",
+    "radio_button",
+    "dropdown",
+    "select",
+  ];
+
+  // Default options for choice elements
+  const defaultOptions = [
+    {
+      label: "Option 1",
+      value: "option1",
+    },
+    {
+      label: "Option 2",
+      value: "option2",
+    },
+  ];
+
+  // Use existing options if provided.
+  // Otherwise, create two default options for choice elements.
+  const sourceOptions =
+    Array.isArray(item.options) && item.options.length > 0
+      ? item.options
+      : choiceTypes.includes(type)
+        ? defaultOptions
+        : [];
+
+  // Normalize options and give each option a unique ID
+  const options = sourceOptions.map((option, index) => {
     if (typeof option === "string") {
       return {
         id: crypto.randomUUID(),
@@ -38,13 +74,16 @@ export function createElementConfig(item) {
     id: crypto.randomUUID(),
     type,
     label: item.label || item.type,
-    //if content is presnt then
+
+    // If content is present, include it
     ...(item.content !== undefined && {
       content: item.content,
     }),
+
     options,
     otherOption: false,
     optionsPerLine: 1,
+
     ...item.settings,
   };
 }

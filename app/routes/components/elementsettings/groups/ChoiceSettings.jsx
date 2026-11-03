@@ -41,6 +41,14 @@ export default function ChoiceSettings({ element, onChange }) {
     value: option.value,
   }));
 
+  const optionsPerLineOptions = [
+  { label: "1 per line", value: "1" },
+  { label: "2 per line", value: "2" },
+  { label: "3 per line", value: "3" },
+  { label: "4 per line", value: "4" },
+  { label: "5 per line", value: "5" },
+];
+
   return (
     <BlockStack gap="400">
 
@@ -73,16 +81,6 @@ export default function ChoiceSettings({ element, onChange }) {
       {/* CHECKBOX SETTINGS */}
       {isCheckbox && (
         <>
-          <TextField
-            label="Enter default value"
-            value={element.defaultValue || ""}
-            onChange={(value) =>
-              update("defaultValue", value)
-            }
-            multiline={4}
-            autoComplete="off"
-          />
-
           <Checkbox
             label="Limit selections"
             checked={Boolean(element.limitSelections)}

@@ -3,6 +3,8 @@ import React, { useState } from "react";
 import SelectIcon from "./SelectIcon";
 import { Icon } from "@shopify/polaris";
 import * as PolarisIcons from "@shopify/polaris-icons";
+import {countries} from "../components/elementsettings/utils/countries.js"
+
 
 import {
     BlockStack,
@@ -13,6 +15,8 @@ import {
     Box,
     InlineStack,
     Button,
+    Select,
+    ButtonGroup
 } from "@shopify/polaris";
 
 import { ArrowLeftIcon } from "@shopify/polaris-icons";
@@ -56,6 +60,7 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
     const isEmail = type === "email";
     const isPhone = ["phone", "tel"].includes(type);
     const isPassword = type === "password";
+    const isCountry = type === "country";
 
     const isContactInput =
         isName || isEmail || isPhone || isPassword;
@@ -86,15 +91,16 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
 
     // CONDITIONAL SETTINGS
     const showDefaultValue =
-        isName || isEmail || isPhone || isChoiceInput;
+        isName || isEmail || isPhone || isChoiceInput || isCountry;
 
-    const showKeepLabelPosition =
-        isName || isEmail || isPhone || isPassword || isChoiceInput;
+  const showKeepLabelPosition =
+    isName || isEmail || isPhone || isPassword ||
+    isChoiceInput || isCountry;
 
     const showCharacterLimit = isContactInput;
 
     const showSelectIcon =
-        isContactInput || isDropdown;
+        isContactInput || isDropdown || isCountry;
 
     const showRequiredNote =
         isContactInput || isChoiceInput;
@@ -431,7 +437,7 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
 
             {/* PLACEHOLDER */}
 
-            {isContactInput && (
+            {(isContactInput || isCountry || isDropdown) && (
                 <TextField
                     label="Placeholder"
                     value={element.placeholder || ""}
@@ -442,16 +448,29 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
 
             {/* DEFAULT VALUE */}
 
+            {/* DEFAULT VALUE */}
+
             {showDefaultValue && (
-                <TextField
-                    label="Enter default value"
-                    value={element.defaultValue || ""}
-                    onChange={(value) =>
-                        update("defaultValue", value)
-                    }
-                    multiline={isChoiceInput ? 4 : false}
-                    autoComplete="off"
-                />
+                isCountry ? (
+                    <Select
+                        label="Default value"
+                        placeholder="Select default country"
+                        options={countries.map((country) => ({
+                            label: country.label,
+                            value: country.value,
+                        }))}
+                        value={element.defaultValue || ""}
+                        onChange={(value) => update("defaultValue", value)}
+                    />
+                ) : (
+                    <TextField
+                        label="Enter default value"
+                        value={element.defaultValue || ""}
+                        onChange={(value) => update("defaultValue", value)}
+                        multiline={isChoiceInput ? 4 : false}
+                        autoComplete="off"
+                    />
+                )
             )}
 
             {/* DESCRIPTION / CAPTION */}
@@ -569,18 +588,46 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
 
                     {/* Select icon */}
                     {showSelectIcon && (
-                        <>
-                            <p>select Icon</p>
+                        <BlockStack gap="200">
+                            {/* Heading and action buttons */}
+                            <InlineStack align="space-between" blockAlign="center">
+                                <Text as="p" variant="bodyMd">
+                                    Select icon
+                                </Text>
+
+                                {element.selectIcon && PolarisIcons[element.selectIcon] && (
+                                    <ButtonGroup gap="tight">
+                                        <Button
+                                            variant="plain"
+                                            icon={PolarisIcons.RefreshIcon}
+                                            onClick={onOpenSelectIcon}
+                                        >
+                                            Change
+                                        </Button>
+
+                                        <Button
+                                            variant="plain"
+                                            tone="critical"
+                                            icon={PolarisIcons.DeleteIcon}
+                                            onClick={() => update("selectIcon", "")}
+                                        >
+                                            Remove
+                                        </Button>
+                                    </ButtonGroup>
+                                )}
+                            </InlineStack>
+
+                            {/* Selected icon preview */}
                             <div className="select-icon-wrapper">
-                                <Button onClick={onOpenSelectIcon}>
-                                    {element.selectIcon && PolarisIcons[element.selectIcon] ? (
-                <Icon source={PolarisIcons[element.selectIcon]} />
-            ) : (
-                "Select icon"
-            )}
-                                </Button>
+                                {element.selectIcon && PolarisIcons[element.selectIcon] ? (
+                                    <Icon source={PolarisIcons[element.selectIcon]} />
+                                ) : (
+                                    <Button onClick={onOpenSelectIcon}>
+                                        Select icon
+                                    </Button>
+                                )}
                             </div>
-                        </>
+                        </BlockStack>
                     )}
                 </>
             )}
@@ -678,7 +725,13 @@ export default function ElementSettings({ element, onChange, onClose }) {
 
     const showOptionsPerLine =
         groupType === "choice" &&
-        ["radio", "radio_group", "checkbox", "checkbox_group", "checkboxes"].includes(type);
+        ["radio",
+            "radio_group",
+            "radio_button",
+            "checkbox_group",
+            "checkboxes",
+            "dropdown",
+            "select"].includes(type);
 
     console.log("========== ELEMENT SETTINGS ==========");
     console.log("Element:", element);

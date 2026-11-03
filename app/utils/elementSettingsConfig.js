@@ -6,6 +6,7 @@ const TEXT_TYPES = [
   "last_name",
   "name",
   "textarea",
+  "country"
 ];
 
 const CHOICE_TYPES = [

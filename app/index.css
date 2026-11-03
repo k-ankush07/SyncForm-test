@@ -1146,17 +1146,16 @@
 }
 .select-icon-wrapper {
     width: 100%;
-    min-height: 62px;
+    min-height: 75px;
     background: #f7f7f7;
     border: 1px solid #e1e1e1;
     border-radius: 4px;
-
     display: flex;
     align-items: center;
     justify-content: center;
-
     box-sizing: border-box;
 }
+
 /* // width selector in row */
 .column-width-selector {
     display: flex;

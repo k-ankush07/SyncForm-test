@@ -11,6 +11,46 @@ function normalizeElement(element) {
     });
   }
 
+  // Get default options based on element type
+function getDefaultOptions(type) {
+    switch (type) {
+        case "checkboxes":
+        case "checkbox_group":
+            return [
+                {
+                    id: crypto.randomUUID(),
+                    label: "Option 1",
+                    value: "option1",
+                },
+                {
+                    id: crypto.randomUUID(),
+                    label: "Option 2",
+                    value: "option2",
+                },
+            ];
+
+        case "radio":
+        case "radio_button":
+        case "dropdown":
+        case "select":
+            return [
+                {
+                    id: crypto.randomUUID(),
+                    label: "Option 1",
+                    value: "option1",
+                },
+                {
+                    id: crypto.randomUUID(),
+                    label: "Option 2",
+                    value: "option2",
+                },
+            ];
+
+        default:
+            return [];
+    }
+}
+
   if (!element || typeof element !== "object") {
     return null;
   }

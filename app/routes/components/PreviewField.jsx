@@ -10,6 +10,7 @@ import {
   TextField,
   Checkbox,
   Select,
+  InlineStack,
   ChoiceList,
   DropZone,
   Button,
@@ -91,12 +92,7 @@ export default function PreviewField({ element, field }) {
     setChecked(Boolean(normalizedElement.defaultValue));
   }, [normalizedElement.id, normalizedElement.defaultValue]);
 
-  const rawOptions = normalizedElement.options?.length
-    ? normalizedElement.options
-    : [
-      { label: "Option 1", value: "option1" },
-      { label: "Option 2", value: "option2" },
-    ];
+  const rawOptions = normalizedElement.options || [];
 
   const options = rawOptions.map((option, index) => {
     if (typeof option === "string") {
@@ -141,6 +137,19 @@ export default function PreviewField({ element, field }) {
       country.value === normalizedElement.defaultCountryCode
   );
 
+  //options per line for radio and checkbox
+  const optionsPerLine = Math.min(
+    5,
+    Math.max(1, Number(normalizedElement.optionsPerLine) || 1)
+  );
+  // to show option per line
+  const choiceGridStyle = {
+    display: "grid",
+    gridTemplateColumns: `repeat(${optionsPerLine}, minmax(0, 1fr))`,
+    gap: "12px",
+    width: "100%",
+  };
+
   switch (type) {
     case "email":
       return (
@@ -177,48 +186,48 @@ export default function PreviewField({ element, field }) {
         />
       );
 
-   case "phone":
-    return (
+    case "phone":
+      return (
         <BlockStack gap="200">
-            {!hideLabel && (
-                <div
+          {!hideLabel && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                width: "fit-content",
+              }}
+            >
+              {selectedCountry && (
+                <>
+                  <ReactCountryFlag
+                    countryCode={selectedCountry.value.toUpperCase()}
+                    svg
                     style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "8px",
-                        width: "fit-content",
+                      width: "20px",
+                      height: "15px",
+                      objectFit: "cover",
                     }}
-                >
-                    {selectedCountry && (
-                        <>
-                            <ReactCountryFlag
-                                countryCode={selectedCountry.value.toUpperCase()}
-                                svg
-                                style={{
-                                    width: "20px",
-                                    height: "15px",
-                                    objectFit: "cover",
-                                }}
-                            />
+                  />
 
-                            <span>{selectedCountry.dialCode}</span>
-                        </>
-                    )}
+                  <span>{selectedCountry.dialCode}</span>
+                </>
+              )}
 
-                    <span>{label}</span>
-                </div>
-            )}
+              <span>{label}</span>
+            </div>
+          )}
 
-            <TextField
-                type="tel"
-                labelHidden
-                placeholder={placeholder || label}
-                value={value}
-                onChange={setValue}
-                readOnly
-            />
+          <TextField
+            type="tel"
+            labelHidden
+            placeholder={placeholder || label}
+            value={value}
+            onChange={setValue}
+            readOnly
+          />
         </BlockStack>
-    );
+      );
 
     case "password":
       return (
@@ -232,22 +241,61 @@ export default function PreviewField({ element, field }) {
         />
       );
 
-    case "country":
-      return (
-        <Select
-          {...commonSelectProps}
-          options={[
-            { label: "Select country", value: "" },
-            { label: "India", value: "IN" },
-            { label: "United States", value: "US" },
-            { label: "United Kingdom", value: "GB" },
-          ]}
-          value={value}
-          onChange={setValue}
-          readOnly
-          disabled
-        />
+    case "country": {
+      const selectedCountries = Array.isArray(normalizedElement.defaultValue)
+        ? normalizedElement.defaultValue
+        : normalizedElement.defaultValue
+          ? [normalizedElement.defaultValue]
+          : [];
+
+      const selectedCountryDetails = countries.filter((country) =>
+        selectedCountries.includes(country.value)
       );
+
+      return (
+        <BlockStack gap="200">
+          {fieldLabelWithIcon}
+
+          <BlockStack gap="200">
+            {selectedCountryDetails.length > 0 ? (
+              selectedCountryDetails.map((country) => (
+                <InlineStack
+                  key={country.value}
+                  gap="200"
+                  blockAlign="center"
+                >
+                  {normalizedElement.showFlags && (
+                    <ReactCountryFlag
+                      countryCode={country.value.toUpperCase()}
+                      svg
+                      style={{
+                        width: "20px",
+                        height: "15px",
+                      }}
+                    />
+                  )}
+
+                  <Text>{country.name}</Text>
+                </InlineStack>
+              ))
+            ) : (
+              <TextField
+                label=""
+                labelHidden
+                value=""
+                placeholder={
+                  normalizedElement.placeholder || "Select a country"
+                }
+                disabled
+                autoComplete="off"
+              />
+            )}
+          </BlockStack>
+
+          {descriptionText}
+        </BlockStack>
+      );
+    }
 
     case "dropdown":
     case "select":
@@ -270,32 +318,65 @@ export default function PreviewField({ element, field }) {
     case "image_options":
       return (
         <BlockStack gap="200">
-          <ChoiceList
-            title={fieldLabel || label}
-            allowMultiple
-            choices={options}
-            selected={selected}
-            onChange={setSelected}
-            readOnly
-          />
+          {fieldLabelWithIcon}
+
+          <div style={choiceGridStyle}>
+            {options.map((option) => (
+              <Checkbox
+                key={option.value}
+                label={option.label}
+                checked={selected.includes(option.value)}
+                onChange={(isChecked) => {
+                  setSelected((previous) =>
+                    isChecked
+                      ? [...previous, option.value]
+                      : previous.filter(
+                        (value) => value !== option.value
+                      )
+                  );
+                }}
+              />
+            ))}
+          </div>
+
           {descriptionText}
         </BlockStack>
       );
 
     case "radio":
     case "radio_button":
+    case "radio_group":
     case "feedback":
     case "matrix":
     case "rating_level":
       return (
         <BlockStack gap="200">
-          <ChoiceList
-            title={fieldLabel || label}
-            choices={options}
-            selected={selected}
-            onChange={setSelected}
-            readOnly
-          />
+          {fieldLabelWithIcon}
+
+          <div style={choiceGridStyle}>
+            {options.map((option) => (
+              <label
+                key={option.value}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  cursor: "pointer",
+                }}
+              >
+                <input
+                  type="radio"
+                  name={`radio-${normalizedElement.id}`}
+                  value={option.value}
+                  checked={selected[0] === option.value}
+                  onChange={() => setSelected([option.value])}
+                />
+
+                <span>{option.label}</span>
+              </label>
+            ))}
+          </div>
+
           {descriptionText}
         </BlockStack>
       );
