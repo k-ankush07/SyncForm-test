@@ -1282,3 +1282,149 @@
 .Polaris-Popover {
     z-index: 100000 !important;
 }
+/* //DATE &TIEM */
+.flatpickr-calendar.hasTime.noCalendar {
+    width: 180px;
+}
+
+.flatpickr-time {
+    height: 45px !important;
+    max-height: 45px !important;
+    border-top: none !important;
+}
+
+.flatpickr-time input {
+    font-size: 14px !important;
+}
+
+.flatpickr-time .numInputWrapper {
+    height: 40px;
+}
+.date-time-flatpickr-input {
+    width: 100%;
+    height: 38px;
+    padding: 8px 12px;
+    border: 1px solid #8a8a8a !important;
+    border-radius: 8px;
+    background: #ffffff !important;
+    color: #303030;
+    font-size: 14px;
+    box-sizing: border-box;
+    outline: none;
+    box-shadow: none;
+}
+
+.date-time-flatpickr-input:focus {
+    border: 2px solid #303030 !important;
+    box-shadow: none !important;
+}
+
+/* date picker */
+.target-days-picker {
+    position: relative;
+    width: 100%;
+}
+
+.target-days-selection {
+    min-height: 40px;
+    width: 100%;
+    padding: 5px 8px;
+    border: 1px solid #b5bdc5;
+    border-radius: 4px;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    cursor: pointer;
+    box-sizing: border-box;
+}
+
+.target-days-selection:hover {
+    border-color: #8a9199;
+}
+
+.target-days-values {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 5px;
+    flex: 1;
+}
+
+.target-day-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 5px 9px;
+    border-radius: 4px;
+    background: #e1e5e9;
+    color: #202a35;
+    font-size: 13px;
+    line-height: 20px;
+}
+
+.target-day-chip button {
+    border: none;
+    background: transparent;
+    color: #40505f;
+    padding: 0;
+    font-size: 17px;
+    line-height: 14px;
+    cursor: pointer;
+}
+
+.target-days-placeholder {
+    color: #737373;
+    font-size: 13px;
+}
+
+.target-days-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+    color: #737373;
+}
+
+.target-days-arrow.open {
+    transform: rotate(180deg);
+}
+
+.target-days-options {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    z-index: 100;
+    background: #fff;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+    padding: 5px;
+    max-height: 220px;
+    overflow-y: auto;
+}
+
+.target-days-option {
+    padding: 9px 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.target-days-option:hover {
+    background: #f1f2f3;
+}
+
+.target-days-option.selected {
+    background: #eaf1f8;
+    color: #202a35;
+}
+
+.target-days-option.selected span:last-child {
+    font-weight: 600;
+}

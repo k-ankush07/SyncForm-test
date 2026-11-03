@@ -77,7 +77,7 @@ export default function PreviewField({ element, field }) {
   const [selected, setSelected] = useState([]);
   const [value, setValue] = useState(defaultValue);
   const [confirmPasswordValue, setConfirmPasswordValue] = useState("");
-  const [dateValue, setDateValue] = useState(defaultValue);
+  // const [dateValue, setDateValue] = useState(defaultValue);
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [rangeValue, setRangeValue] = useState(50);
   const [colorValue, setColorValue] = useState("#563D7C");
@@ -95,6 +95,16 @@ export default function PreviewField({ element, field }) {
   }, [normalizedElement.id, normalizedElement.defaultValue]);
 
   const rawOptions = normalizedElement.options || [];
+
+  //for date and time
+  const [dateValue, setDateValue] = useState(
+    normalizedElement.defaultDate || ""
+);
+
+React.useEffect(() => {
+    setDateValue(normalizedElement.defaultDate || "");
+}, [normalizedElement.defaultDate]);
+
 
   const options = rawOptions.map((option, index) => {
     if (typeof option === "string") {
@@ -452,16 +462,15 @@ export default function PreviewField({ element, field }) {
         />
       );
 
-    case "date":
-      return (
+ case "date":
+    return (
         <TextField
-          {...commonTextFieldProps}
-          type="date"
-          value={dateValue}
-          onChange={setDateValue}
-          readOnly
+            {...commonTextFieldProps}
+            value={dateValue}
+            onChange={setDateValue}
+            readOnly
         />
-      );
+    );
 
     case "hidden":
       return null;
@@ -771,10 +780,7 @@ export default function PreviewField({ element, field }) {
         ? normalizedElement.acceptedFileTypes
         : [];
 
-      const fileSizeLimit = normalizedElement.fileSizeLimit;
-      const numberOfFilesLimit = normalizedElement.numberOfFilesLimit;
-
-      const allowMultiple = Boolean(normalizedElement.allowMultiple);
+ 
 
       return (
         <BlockStack gap="200">

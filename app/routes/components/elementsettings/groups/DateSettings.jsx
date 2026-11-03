@@ -1,5 +1,7 @@
 
-import React from "react";
+import React, { useState } from "react";
+import Flatpickr from "react-flatpickr";
+import "flatpickr/dist/flatpickr.min.css";
 
 import {
     BlockStack,
@@ -10,8 +12,156 @@ import {
     Select,
 } from "@shopify/polaris";
 
+// =====================================
+// TARGET DAYS PICKER
+// =====================================
+const TargetDaysPicker = ({ value = [], onChange }) => {
+    const [isOpen, setIsOpen] = useState(false);
+
+    const days = [
+        { label: "Monday", value: "monday" },
+        { label: "Tuesday", value: "tuesday" },
+        { label: "Wednesday", value: "wednesday" },
+        { label: "Thursday", value: "thursday" },
+        { label: "Friday", value: "friday" },
+        { label: "Saturday", value: "saturday" },
+        { label: "Sunday", value: "sunday" },
+    ];
+
+    const toggleDay = (day) => {
+        const updatedDays = value.includes(day)
+            ? value.filter((item) => item !== day)
+            : [...value, day];
+
+        onChange(updatedDays);
+    };
+
+    const removeDay = (day) => {
+        onChange(value.filter((item) => item !== day));
+    };
+
+    return (
+        <div className="target-days-picker">
+            <div
+                className="target-days-selection"
+                onClick={() => setIsOpen(!isOpen)}
+            >
+                <div className="target-days-values">
+                    {value.map((day) => (
+                        <span
+                            key={day}
+                            className="target-day-chip"
+                            onClick={(event) => event.stopPropagation()}
+                        >
+                            {day}
+
+                            <button
+                                type="button"
+                                onClick={() => removeDay(day)}
+                                aria-label={`Remove ${day}`}
+                            >
+                                ×
+                            </button>
+                        </span>
+                    ))}
+
+                    {value.length === 0 && (
+                        <span className="target-days-placeholder">
+                            Select days
+                        </span>
+                    )}
+                </div>
+
+                <span className={`target-days-arrow ${isOpen ? "open" : ""}`}>
+                    <svg viewBox="0 0 10 7" width="10" height="7">
+                        <path
+                            d="M1 1l4 4 4-4"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="1.5"
+                        />
+                    </svg>
+                </span>
+            </div>
+
+            {isOpen && (
+                <div className="target-days-options">
+                    {days.map((day) => {
+                        const selected = value.includes(day.value);
+
+                        return (
+                            <div
+                                key={day.value}
+                                className={`target-days-option ${selected ? "selected" : ""
+                                    }`}
+                                onClick={() => toggleDay(day.value)}
+                            >
+                                <span>{day.label}</span>
+
+                                {selected && <span>✓</span>}
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
+        </div>
+    );
+};
+
+// =====================================
+// REUSABLE DATE PICKER
+// =====================================
+
+const DatePickerField = ({
+    label,
+    value,
+    onChange,
+    dateFormat = "Y-m-d",
+    mode = "single",
+}) => {
+    return (
+        <BlockStack gap="200">
+            {label && (
+                <Text as="span" variant="bodyMd">
+                    {label}
+                </Text>
+            )}
+
+            <Flatpickr
+                value={value || ""}
+                options={{
+                    enableTime: false,
+                    noCalendar: false,
+                    dateFormat,
+                    mode,
+                    allowInput: false,
+                    monthSelectorType: "dropdown",
+                    animate: true,
+                }}
+                onChange={(dates, dateString) => {
+                    onChange(dateString);
+                }}
+                render={(props, ref) => (
+                    <input
+                        {...props}
+                        ref={ref}
+                        value={value || ""}
+                        readOnly
+                        placeholder={dateFormat}
+                        className="date-time-flatpickr-input"
+                    />
+                )}
+            />
+        </BlockStack>
+    );
+};
+
+// =====================================
+// DATE SETTINGS
+// =====================================
+
 const DateSettings = ({ element, onChange }) => {
-    // Update element settings
+
     const update = (key, value) => {
         onChange({
             ...element,
@@ -28,9 +178,14 @@ const DateSettings = ({ element, onChange }) => {
     const showTimeSettings =
         format === "date_time" || format === "time";
 
+    const isDate = format === "date";
 
-    const isDate = String(format).toLowerCase().trim() === "date";
-    // Localization options
+    const dateFormat = element.dateFormat || "Y-m-d";
+
+    // =====================================
+    // OPTIONS
+    // =====================================
+
     const localizationOptions = [
         { label: "Arabic", value: "ar" },
         { label: "Austria", value: "at" },
@@ -91,7 +246,6 @@ const DateSettings = ({ element, onChange }) => {
         { label: "Mandarin", value: "zh" },
     ];
 
-    // Date format options
     const dateFormatOptions = [
         { label: "Y-m-d", value: "Y-m-d" },
         { label: "d-m-Y", value: "d-m-Y" },
@@ -106,13 +260,11 @@ const DateSettings = ({ element, onChange }) => {
         { label: "m/d", value: "m/d" },
     ];
 
-    // Time format options
     const timeFormatOptions = [
         { label: "24h", value: "24h" },
         { label: "12h", value: "12h" },
     ];
 
-    // Start date options
     const startDateOptions = [
         { label: "Unset", value: "false" },
         { label: "Today", value: "today" },
@@ -120,13 +272,83 @@ const DateSettings = ({ element, onChange }) => {
         { label: "Relative date", value: "relativeDate" },
     ];
 
-    // End date options
     const endDateOptions = [
         { label: "Unset", value: "false" },
         { label: "Today", value: "today" },
         { label: "Specific end date", value: "specificDate" },
         { label: "Relative date", value: "relativeDate" },
     ];
+
+    const targetDayOptions = [
+        { label: "All days", value: "all" },
+        { label: "Weekdays", value: "weekdays" },
+        { label: "Weekends", value: "weekends" },
+        { label: "Saturday", value: "saturday" },
+        { label: "Sunday", value: "sunday" },
+    ];
+
+    const timeTypeOptions = [
+        { label: "Time picker", value: "picker" },
+        { label: "Dropdown", value: "dropdown" },
+    ];
+
+    // =====================================
+    // TIME PICKER
+    // =====================================
+
+    const renderTimePicker = (field, defaultValue, label) => {
+        const enabledKey =
+            field === "startTime"
+                ? "enableStartTime"
+                : "enableEndTime";
+
+        const enabled = element[enabledKey] !== false;
+
+        return (
+            <BlockStack gap="200">
+                <Checkbox
+                    label={label}
+                    checked={enabled}
+                    onChange={(checked) =>
+                        update(enabledKey, checked)
+                    }
+                />
+
+                {enabled && (
+                    <Flatpickr
+                        value={element[field] || defaultValue}
+                        options={{
+                            enableTime: true,
+                            noCalendar: true,
+                            dateFormat: "H:i",
+                            time_24hr: element.timeFormat !== "12h",
+                            minuteIncrement: Math.max(
+                                1,
+                                Number(element.timeStep) || 5
+                            ),
+                        }}
+                        onChange={(dates, dateString) =>
+                            update(field, dateString)
+                        }
+                        render={(props, ref) => (
+                            <input
+                                {...props}
+                                ref={ref}
+                                value={element[field] || defaultValue}
+                                readOnly
+                                placeholder={label}
+                                className="Polaris-TextField__Input date-time-flatpickr-input"
+                            />
+                        )}
+                    />
+                )}
+            </BlockStack>
+        );
+    };
+
+    // =====================================
+    // UI
+    // =====================================
 
     return (
         <BlockStack gap="400">
@@ -143,19 +365,16 @@ const DateSettings = ({ element, onChange }) => {
                         { label: "Date & time", value: "date_time" },
                         { label: "Date", value: "date" },
                         { label: "Time", value: "time" },
-                    ].map((item) => {
-                        const selected = format === item.value;
-
-                        return (
-                            <div
-                                key={item.value}
-                                className={`chooseItem ${selected ? "active" : ""}`}
-                                onClick={() => update("format", item.value)}
-                            >
-                                {item.label}
-                            </div>
-                        );
-                    })}
+                    ].map((item) => (
+                        <div
+                            key={item.value}
+                            className={`chooseItem ${format === item.value ? "active" : ""
+                                }`}
+                            onClick={() => update("format", item.value)}
+                        >
+                            {item.label}
+                        </div>
+                    ))}
                 </div>
             </BlockStack>
 
@@ -180,7 +399,9 @@ const DateSettings = ({ element, onChange }) => {
                 />
             )}
 
-            {/* DATE SETTINGS */}
+            {/* =====================================
+                DATE SETTINGS
+            ====================================== */}
 
             {showDateSettings && (
                 <>
@@ -188,23 +409,26 @@ const DateSettings = ({ element, onChange }) => {
 
                     <BlockStack gap="300">
 
+                        {/* DATE FORMAT */}
+
                         <Select
                             label="Date format"
                             options={dateFormatOptions}
-                            value={element.dateFormat || "Y-m-d"}
+                            value={dateFormat}
                             onChange={(value) =>
                                 update("dateFormat", value)
                             }
                         />
 
-                        <TextField
+                        {/* DEFAULT DATE */}
+
+                        <DatePickerField
                             label="Default date"
-                            type="date"
-                            value={element.defaultDate || ""}
+                            value={element.defaultDate}
                             onChange={(value) =>
                                 update("defaultDate", value)
                             }
-                            autoComplete="off"
+                            dateFormat={dateFormat}
                         />
 
                         {/* START DATE */}
@@ -219,14 +443,13 @@ const DateSettings = ({ element, onChange }) => {
                         />
 
                         {element.startDateType === "specificDate" && (
-                            <TextField
+                            <DatePickerField
                                 label="Specific date"
-                                type="date"
-                                value={element.specificStartDate || ""}
+                                value={element.specificStartDate}
                                 onChange={(value) =>
                                     update("specificStartDate", value)
                                 }
-                                autoComplete="off"
+                                dateFormat={dateFormat}
                             />
                         )}
 
@@ -234,7 +457,9 @@ const DateSettings = ({ element, onChange }) => {
                             <TextField
                                 label="Relative date (days)"
                                 type="number"
-                                value={String(element.relativeStartDate ?? "")}
+                                value={String(
+                                    element.relativeStartDate ?? ""
+                                )}
                                 onChange={(value) =>
                                     update("relativeStartDate", value)
                                 }
@@ -254,14 +479,13 @@ const DateSettings = ({ element, onChange }) => {
                         />
 
                         {element.endDateType === "specificDate" && (
-                            <TextField
-                                label="Specific date"
-                                type="date"
-                                value={element.specificDate || ""}
+                            <DatePickerField
+                                label="Specific end date"
+                                value={element.specificDate}
                                 onChange={(value) =>
                                     update("specificDate", value)
                                 }
-                                autoComplete="off"
+                                dateFormat={dateFormat}
                             />
                         )}
 
@@ -269,7 +493,9 @@ const DateSettings = ({ element, onChange }) => {
                             <TextField
                                 label="Relative date (days)"
                                 type="number"
-                                value={String(element.relativeEndDate ?? "")}
+                                value={String(
+                                    element.relativeEndDate ?? ""
+                                )}
                                 onChange={(value) =>
                                     update("relativeEndDate", value)
                                 }
@@ -277,23 +503,25 @@ const DateSettings = ({ element, onChange }) => {
                             />
                         )}
 
+                        {/* SPECIFIC DATE */}
+
+                        <DatePickerField
+                            label="Specific date"
+                            value={element.selectedSpecificDate}
+                            onChange={(value) =>
+                                update("selectedSpecificDate", value)
+                            }
+                            dateFormat={dateFormat}
+                        />
+
                     </BlockStack>
                 </>
             )}
 
-            {/* SPECIFIC DATE */}
-
-            <TextField
-                label="Specific date"
-                type="date"
-                value={element.selectedSpecificDate || ""}
-                onChange={(value) =>
-                    update("selectedSpecificDate", value)
-                }
-                autoComplete="off"
-            />
-
-            {/* LIMIT DATE PICKER - ONLY FOR DATE FORMAT */}
+            {/* =====================================
+                LIMIT DATE PICKER
+                ONLY WHEN DATE IS SELECTED
+            ====================================== */}
 
             {isDate && (
                 <>
@@ -310,11 +538,19 @@ const DateSettings = ({ element, onChange }) => {
                     {element.limitDatePicker && (
                         <BlockStack gap="300">
 
+                            {/* LIMIT DATE TYPE */}
+
                             <Select
                                 label="Limit date type"
                                 options={[
-                                    { label: "Disabling dates", value: "disable" },
-                                    { label: "Enabling dates", value: "enable" },
+                                    {
+                                        label: "Disabling dates",
+                                        value: "disable",
+                                    },
+                                    {
+                                        label: "Enabling dates",
+                                        value: "enable",
+                                    },
                                 ]}
                                 value={element.limitDateType || "disable"}
                                 onChange={(value) =>
@@ -322,73 +558,85 @@ const DateSettings = ({ element, onChange }) => {
                                 }
                             />
 
+                            {/* SPECIFIC DATES */}
+
                             <Checkbox
                                 label="Specific dates"
-                                checked={Boolean(element.enableSpecificDates)}
+                                checked={Boolean(
+                                    element.enableSpecificDates
+                                )}
                                 onChange={(checked) =>
                                     update("enableSpecificDates", checked)
                                 }
                             />
 
                             {element.enableSpecificDates && (
-                                <TextField
+                                <DatePickerField
                                     label="Select specific dates"
-                                    value={element.specificDates || ""}
+                                    value={element.specificDates}
                                     onChange={(value) =>
                                         update("specificDates", value)
                                     }
-                                    placeholder="Y-m-d"
-                                    autoComplete="off"
+                                    dateFormat={dateFormat}
+                                    mode="multiple"
                                 />
                             )}
 
+                            {/* RANGE DATES */}
+
                             <Checkbox
                                 label="Range dates"
-                                checked={Boolean(element.enableRangeDates)}
+                                checked={Boolean(
+                                    element.enableRangeDates
+                                )}
                                 onChange={(checked) =>
                                     update("enableRangeDates", checked)
                                 }
                             />
 
                             {element.enableRangeDates && (
-                                <TextField
+                                <DatePickerField
                                     label="Select range dates"
-                                    value={element.rangeDates || ""}
+                                    value={element.rangeDates}
                                     onChange={(value) =>
                                         update("rangeDates", value)
                                     }
-                                    placeholder="Y-m-d"
-                                    autoComplete="off"
+                                    dateFormat={dateFormat}
+                                    mode="range"
                                 />
                             )}
 
+                            {/* DAYS OF WEEK */}
+
                             <Checkbox
                                 label="Days of week"
-                                checked={Boolean(element.enableDaysOfWeek)}
+                                checked={Boolean(
+                                    element.enableDaysOfWeek
+                                )}
                                 onChange={(checked) =>
                                     update("enableDaysOfWeek", checked)
                                 }
                             />
 
                             {element.enableDaysOfWeek && (
-                                <Select
-                                    label="Target days of week"
-                                    options={[
-                                        { label: "All days", value: "all" },
-                                        { label: "Weekdays", value: "weekdays" },
-                                        { label: "Weekends", value: "weekends" },
-                                        { label: "Saturday", value: "saturday" },
-                                        { label: "Sunday", value: "sunday" },
-                                    ]}
-                                    value={element.targetDayType || "all"}
-                                    onChange={(value) =>
-                                        update("targetDayType", value)
-                                    }
-                                />
+                                <BlockStack gap="200">
+                                    <Text as="span" variant="bodyMd">
+                                        Target days of week
+                                    </Text>
+
+                                    <TargetDaysPicker
+                                        value={element.targetDaysOfWeek || []}
+                                        onChange={(value) =>
+                                            update("targetDaysOfWeek", value)
+                                        }
+                                    />
+                                </BlockStack>
                             )}
 
                         </BlockStack>
                     )}
+
+                    {/* ONLY SHOW MONTH */}
 
                     <Checkbox
                         label="Only show month"
@@ -400,10 +648,9 @@ const DateSettings = ({ element, onChange }) => {
                 </>
             )}
 
-            {/* TIME SETTINGS */}
-
-
-            {/* TIME SETTINGS */}
+            {/* =====================================
+                TIME SETTINGS
+            ====================================== */}
 
             {showTimeSettings && (
                 <>
@@ -430,23 +677,21 @@ const DateSettings = ({ element, onChange }) => {
                             </Text>
 
                             <div className="column-width-selector">
-                                {[
-                                    { label: "Time picker", value: "picker" },
-                                    { label: "Dropdown", value: "dropdown" },
-                                ].map((item) => {
-                                    const selected =
-                                        (element.timeType || "picker") === item.value;
-
-                                    return (
-                                        <div
-                                            key={item.value}
-                                            className={`chooseItem ${selected ? "active" : ""}`}
-                                            onClick={() => update("timeType", item.value)}
-                                        >
-                                            {item.label}
-                                        </div>
-                                    );
-                                })}
+                                {timeTypeOptions.map((item) => (
+                                    <div
+                                        key={item.value}
+                                        className={`chooseItem ${(element.timeType || "picker") ===
+                                                item.value
+                                                ? "active"
+                                                : ""
+                                            }`}
+                                        onClick={() =>
+                                            update("timeType", item.value)
+                                        }
+                                    >
+                                        {item.label}
+                                    </div>
+                                ))}
                             </div>
                         </BlockStack>
 
@@ -465,51 +710,23 @@ const DateSettings = ({ element, onChange }) => {
 
                         {/* START TIME */}
 
-                        <Checkbox
-                            label="Start time"
-                            checked={element.enableStartTime !== false}
-                            onChange={(checked) =>
-                                update("enableStartTime", checked)
-                            }
-                        />
-
-                        {element.enableStartTime !== false && (
-                            <TextField
-                                type="time"
-                                value={element.startTime || "12:00"}
-                                onChange={(value) =>
-                                    update("startTime", value)
-                                }
-                                autoComplete="off"
-                            />
+                        {renderTimePicker(
+                            "startTime",
+                            "12:00",
+                            "Start time"
                         )}
 
                         {/* END TIME */}
 
-                        <Checkbox
-                            label="End time"
-                            checked={element.enableEndTime !== false}
-                            onChange={(checked) =>
-                                update("enableEndTime", checked)
-                            }
-                        />
-
-                        {element.enableEndTime !== false && (
-                            <TextField
-                                type="time"
-                                value={element.endTime || "00:00"}
-                                onChange={(value) =>
-                                    update("endTime", value)
-                                }
-                                autoComplete="off"
-                            />
+                        {renderTimePicker(
+                            "endTime",
+                            "00:00",
+                            "End time"
                         )}
 
                     </BlockStack>
                 </>
             )}
-
-           
 
         </BlockStack>
     );
