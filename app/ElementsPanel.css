@@ -466,7 +466,7 @@
   outline-offset: -2px;
 }
 
-/* //opoup */
+
 
 
 
@@ -486,4 +486,16 @@
   .element-tree {
     padding-inline: 6px;
   }
+}
+
+/* // FOR ow, when you drag an element over a row, that row will get a blue highlighted background */
+.element-tree__row-fields {
+    min-height: 35px;
+    transition: background 0.2s ease;
+}
+
+.element-tree__row-fields--over {
+    background: #eaf4ff;
+    outline: 1px dashed #2c6ecb;
+    border-radius: 6px;
 }

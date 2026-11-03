@@ -7,6 +7,7 @@ import {
     PointerSensor,
     useSensor,
     useSensors,
+    useDroppable,
 } from "@dnd-kit/core";
 
 import {
@@ -68,6 +69,118 @@ export default function ElementsPanel({ pages, setPages }) {
         })
     );
 
+    // ======================================================
+    // FUNCTION: REORDER ELEMENTS INSIDE THE ROWS AND ROOT ELEMENTS
+    // ======================================================
+    const handlePageContentDragEnd = (event) => {
+        const { active, over } = event;
+
+        if (!over || active.id === over.id) return;
+
+        const activeData = active.data.current;
+        const overData = over.data.current;
+
+        if (!activeData || !overData) return;
+
+        // Keep row reordering separate
+        if (activeData.type === "row") {
+            return;
+        }
+
+        const targetRowId = overData.rowId;
+        const targetPageId = overData.pageId;
+
+        if (targetRowId == null || targetPageId == null) return;
+
+        setPages((previousPages) => {
+            let draggedItem = null;
+
+            // First remove the dragged item from its original page
+            const updatedPages = previousPages.map((page) => {
+                const rows = (page.rows || []).map((row) => ({
+                    ...row,
+                    fields: [...(row.fields || [])],
+                    elements: [...(row.elements || [])],
+                }));
+
+                if (activeData.type === "field") {
+                    const sourceRow = rows.find(
+                        (row) => row.id === activeData.rowId
+                    );
+
+                    if (sourceRow) {
+                        draggedItem = sourceRow.fields.find(
+                            (item, index) =>
+                                getDragItemId(item, index) === activeData.itemId
+                        );
+
+                        sourceRow.fields = sourceRow.fields.filter(
+                            (item, index) =>
+                                getDragItemId(item, index) !== activeData.itemId
+                        );
+                    }
+                }
+
+                if (activeData.type === "element") {
+                    const sourceRow = rows.find(
+                        (row) => row.id === activeData.rowId
+                    );
+
+                    if (sourceRow) {
+                        draggedItem = sourceRow.elements.find(
+                            (item) => `element-${item.id}` === activeData.itemId
+                        );
+
+                        sourceRow.elements = sourceRow.elements.filter(
+                            (item) => `element-${item.id}` !== activeData.itemId
+                        );
+                    }
+                }
+
+                if (activeData.type === "rootElement") {
+                    draggedItem = (page.rootElements || []).find(
+                        (item) => `element-${item.id}` === activeData.itemId
+                    );
+                }
+
+                return {
+                    ...page,
+                    rows,
+                    rootElements: (page.rootElements || []).filter(
+                        (item) =>
+                            activeData.type !== "rootElement" ||
+                            `element-${item.id}` !== activeData.itemId
+                    ),
+                };
+            });
+
+            if (!draggedItem) return previousPages;
+
+            // Then add the item to the target page and row
+            return updatedPages.map((page) => {
+                if (page.id !== targetPageId) return page;
+
+                return {
+                    ...page,
+                    rows: page.rows.map((row) => {
+                        if (row.id !== targetRowId) return row;
+
+                        if (activeData.type === "field") {
+                            return {
+                                ...row,
+                                fields: [...row.fields, draggedItem],
+                            };
+                        }
+
+                        return {
+                            ...row,
+                            elements: [...row.elements, draggedItem],
+                        };
+                    }),
+                };
+            });
+        });
+    };
     // ======================================================
     // FUNCTION: REORDER PAGES
     // Moves the dragged page to the position of the target.
@@ -480,6 +593,7 @@ export default function ElementsPanel({ pages, setPages }) {
                                 togglePage={togglePage}
                                 handleRowDragEnd={handleRowDragEnd}
                                 handleFieldDragEnd={handleFieldDragEnd}
+                                handlePageContentDragEnd={handlePageContentDragEnd}
                                 handleElementDragEnd={handleElementDragEnd}
                                 addRowElement={addRowElement}
                                 addRootElement={addRootElement}
@@ -533,6 +647,13 @@ export default function ElementsPanel({ pages, setPages }) {
     );
 }
 
+const getDragItemId = (item, index) => {
+    return typeof item === "object" && item?.id != null
+        ? `field-${item.id}`
+        : `field-index-${index}`;
+};
+
+
 // ======================================================
 // COMPONENT: SORTABLE PAGE
 // Makes the page draggable using its drag handle.
@@ -546,6 +667,7 @@ function SortablePage({
     handleRowDragEnd,
     handleFieldDragEnd,
     handleElementDragEnd,
+    handlePageContentDragEnd,
     addRowElement,
     addRootElement,
     openElementPicker,
@@ -624,26 +746,28 @@ function SortablePage({
                 <div className="element-tree__page-content">
 
                     {/* ==============================================
-                      ROWS LIST
-                      This context allows rows to be reordered
+                      ROWS LIST and ROOT ELEMENT LIST BOTH 
+                      This context allows rows  AND root elements to be reordered
                       within the current page.
                      ============================================== */}
+
+                    {/* SHARED DRAG AND DROP CONTEXT */}
 
                     <DndContext
                         sensors={sensors}
                         collisionDetection={closestCenter}
                         onDragEnd={(event) =>
-                            handleRowDragEnd(event, page.id)
+                            handlePageContentDragEnd(event, page.id)
                         }
                     >
+                        {/* ROWS LIST */}
+
                         <SortableContext
                             items={(page.rows || []).map(
                                 (row) => `row-${row.id}`
                             )}
                             strategy={verticalListSortingStrategy}
                         >
-                            {/* Render each row as a sortable component. */}
-
                             {(page.rows || []).map((row) => (
                                 <SortableRow
                                     key={row.id}
@@ -657,36 +781,25 @@ function SortablePage({
                                 />
                             ))}
                         </SortableContext>
-                    </DndContext>
 
-                    {/* ==============================================
-                      ROOT ELEMENTS LIST
-                      These elements belong directly to the page,
-                      rather than to an individual row.
-                     ============================================== */}
+                        {/* ROOT ELEMENTS LIST */}
 
-                    <DndContext
-                        sensors={sensors}
-                        collisionDetection={closestCenter}
-                        onDragEnd={(event) =>
-                            handleElementDragEnd(event, page.id)
-                        }
-                    >
                         <SortableContext
                             items={(page.rootElements || []).map(
                                 (element) => `element-${element.id}`
                             )}
                             strategy={verticalListSortingStrategy}
                         >
-                            {/* Render every root element as draggable. */}
-
                             {(page.rootElements || []).map((element) => (
                                 <SortableCreatedElement
                                     key={element.id}
                                     element={element}
+                                    type="rootElement"
+                                    rowId={null}
                                 />
                             ))}
                         </SortableContext>
+
                     </DndContext>
 
                     {/* ADD ELEMENT OUTSIDE ROWS */}
@@ -723,6 +836,7 @@ function SortableRow({
     addRowElement,
     openElementPicker,
 }) {
+    // use soratable for the row itself => Allows you to drag and reorder the row
     const {
         attributes,
         listeners,
@@ -732,6 +846,21 @@ function SortableRow({
         isDragging,
     } = useSortable({
         id: `row-${row.id}`,
+        data: {
+            type: "row",
+            rowId: row.id,
+        },
+    });
+    // USE DROPABLE => Allows you to drop elements inside the row
+    const {
+        setNodeRef: setDropRef,
+        isOver,
+    } = useDroppable({
+        id: `row-drop-${row.id}`,
+        data: {
+            rowId: row.id,
+            type: "rowDrop",
+        },
     });
 
     // Apply the drag position and visual feedback.
@@ -773,73 +902,50 @@ function SortableRow({
 
             {/* ROW FIELDS AND CREATED ELEMENTS */}
 
-            <div className="element-tree__row-fields">
+            <div
+                ref={setDropRef}
+                className={`element-tree__row-fields ${isOver ? "element-tree__row-fields--over" : ""
+                    }`}
+            >
+                <SortableContext
+                    items={[
+                        ...(row.fields || []).map((field, index) =>
+                            getDragItemId(field, index)
+                        ),
 
-                {/* ==============================================
-                  ORIGINAL FIELDS
-                  Reorders fields within this row only.
-                 ============================================== */}
-
-                <DndContext
-                    sensors={sensors}
-                    collisionDetection={closestCenter}
-                    onDragEnd={(event) =>
-                        handleFieldDragEnd(event, pageId, row.id)
-                    }
-                >
-                    <SortableContext
-                        items={(row.fields || []).map((field, index) =>
-                            typeof field === "object" && field?.id != null
-                                ? `field-${field.id}`
-                                : `${row.id}-field-${index}`
-                        )}
-                        strategy={verticalListSortingStrategy}
-                    >
-                        {(row.fields || []).map((field, index) => {
-                            const fieldId =
-                                typeof field === "object" && field?.id != null
-                                    ? `field-${field.id}`
-                                    : `${row.id}-field-${index}`;
-
-                            return (
-                                <SortableSidebarField
-                                    key={fieldId}
-                                    id={fieldId}
-                                    field={field}
-                                />
-                            );
-                        })}
-                    </SortableContext>
-                </DndContext>
-
-                {/* ==============================================
-                  CREATED ELEMENTS
-                  Reorders created elements within this row.
-                 ============================================== */}
-
-                <DndContext
-                    sensors={sensors}
-                    collisionDetection={closestCenter}
-                    onDragEnd={(event) =>
-                        handleElementDragEnd(event, pageId, row.id)
-                    }
-                >
-                    <SortableContext
-                        items={(row.elements || []).map(
+                        ...(row.elements || []).map(
                             (element) => `element-${element.id}`
-                        )}
-                        strategy={verticalListSortingStrategy}
-                    >
-                        {/* Render every created element as draggable. */}
+                        ),
+                    ]}
+                    strategy={verticalListSortingStrategy}
+                >
+                    {/* ORIGINAL FIELDS */}
 
-                        {(row.elements || []).map((element) => (
-                            <SortableCreatedElement
-                                key={element.id}
-                                element={element}
+                    {(row.fields || []).map((field, index) => {
+                        const fieldId = getDragItemId(field, index);
+
+                        return (
+                            <SortableSidebarField
+                                key={fieldId}
+                                id={fieldId}
+                                field={field}
+                                rowId={row.id}
+                                  pageId={pageId}
                             />
-                        ))}
-                    </SortableContext>
-                </DndContext>
+                        );
+                    })}
+
+                    {/* CREATED ELEMENTS */}
+
+                    {(row.elements || []).map((element) => (
+                        <SortableCreatedElement
+                            key={element.id}
+                            element={element}
+                            type="element"
+                            rowId={row.id}
+                        />
+                    ))}
+                </SortableContext>
             </div>
 
             {/* ADD ELEMENT TO THIS ROW */}
@@ -863,7 +969,7 @@ function SortableRow({
 // Shows the drag icon instead of the file icon on hover.
 // ======================================================
 
-function SortableSidebarField({ id, field }) {
+function SortableSidebarField({ id, field, rowId }) {
     const {
         attributes,
         listeners,
@@ -871,9 +977,16 @@ function SortableSidebarField({ id, field }) {
         transform,
         transition,
         isDragging,
-    } = useSortable({ id });
+    } = useSortable({
+        id,
+        data: {
+            type: "field",
+            rowId,
+            pageId,
+            itemId: id,
+        },
+    });
 
-    // Apply the drag position and visual feedback.
     const style = {
         transform: CSS.Transform.toString(transform),
         transition,
@@ -888,8 +1001,6 @@ function SortableSidebarField({ id, field }) {
             {...attributes}
             {...listeners}
         >
-            {/* Default file icon and hover drag icon. */}
-
             <span className="element-tree__field-icon">
                 <span className="element-tree__default-icon">
                     <Icon source={FileIcon} />
@@ -897,8 +1008,6 @@ function SortableSidebarField({ id, field }) {
 
                 <span className="element-tree__drag-icon">⠿</span>
             </span>
-
-            {/* Display the field name. */}
 
             <span className="element-tree__field-label">
                 {typeof field === "string"
@@ -908,13 +1017,16 @@ function SortableSidebarField({ id, field }) {
         </div>
     );
 }
-
 // ======================================================
 // COMPONENT: SORTABLE CREATED ELEMENT
 // Makes an element created by Add elements draggable.
 // ======================================================
 
-function SortableCreatedElement({ element }) {
+function SortableCreatedElement({
+    element,
+    type = "element",
+    rowId = null,
+}) {
     const {
         attributes,
         listeners,
@@ -924,9 +1036,14 @@ function SortableCreatedElement({ element }) {
         isDragging,
     } = useSortable({
         id: `element-${element.id}`,
+        data: {
+            type,
+            rowId,
+            pageId,
+            itemId: `element-${element.id}`,
+        },
     });
 
-    // Apply the drag position and visual feedback.
     const style = {
         transform: CSS.Transform.toString(transform),
         transition,
@@ -941,8 +1058,6 @@ function SortableCreatedElement({ element }) {
             {...attributes}
             {...listeners}
         >
-            {/* Default file icon and hover drag icon. */}
-
             <span className="element-tree__field-icon">
                 <span className="element-tree__default-icon">
                     <Icon source={FileIcon} />
@@ -950,8 +1065,6 @@ function SortableCreatedElement({ element }) {
 
                 <span className="element-tree__drag-icon">⠿</span>
             </span>
-
-            {/* Display the created element's label. */}
 
             <span className="element-tree__field-label">
                 {element.label}
