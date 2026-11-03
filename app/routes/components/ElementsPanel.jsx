@@ -87,16 +87,20 @@ export default function ElementsPanel({ pages, setPages }) {
             return;
         }
 
-        const targetRowId = overData.rowId;
+        const targetRowId = overData.rowId ?? null;
         const targetPageId = overData.pageId;
 
-        if (targetRowId == null || targetPageId == null) return;
+        if (targetPageId == null) return;
 
         setPages((previousPages) => {
             let draggedItem = null;
 
             // First remove the dragged item from its original page
             const updatedPages = previousPages.map((page) => {
+
+                // Only remove the item from its actual source page.
+                if (page.id !== activeData.pageId) return page;
+
                 const rows = (page.rows || []).map((row) => ({
                     ...row,
                     fields: [...(row.fields || [])],
@@ -157,8 +161,20 @@ export default function ElementsPanel({ pages, setPages }) {
             if (!draggedItem) return previousPages;
 
             // Then add the item to the target page and row
+            // Then add the item to the target page and row
             return updatedPages.map((page) => {
                 if (page.id !== targetPageId) return page;
+
+                // If the target is a page header, add the item to root elements.
+                if (targetRowId == null) {
+                    return {
+                        ...page,
+                        rootElements: [
+                            ...(page.rootElements || []),
+                            draggedItem,
+                        ],
+                    };
+                }
 
                 return {
                     ...page,
@@ -181,6 +197,7 @@ export default function ElementsPanel({ pages, setPages }) {
             });
         });
     };
+
     // ======================================================
     // FUNCTION: REORDER PAGES
     // Moves the dragged page to the position of the target.
@@ -369,6 +386,29 @@ export default function ElementsPanel({ pages, setPages }) {
     };
 
     // ======================================================
+    // FUNCTION: HANDLE ALL DRAG END EVENTS
+    // Determines whether a page, row, or element was dragged.
+    // ======================================================
+
+    const handleAllDragEnd = (event) => {
+        const activeData = event.active.data.current;
+
+        if (!activeData) return;
+
+        if (activeData.type === "page") {
+            handlePageDragEnd(event);
+            return;
+        }
+
+        if (activeData.type === "row") {
+            handleRowDragEnd(event, activeData.pageId);
+            return;
+        }
+
+        handlePageContentDragEnd(event);
+    };
+
+    // ======================================================
     // FUNCTION: ADD A PAGE
     // Adds a new page and closes the previously open pages.
     // ======================================================
@@ -403,7 +443,6 @@ export default function ElementsPanel({ pages, setPages }) {
             }))
         );
     };
-
     // ======================================================
     // FUNCTION: ADD ELEMENT TO A ROW
     // Adds a new element to the selected row.
@@ -574,10 +613,13 @@ export default function ElementsPanel({ pages, setPages }) {
              ================================================== */}
 
             <div className="element-tree">
+
+                {/* SHARED DRAG AND DROP CONTEXT */}
+
                 <DndContext
                     sensors={sensors}
                     collisionDetection={closestCenter}
-                    onDragEnd={handlePageDragEnd}
+                    onDragEnd={handleAllDragEnd}
                 >
                     <SortableContext
                         items={pages.map((page) => `page-${page.id}`)}
@@ -672,16 +714,21 @@ function SortablePage({
     addRootElement,
     openElementPicker,
 }) {
-    const {
-        attributes,
-        listeners,
-        setNodeRef,
-        transform,
-        transition,
-        isDragging,
-    } = useSortable({
-        id: `page-${page.id}`,
-    });
+   const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+} = useSortable({
+    id: `page-${page.id}`,
+    data: {
+        type: "page",
+        pageId: page.id,
+        rowId: null,
+    },
+});
 
     // Apply the drag position and visual feedback.
     const pageStyle = {
@@ -751,56 +798,46 @@ function SortablePage({
                       within the current page.
                      ============================================== */}
 
-                    {/* SHARED DRAG AND DROP CONTEXT */}
+                    {/* ROWS LIST */}
 
-                    <DndContext
-                        sensors={sensors}
-                        collisionDetection={closestCenter}
-                        onDragEnd={(event) =>
-                            handlePageContentDragEnd(event, page.id)
-                        }
+                    <SortableContext
+                        items={(page.rows || []).map(
+                            (row) => `row-${row.id}`
+                        )}
+                        strategy={verticalListSortingStrategy}
                     >
-                        {/* ROWS LIST */}
+                        {(page.rows || []).map((row) => (
+                            <SortableRow
+                                key={row.id}
+                                row={row}
+                                pageId={page.id}
+                                sensors={sensors}
+                                handleFieldDragEnd={handleFieldDragEnd}
+                                handleElementDragEnd={handleElementDragEnd}
+                                addRowElement={addRowElement}
+                                openElementPicker={openElementPicker}
+                            />
+                        ))}
+                    </SortableContext>
 
-                        <SortableContext
-                            items={(page.rows || []).map(
-                                (row) => `row-${row.id}`
-                            )}
-                            strategy={verticalListSortingStrategy}
-                        >
-                            {(page.rows || []).map((row) => (
-                                <SortableRow
-                                    key={row.id}
-                                    row={row}
-                                    pageId={page.id}
-                                    sensors={sensors}
-                                    handleFieldDragEnd={handleFieldDragEnd}
-                                    handleElementDragEnd={handleElementDragEnd}
-                                    addRowElement={addRowElement}
-                                    openElementPicker={openElementPicker}
-                                />
-                            ))}
-                        </SortableContext>
+                    {/* ROOT ELEMENTS LIST */}
 
-                        {/* ROOT ELEMENTS LIST */}
-
-                        <SortableContext
-                            items={(page.rootElements || []).map(
-                                (element) => `element-${element.id}`
-                            )}
-                            strategy={verticalListSortingStrategy}
-                        >
-                            {(page.rootElements || []).map((element) => (
-                                <SortableCreatedElement
-                                    key={element.id}
-                                    element={element}
-                                    type="rootElement"
-                                    rowId={null}
-                                />
-                            ))}
-                        </SortableContext>
-
-                    </DndContext>
+                    <SortableContext
+                        items={(page.rootElements || []).map(
+                            (element) => `element-${element.id}`
+                        )}
+                        strategy={verticalListSortingStrategy}
+                    >
+                        {(page.rootElements || []).map((element) => (
+                            <SortableCreatedElement
+                                key={element.id}
+                                element={element}
+                                type="rootElement"
+                                rowId={null}
+                                pageId={page.id}
+                            />
+                        ))}
+                    </SortableContext>
 
                     {/* ADD ELEMENT OUTSIDE ROWS */}
 
@@ -849,6 +886,7 @@ function SortableRow({
         data: {
             type: "row",
             rowId: row.id,
+            pageId,
         },
     });
     // USE DROPABLE => Allows you to drop elements inside the row
@@ -860,6 +898,7 @@ function SortableRow({
         data: {
             rowId: row.id,
             type: "rowDrop",
+            pageId,
         },
     });
 
@@ -930,7 +969,7 @@ function SortableRow({
                                 id={fieldId}
                                 field={field}
                                 rowId={row.id}
-                                  pageId={pageId}
+                                pageId={pageId}
                             />
                         );
                     })}
@@ -943,6 +982,7 @@ function SortableRow({
                             element={element}
                             type="element"
                             rowId={row.id}
+                            pageId={pageId}
                         />
                     ))}
                 </SortableContext>
@@ -969,7 +1009,7 @@ function SortableRow({
 // Shows the drag icon instead of the file icon on hover.
 // ======================================================
 
-function SortableSidebarField({ id, field, rowId }) {
+function SortableSidebarField({ id, field, rowId, pageId }) {
     const {
         attributes,
         listeners,
@@ -1026,6 +1066,7 @@ function SortableCreatedElement({
     element,
     type = "element",
     rowId = null,
+    pageId,
 }) {
     const {
         attributes,
