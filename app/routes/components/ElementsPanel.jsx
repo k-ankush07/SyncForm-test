@@ -231,27 +231,51 @@ export default function ElementsPanel({
     // Moves the dragged page to the position of the target.
     // ======================================================
 
+    // ======================================================
+    // FUNCTION: REORDER PAGES
+    // Moves the dragged page to the position of the target.
+    // ======================================================
+
     const handlePageDragEnd = (event) => {
         const { active, over } = event;
 
-        if (!over || active.id === over.id) return;
+        if (!over) return;
+
+        // Get actual page IDs from drag data.
+        const activePageId = active.data.current?.pageId;
+        const overPageId = over.data.current?.pageId;
+
+        if (
+            activePageId == null ||
+            overPageId == null ||
+            activePageId === overPageId
+        ) {
+            return;
+        }
 
         setPages((previousPages) => {
+            // Find the original position of the dragged page.
             const oldIndex = previousPages.findIndex(
-                (page) => `page-${page.id}` === active.id
+                (page) => page.id === activePageId
             );
 
+            // Find the position where the page was dropped.
             const newIndex = previousPages.findIndex(
-                (page) => `page-${page.id}` === over.id
+                (page) => page.id === overPageId
             );
 
             if (oldIndex === -1 || newIndex === -1) {
                 return previousPages;
             }
 
+            // Move the complete page to its new position.
             return arrayMove(previousPages, oldIndex, newIndex);
         });
     };
+    // ======================================================
+    // FUNCTION: REORDER ROWS
+    // Moves a row within its own page.
+    // ======================================================
 
     // ======================================================
     // FUNCTION: REORDER ROWS
@@ -261,25 +285,42 @@ export default function ElementsPanel({
     const handleRowDragEnd = (event, pageId) => {
         const { active, over } = event;
 
-        if (!over || active.id === over.id) return;
+        if (!over) return;
+
+        // Get the actual row IDs from the drag data.
+        const activeRowId = active.data.current?.rowId;
+        const overRowId = over.data.current?.rowId;
+
+        // Stop if either row ID is missing or the row is dropped
+        // back onto its original position.
+        if (
+            activeRowId == null ||
+            overRowId == null ||
+            activeRowId === overRowId
+        ) {
+            return;
+        }
 
         setPages((previousPages) =>
             previousPages.map((page) => {
                 // Only update the page containing the dragged row.
                 if (page.id !== pageId) return page;
 
+                // Find the original position of the dragged row.
                 const oldIndex = page.rows.findIndex(
-                    (row) => `row-${row.id}` === active.id
+                    (row) => row.id === activeRowId
                 );
 
+                // Find the position where the row was dropped.
                 const newIndex = page.rows.findIndex(
-                    (row) => `row-${row.id}` === over.id
+                    (row) => row.id === overRowId
                 );
 
                 if (oldIndex === -1 || newIndex === -1) {
                     return page;
                 }
 
+                // Move the complete row to its new position.
                 return {
                     ...page,
                     rows: arrayMove(page.rows, oldIndex, newIndex),
@@ -548,8 +589,38 @@ export default function ElementsPanel({
                 {/* SHARED DRAG AND DROP CONTEXT */}
 
                 <DndContext
+                    // now it can reconiz epage srows and elemnts 
                     sensors={sensors}
-                    collisionDetection={closestCenter}
+                    collisionDetection={(args) => {
+                        const activeType = args.active.data.current?.type;
+
+                        // When dragging a page, detect only other pages.
+                        if (activeType === "page") {
+                            const pageContainers = args.droppableContainers.filter(
+                                (container) => container.data.current?.type === "page"
+                            );
+
+                            return closestCenter({
+                                ...args,
+                                droppableContainers: pageContainers,
+                            });
+                        }
+
+                        // When dragging a row, detect only other rows.
+                        if (activeType === "row") {
+                            const rowContainers = args.droppableContainers.filter(
+                                (container) => container.data.current?.type === "row"
+                            );
+
+                            return closestCenter({
+                                ...args,
+                                droppableContainers: rowContainers,
+                            });
+                        }
+
+                        // Keep existing collision detection for fields and elements.
+                        return closestCenter(args);
+                    }}
                     onDragEnd={handleAllDragEnd}
                 >
                     <SortableContext
@@ -705,6 +776,8 @@ function SortablePage({
             <div
                 className={`element-tree__page ${page.open ? "element-tree__page--active" : ""
                     }`}
+                {...attributes}
+                {...listeners}
             >
                 {/* Expand/collapse arrow */}
 
@@ -722,8 +795,7 @@ function SortablePage({
 
                 <span
                     className="element-tree__field-icon element-tree__page-icon"
-                    {...attributes}
-                    {...listeners}
+                 
                 >
                     <span className="element-tree__default-icon">
                         <Icon source={FileIcon} />
@@ -845,6 +917,7 @@ function SortablePage({
 // The fields and elements move together with their row.
 // ======================================================
 
+
 function SortableRow({
     page,
     row,
@@ -899,6 +972,7 @@ function SortableRow({
         transition,
         opacity: isDragging ? 0.55 : 1,
     };
+
     // state to show hover 
     const [isHovered, setIsHovered] = useState(false);
 
@@ -907,21 +981,22 @@ function SortableRow({
             ref={setNodeRef}
             style={rowStyle}
             className="element-tree__row"
-
         >
             {/* ROW HEADING AND DRAG HANDLE */}
 
-            <div className="element-tree__row-heading"
+            <div
+                className="element-tree__row-heading"
                 // add these to get knonw mouse enter 
                 onMouseEnter={() => setIsHovered(true)}
-                onMouseLeave={() => setIsHovered(false)}>
+                onMouseLeave={() => setIsHovered(false)}
+
+                // Make the entire row heading draggable.
+                {...attributes}
+                {...listeners}
+            >
                 {/* Folder icon changes to drag icon on hover */}
 
-                <span
-                    className="element-tree__field-icon element-tree__row-drag-icon"
-                    {...attributes}
-                    {...listeners}
-                >
+                <span className="element-tree__field-icon element-tree__row-drag-icon">
                     <span className="element-tree__default-icon">
                         <Icon source={FolderIcon} />
                     </span>
@@ -934,6 +1009,7 @@ function SortableRow({
                 <Text as="span" variant="bodySm">
                     Row
                 </Text>
+
                 {/* Reusable row toolbox */}
                 {isHovered && (
                     <ElementActions
@@ -1017,6 +1093,7 @@ function SortableRow({
         </div>
     );
 }
+
 
 // ======================================================
 // COMPONENT: SORTABLE SIDEBAR FIELD

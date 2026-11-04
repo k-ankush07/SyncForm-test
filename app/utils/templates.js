@@ -1,47 +1,78 @@
 export  const templates = [
   // 1. Contact Form
-  {
-    id: 1,
-    title: "Contact form",
-    description: "Basic contact form",
-    category: "contact",
-    image: "/images/contact.fc71ad9f717b4b182c75.png",
-    theme: "classic",
-    layout: "stacked",
-    type: "contact",
-    pages: [
-      {
-        id: 1,
-        label: "Page 1",
-        open: true,
-        rows: [
-          {
-            id: 101,
-            fields: ["First Name", "Last Name"],
-            elements: [],
-          },
-          {
-            id: 102,
-            fields: ["Email", "Phone"],
-            elements: [],
-          },
-        ],
-        rootElements: [
-          {
-            id: 103,
-            label: "Message",
-            type: "textarea",
-            elements: [],
-          },
-        ],
-        submitButton: {
-          label: "Send message",
-          enabled: true,
-        },
-      },
-    ],
-  },
+ {
+  id: 1,
+  title: "Contact form",
+  description: "Basic contact form",
+  category: "contact",
+  image: "/images/contact.fc71ad9f717b4b182c75.png",
+  theme: "classic",
+  layout: "stacked",
+  type: "contact",
 
+  pages: [
+    {
+      id: 1,
+      label: "Page 1",
+      open: true,
+
+      // Form Header
+      header: {
+        id: 100,
+        type: "form_header",
+        showHeader: true,
+        title: "Contact us",
+        headingTag: "h2",
+        alignment: "left",
+        description: "Leave your message and we'll get back to you shortly.",
+        visible: true,
+      },
+
+      // Form Fields
+      rows: [
+        {
+          id: 101,
+          fields: ["First Name", "Last Name"],
+          elements: [],
+        },
+        {
+          id: 102,
+          fields: ["Email", "Phone"],
+          elements: [],
+        },
+      ],
+
+      rootElements: [
+        {
+          id: 103,
+          label: "Message",
+          type: "textarea",
+          elements: [],
+        },
+      ],
+
+      // Form Footer
+      footer: {
+        id: 104,
+        type: "form_footer",
+        text: "",
+        showDescriptionAtBottom: true,
+        previousText: "Previous",
+        nextText: "Next",
+        submitText: "Send message",
+        showResetButton: false,
+        resetButtonText: "Reset",
+        fullWidthButton: false,
+        visible: true,
+      },
+
+      submitButton: {
+        label: "Send message",
+        enabled: true,
+      },
+    },
+  ],
+},
   // 2. Registration Form
   {
     id: 2,

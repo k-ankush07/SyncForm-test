@@ -240,12 +240,12 @@
 /* Page drag handle */
 
 .element-tree__page-icon {
-  cursor: pointer;
+  cursor: grab;
   touch-action: none;
 }
 
 .element-tree__page-icon:active {
-  cursor: pointer;
+  cursor: grabbing;
 }
 
 /* Page label */
@@ -682,4 +682,12 @@
 .element-tree__action-btn--delete:hover {
     background: #fff0ee;
     color: #bf0711;
+}
+.element-tree__row-heading {
+    cursor: pointer;
+    touch-action: none;
+}
+
+.element-tree__row-heading:hover {
+    cursor: pointer;
 }

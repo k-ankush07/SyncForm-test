@@ -52,46 +52,46 @@ function PreviewDropZone({
     },
   });
 
-  return (
-    <div
-      ref={setNodeRef}
-      className={[
-        "preview-drop-zone",
-        `preview-drop-zone--${placement}`,
-        isOver ? "preview-drop-zone--active" : "",
-      ]
-        .filter(Boolean)
-        .join(" ")}
-    >
-      <button
-        type="button"
-        className="preview-insert-button"
-        aria-label={`Insert element ${placement}`}
-        title={`Add element ${placement}`}
-        onPointerDown={(event) => {
-          // Prevent the parent preview element from starting a drag.
-          event.stopPropagation();
-        }}
-        onClick={(event) => {
-          event.stopPropagation();
+ return (
+  <div
+    ref={setNodeRef}
+    className={[
+      "preview-drop-zone",
+      `preview-drop-zone--${placement}`,
+      isOver ? "preview-drop-zone--active" : "",
+    ]
+      .filter(Boolean)
+      .join(" ")}
+  >
+    <span className="preview-drop-line" />
 
-          // Open the existing element picker at this position.
-          onOpenElementPicker?.(
-            {
-              pageId,
-              rowId,
-              elementId,
-              collection,
-              placement,
-            },
-            event
-          );
-        }}
-      >
-        +
-      </button>
-    </div>
-  );
+    <button
+      type="button"
+      className="preview-insert-button"
+      aria-label={`Insert element ${placement}`}
+      title={`Add element ${placement}`}
+      onPointerDown={(event) => {
+        event.stopPropagation();
+      }}
+      onClick={(event) => {
+        event.stopPropagation();
+
+        onOpenElementPicker?.(
+          {
+            pageId,
+            rowId,
+            elementId,
+            collection,
+            placement,
+          },
+          event
+        );
+      }}
+    >
+      +
+    </button>
+  </div>
+);
 }
 
 // Each preview element has its own drag behavior.

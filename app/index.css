@@ -1659,3 +1659,102 @@
   cursor: pointer;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
 }
+
+/* Parent element must allow insertion indicators outside its boundaries */
+.preview-element {
+    position: relative;
+    overflow: visible;
+}
+
+/* Base drop zone */
+.preview-drop-zone {
+    position: absolute;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 150ms ease;
+}
+
+/* Horizontal insertion zones */
+.preview-drop-zone--top,
+.preview-drop-zone--bottom {
+    left: 0;
+    width: 100%;
+    height: 20px;
+}
+
+.preview-drop-zone--top {
+    top: -10px;
+}
+
+.preview-drop-zone--bottom {
+    bottom: -10px;
+}
+
+.preview-drop-zone--left,
+.preview-drop-zone--right {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 20px;
+    height: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.preview-drop-zone--left {
+    left: -10px;
+}
+
+.preview-drop-zone--right {
+    right: -10px;
+}
+
+/* Center the vertical insertion line */
+.preview-drop-zone--left .preview-drop-line,
+.preview-drop-zone--right .preview-drop-line {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 3px;
+    height: 100%;
+    transform: translate(-50%, -50%);
+}
+
+/* Keep plus icon exactly at the center */
+.preview-drop-zone--left .preview-insert-button,
+.preview-drop-zone--right .preview-insert-button {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+/* Plus button in the center of the line */
+.preview-insert-button {
+    position: absolute;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: 2px solid #ffffff;
+    border-radius: 50%;
+    background: #2c6ecb;
+    color: #ffffff;
+    font-size: 17px;
+    font-weight: 600;
+    line-height: 1;
+    cursor: pointer;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
+.preview-insert-button:hover {
+    background: #1a5bb5;
+    transform: scale(1.1);
+}
