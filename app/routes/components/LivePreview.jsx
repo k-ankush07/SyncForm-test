@@ -54,14 +54,14 @@ function PreviewDropZone({
   return (
     <div
       ref={setNodeRef}
-      className={`preview-drop-zone preview-drop-zone--${placement} ${
-        isOver ? "preview-drop-zone--active" : ""
-      }`}
+      className={`preview-drop-zone preview-drop-zone--${placement} ${isOver ? "preview-drop-zone--active" : ""
+        }`}
     />
   );
 }
 
 // Each preview element has its own drag behavior.
+
 function DraggablePreviewElement({
   element,
   pageId,
@@ -95,20 +95,45 @@ function DraggablePreviewElement({
     },
   });
 
+// =========================================
+// HANDLE DRAG FROM PREVIEW FIELD AND TOOLBAR
+// =========================================
+
+const handlePreviewPointerDown = (event) => {
+  const target = event.target;
+
+  // Do not start dragging from preview drop zones.
+  if (target.closest(".preview-drop-zone")) {
+    return;
+  }
+
+  // Allow dragging from anywhere inside the full preview element.
+  // This includes labels, inputs, placeholders, and empty space.
+  // The toolbar drag handle also works through this event.
+  listeners?.onPointerDown?.(event);
+};
   const dragStyle = transform
     ? {
-        transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
-        zIndex: isDragging ? 100 : undefined,
-        opacity: isDragging ? 0.45 : 1,
-      }
+      transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+      zIndex: isDragging ? 100 : undefined,
+      opacity: isDragging ? 0.45 : 1,
+    }
     : undefined;
+
 
   return (
     <div
-      ref={setNodeRef}
+      ref={(node) => {
+        setNodeRef(node);
+        setActivatorNodeRef(node);
+      }}
+      {...attributes}
+      onPointerDown={handlePreviewPointerDown}
+      onKeyDown={listeners?.onKeyDown}
       style={{
         ...dragStyle,
         display: isHidden ? "none" : undefined,
+        cursor: isDragging ? "grabbing" : "grab",
       }}
       className={[
         "preview-element",
@@ -158,28 +183,18 @@ function DraggablePreviewElement({
           className="element-floating-toolbar"
           onClick={(event) => event.stopPropagation()}
         >
+          {/* Drag using toolbar */}
           <button
-            ref={setActivatorNodeRef}
             type="button"
             title="Drag field"
             aria-label="Drag field"
             className="element-toolbar-button element-drag-handle"
-            {...listeners}
-            {...attributes}
+            data-drag-handle
           >
             <Icon source={DragHandleIcon} />
           </button>
 
-          <button
-            type="button"
-            title="Layout settings"
-            aria-label="Layout settings"
-            className="element-toolbar-button"
-            onClick={() => onSelectElement?.(element)}
-          >
-            <Icon source={LayoutColumns3Icon} />
-          </button>
-
+          {/* Duplicate field */}
           <button
             type="button"
             title="Duplicate field"
@@ -190,6 +205,7 @@ function DraggablePreviewElement({
             <Icon source={DuplicateIcon} />
           </button>
 
+          {/* Hide / Show field */}
           <button
             type="button"
             title={isHidden ? "Show field" : "Hide field"}
@@ -200,6 +216,7 @@ function DraggablePreviewElement({
             <Icon source={isHidden ? ViewIcon : HideIcon} />
           </button>
 
+          {/* Delete field */}
           <button
             type="button"
             title="Delete field"
@@ -215,7 +232,9 @@ function DraggablePreviewElement({
       <PreviewField element={element} />
     </div>
   );
+
 }
+
 
 // The empty preview area is a drop target for root elements.
 function PreviewRootDropArea({ pageId, children }) {
@@ -230,9 +249,8 @@ function PreviewRootDropArea({ pageId, children }) {
   return (
     <div
       ref={setNodeRef}
-      className={`preview-root-drop-area ${
-        isOver ? "preview-root-drop-area--active" : ""
-      }`}
+      className={`preview-root-drop-area ${isOver ? "preview-root-drop-area--active" : ""
+        }`}
     >
       {children}
     </div>
@@ -251,9 +269,8 @@ export default function LivePreview({
 }) {
   return (
     <div
-      className={`live-preview live-preview--${
-        formSettings.theme || "classic"
-      }`}
+      className={`live-preview live-preview--${formSettings.theme || "classic"
+        }`}
     >
       <Box background="bg-surface" padding="300">
         <InlineStack
