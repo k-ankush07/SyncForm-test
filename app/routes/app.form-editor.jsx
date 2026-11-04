@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 
 import { normalizeFormPages } from "../utils/normalizeFormPages.js";
@@ -592,22 +593,45 @@ export default function FormEditor() {
       // Drop to the left or right of another element.
       // Insert into the target element's row.
       if (placement === "left" || placement === "right") {
-        // Horizontal drop beside a root element.
+        // =========================================
+        // FIX: HORIZONTAL DROP BESIDE ROOT ELEMENT
+        //
+        // Instead of keeping both elements in
+        // rootElements, create a new row containing
+        // both elements.
+        // =========================================
+
         if (overData.targetCollection === "rootElements") {
+          // Find the target root element.
           const targetIndex = targetPage.rootElements.findIndex(
             (item) => item.id === targetElementId
           );
 
           if (targetIndex === -1) return previousPages;
 
-          targetPage.rootElements.splice(
-            placement === "left"
-              ? targetIndex
-              : targetIndex + 1,
-            0,
-            draggedElement
-          );
+          // Get the target element before removing it.
+          const targetElement = targetPage.rootElements[targetIndex];
 
+          // Remove the target element from rootElements.
+          targetPage.rootElements.splice(targetIndex, 1);
+
+          // Create a new row containing both elements.
+          // Root elements do not retain their original
+          // fields/elements collection, so both are
+          // placed in the elements collection.
+          const newRow = {
+            id: crypto.randomUUID(),
+            fields: [],
+            elements:
+              placement === "left"
+                ? [draggedElement, targetElement]
+                : [targetElement, draggedElement],
+          };
+
+          // Add the new row to the page.
+          targetPage.rows.push(newRow);
+
+          // Normalize after the completed drop.
           return normalizeRows(updatedPages);
         }
 
@@ -799,12 +823,60 @@ export default function FormEditor() {
 
       // CASE 2:
       // Horizontal drop of a root element.
-      // Create a separate full-width row.
+      //
+      // If the target is another root element,
+      // move BOTH elements into one new row.
+      // Otherwise, preserve the existing behavior
+      // of placing the dragged root element into a row.
       if (
         activeData.type === "rootElement" &&
         overData.type === "previewDrop" &&
         (placement === "left" || placement === "right")
       ) {
+        // =========================================
+        // FIX: ROOT ELEMENT BESIDE ROOT ELEMENT
+        // =========================================
+
+        if (overData.targetCollection === "rootElements") {
+          // Find the target root element.
+          const targetIndex = (
+            targetPage.rootElements ?? []
+          ).findIndex(
+            (item) => item.id === overData.targetElementId
+          );
+
+          if (targetIndex === -1) return previousPages;
+
+          // Get the target root element.
+          const targetElement = targetPage.rootElements[targetIndex];
+
+          // Remove the target element from rootElements.
+          const rootElements = [...(targetPage.rootElements ?? [])];
+          rootElements.splice(targetIndex, 1);
+
+          // Create one row containing both root elements.
+          const newRow = {
+            id: crypto.randomUUID(),
+            fields: [],
+            elements:
+              placement === "left"
+                ? [draggedElement, targetElement]
+                : [targetElement, draggedElement],
+          };
+
+          // Add the new row and update the root elements.
+          updatedPages[targetPageIndex] = {
+            ...targetPage,
+            rows: [...rows, newRow],
+            rootElements,
+          };
+
+          return normalizeRows(updatedPages);
+        }
+
+        // Existing behavior:
+        // If the target is inside a row, insert a separate
+        // row above or below that target row.
         const targetIndex = rows.findIndex(
           (row) => row.id === overData.targetRowId
         );
