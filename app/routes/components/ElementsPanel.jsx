@@ -27,13 +27,17 @@ import {
     Button,
     InlineGrid,
     BlockStack,
+    InlineStack
 } from "@shopify/polaris";
 
 import { ELEMENT_TYPES } from "../../utils/elementsConfig.js";
-// import the create element config 
+
+// Import the create element config helper.
+import { createElementConfig } from "../../utils/elementHelpers.js";
+
 import "../../ElementsPanel.css";
-// import { createElementConfig } from "../../utils/elementHelpers.js"
 // import ElementPickerPopover from "./ElementPickerPopover.jsx";
+import ElementActions from "./ElementActions.jsx";
 
 import {
     PlusCircleIcon,
@@ -42,7 +46,20 @@ import {
     FileIcon,
     FolderIcon,
     LayoutSectionIcon,
+    DuplicateIcon
 } from "@shopify/polaris-icons";
+
+
+//helper 
+// Get the actual Polaris icon for an element based on its type.
+const getElementIcon = (type) => {
+    const elementConfig = ELEMENT_TYPES.find(
+        (item) => item.type === type
+    );
+
+    // If no matching icon is found, use FileIcon as the fallback.
+    return elementConfig?.icon || FileIcon;
+};
 
 // ======================================================
 // MAIN COMPONENT
@@ -58,8 +75,17 @@ export default function ElementsPanel({
     // setElementTarget,
     // elementPickerPosition,
     // setElementPickerPosition,
-    openElementPicker, }) {
 
+    // Element toolbox actions from FormEditor
+    onToggleElementVisibility,
+    onDuplicateElement,
+    onDeleteElement,
+    openElementPicker,
+    onToggleRowVisibility,
+    onDuplicateRow,
+    onDeleteRow,
+    onDuplicatePage,
+}) {
 
     // Configure the pointer sensor.
     // The user must move the pointer 5px before dragging starts.
@@ -74,6 +100,7 @@ export default function ElementsPanel({
     // ======================================================
     // FUNCTION: REORDER ELEMENTS INSIDE THE ROWS AND ROOT ELEMENTS
     // ======================================================
+
     const handlePageContentDragEnd = (event) => {
         const { active, over } = event;
 
@@ -162,7 +189,6 @@ export default function ElementsPanel({
 
             if (!draggedItem) return previousPages;
 
-            // Then add the item to the target page and row
             // Then add the item to the target page and row
             return updatedPages.map((page) => {
                 if (page.id !== targetPageId) return page;
@@ -332,7 +358,6 @@ export default function ElementsPanel({
                 if (rowId !== null) {
                     return {
                         ...page,
-
                         rows: page.rows.map((row) => {
                             if (row.id !== rowId) return row;
 
@@ -445,6 +470,7 @@ export default function ElementsPanel({
             }))
         );
     };
+
     // ======================================================
     // FUNCTION: ADD ELEMENT TO A ROW
     // Adds a new element to the selected row.
@@ -476,100 +502,6 @@ export default function ElementsPanel({
             )
         );
     };
-
-
-
-    // ======================================================
-    // FUNCTION: OPEN ELEMENT PICKER
-    // Opens the modal and remembers where to add the element.
-    // ======================================================
-
-    // const openElementPicker = (pageId, rowId = null, event) => {
-    //     if (!event?.currentTarget) return;
-
-    //     const buttonRect = event.currentTarget.getBoundingClientRect();
-
-    //     const modalWidth = Math.min(680, window.innerWidth - 24);
-    //     const modalHeight = Math.min(430, window.innerHeight - 24);
-
-    //     // Position the picker to the right of the clicked button.
-    //     let left =
-    //         rowId !== null
-    //             ? buttonRect.left + 200
-    //             : buttonRect.right + 8;
-
-    //     // If there is not enough room on the right,
-    //     // move it to the left of the button.
-    //     if (left + modalWidth > window.innerWidth - 12) {
-    //         left = buttonRect.left - modalWidth - 8;
-    //     }
-
-    //     // Keep the picker inside the screen horizontally.
-    //     left = Math.max(
-    //         12,
-    //         Math.min(left, window.innerWidth - modalWidth - 12)
-    //     );
-
-    //     // Align it with the clicked button when possible.
-    //     // Move it upward if it would extend beyond the screen.
-    //     const top = Math.max(
-    //         12,
-    //         Math.min(
-    //             buttonRect.top - 20,
-    //             window.innerHeight - modalHeight - 12
-    //         )
-    //     );
-
-    //     setElementPickerPosition({ top, left });
-    //     setElementTarget({ pageId, rowId });
-    //     setElementPickerOpen(true);
-    // };
-
-    // ======================================================
-    // FUNCTION: SELECT AN ELEMENT
-    // Adds the selected element to the correct page or row. pick from popover modal
-    // ======================================================
-
-    // const handleSelectElement = (item) => {
-    //     if (!elementTarget || !item?.type) return;
-
-    //     const newElement = createElementConfig(item);
-
-    //     setPages((previousPages) =>
-    //         previousPages.map((page) => {
-    //             if (page.id !== elementTarget.pageId) return page;
-
-    //             if (elementTarget.rowId != null) {
-    //                 return {
-    //                     ...page,
-    //                     rows: (page.rows || []).map((row) =>
-    //                         row.id !== elementTarget.rowId
-    //                             ? row
-    //                             : {
-    //                                 ...row,
-    //                                 elements: [
-    //                                     ...(row.elements || []),
-    //                                     newElement,
-    //                                 ],
-    //                             }
-    //                     ),
-    //                 };
-    //             }
-
-    //             return {
-    //                 ...page,
-    //                 rootElements: [
-    //                     ...(page.rootElements || []),
-    //                     newElement,
-    //                 ],
-    //             };
-    //         })
-    //     );
-
-    //     setElementPickerOpen(false);
-    //     setElementTarget(null);
-    // };
-
 
     // ======================================================
     // FUNCTION: ADD ROOT ELEMENT
@@ -609,10 +541,7 @@ export default function ElementsPanel({
                 </Text>
             </div>
 
-            {/* ==================================================
-              PAGES LIST
-              This context allows the pages to be reordered.
-             ================================================== */}
+            {/* PAGES LIST */}
 
             <div className="element-tree">
 
@@ -642,6 +571,18 @@ export default function ElementsPanel({
                                 addRowElement={addRowElement}
                                 addRootElement={addRootElement}
                                 openElementPicker={openElementPicker}
+
+                                // Element toolbox actions from FormEditor
+                                onToggleElementVisibility={onToggleElementVisibility}
+                                onDuplicateElement={onDuplicateElement}
+                                onDeleteElement={onDeleteElement}
+                                // NEW: Row toolbox actions
+                                onToggleRowVisibility={onToggleRowVisibility}
+                                onDuplicateRow={onDuplicateRow}
+                                onDeleteRow={onDeleteRow}
+
+                                // NEW: Page toolbox action
+                                onDuplicatePage={onDuplicatePage}
                             />
                         ))}
                     </SortableContext>
@@ -691,12 +632,16 @@ export default function ElementsPanel({
     );
 }
 
+// ======================================================
+// HELPER: GET DRAG ITEM ID
+// Returns the correct drag ID for fields.
+// ======================================================
+
 const getDragItemId = (item, index) => {
     return typeof item === "object" && item?.id != null
         ? `field-${item.id}`
         : `field-index-${index}`;
 };
-
 
 // ======================================================
 // COMPONENT: SORTABLE PAGE
@@ -714,7 +659,17 @@ function SortablePage({
     handlePageContentDragEnd,
     addRowElement,
     addRootElement,
+    onToggleElementVisibility,
+    onDuplicateElement,
+    onDeleteElement,
     openElementPicker,
+    // NEW: Row toolbox actions
+    onToggleRowVisibility,
+    onDuplicateRow,
+    onDeleteRow,
+
+    // NEW: Page toolbox action
+    onDuplicatePage,
 }) {
     const {
         attributes,
@@ -738,7 +693,7 @@ function SortablePage({
         transition,
         opacity: isDragging ? 0.55 : 1,
     };
-
+    //hover
     return (
         <div
             ref={setNodeRef}
@@ -786,74 +741,99 @@ function SortablePage({
                 >
                     {page.label}
                 </button>
+
+                {/* Duplicate button is always visible when page is open */}
+
+                {page.open && (
+                    <button
+                        type="button"
+                        className="element-tree__action-btn"
+                        title="Duplicate page"
+                        onPointerDown={(event) => event.stopPropagation()}
+                        onClick={(event) => {
+                            event.stopPropagation();
+                            onDuplicatePage(page.id);
+                        }}
+                    >
+                        <Icon source={DuplicateIcon} />
+                    </button>
+                )}
             </div>
 
             {/* PAGE CONTENT
-              Rows and root elements are shown only when open. */}
+            Rows and root elements are shown only when open. */}
 
             {page.open && (
-                <div className="element-tree__page-content">
+                <>
+                    <div className="element-tree__page-content">
 
-                    {/* ==============================================
-                      ROWS LIST and ROOT ELEMENT LIST BOTH 
-                      This context allows rows  AND root elements to be reordered
-                      within the current page.
-                     ============================================== */}
+                        {/* ROWS LIST */}
 
-                    {/* ROWS LIST */}
+                        <SortableContext
+                            items={(page.rows || []).map(
+                                (row) => `row-${row.id}`
+                            )}
+                            strategy={verticalListSortingStrategy}
+                        >
+                            {(page.rows || []).map((row) => (
+                                <SortableRow
+                                    key={row.id}
+                                    row={row}
+                                    pageId={page.id}
+                                    sensors={sensors}
+                                    handleFieldDragEnd={handleFieldDragEnd}
+                                    handleElementDragEnd={handleElementDragEnd}
+                                    addRowElement={addRowElement}
+                                    openElementPicker={openElementPicker}
+                                    onToggleElementVisibility={onToggleElementVisibility}
+                                    onDuplicateElement={onDuplicateElement}
+                                    onDeleteElement={onDeleteElement}
+                                    // NEW: Row toolbox actions
+                                    onToggleRowVisibility={onToggleRowVisibility}
+                                    onDuplicateRow={onDuplicateRow}
+                                    onDeleteRow={onDeleteRow}
+                                />
+                            ))}
+                        </SortableContext>
 
-                    <SortableContext
-                        items={(page.rows || []).map(
-                            (row) => `row-${row.id}`
-                        )}
-                        strategy={verticalListSortingStrategy}
-                    >
-                        {(page.rows || []).map((row) => (
-                            <SortableRow
-                                key={row.id}
-                                row={row}
-                                pageId={page.id}
-                                sensors={sensors}
-                                handleFieldDragEnd={handleFieldDragEnd}
-                                handleElementDragEnd={handleElementDragEnd}
-                                addRowElement={addRowElement}
-                                openElementPicker={openElementPicker}
-                            />
-                        ))}
-                    </SortableContext>
+                        {/* ROOT ELEMENTS LIST */}
 
-                    {/* ROOT ELEMENTS LIST */}
+                        <SortableContext
+                            items={(page.rootElements || []).map(
+                                (element) => `element-${element.id}`
+                            )}
+                            strategy={verticalListSortingStrategy}
+                        >
+                            {(page.rootElements || []).map((element) => (
+                                <SortableCreatedElement
+                                    key={element.id}
+                                    element={element}
+                                    type="rootElement"
+                                    rowId={null}
+                                    pageId={page.id}
 
-                    <SortableContext
-                        items={(page.rootElements || []).map(
-                            (element) => `element-${element.id}`
-                        )}
-                        strategy={verticalListSortingStrategy}
-                    >
-                        {(page.rootElements || []).map((element) => (
-                            <SortableCreatedElement
-                                key={element.id}
-                                element={element}
-                                type="rootElement"
-                                rowId={null}
-                                pageId={page.id}
-                            />
-                        ))}
-                    </SortableContext>
+                                    // Pass toolbox handlers to root elements.
+                                    onToggleElementVisibility={onToggleElementVisibility}
+                                    onDuplicateElement={onDuplicateElement}
+                                    onDeleteElement={onDeleteElement}
+                                />
+                            ))}
+                        </SortableContext>
 
-                    {/* ADD ELEMENT OUTSIDE ROWS */}
+                        {/* ADD ELEMENT OUTSIDE ROWS */}
 
-                    <button
-                        type="button"
-                        className="element-tree__add element-tree__add--root"
-                        onClick={(event) => {
-                            openElementPicker(page.id, null, event);
-                        }}
-                    >
-                        <Icon source={PlusCircleIcon} />
-                        <span>Add elements</span>
-                    </button>
-                </div>
+                        <button
+                            type="button"
+                            className="element-tree__add element-tree__add--root"
+                            onClick={(event) => {
+                                openElementPicker(page.id, null, event);
+                            }}
+                        >
+                            <Icon source={PlusCircleIcon} />
+                            <span>Add elements</span>
+                        </button>
+                    </div>
+                </>
             )}
         </div>
     );
@@ -874,8 +854,16 @@ function SortableRow({
     handleElementDragEnd,
     addRowElement,
     openElementPicker,
+    onDeleteElement,
+    onDuplicateElement,
+    onToggleElementVisibility,
+    // NEW: Row toolbox actions
+    onToggleRowVisibility,
+    onDuplicateRow,
+    onDeleteRow,
 }) {
-    // use soratable for the row itself => Allows you to drag and reorder the row
+    // useSortable for the row itself.
+    // Allows you to drag and reorder the row.
     const {
         attributes,
         listeners,
@@ -891,7 +879,8 @@ function SortableRow({
             pageId,
         },
     });
-    // USE DROPABLE => Allows you to drop elements inside the row
+
+    // useDroppable allows you to drop elements inside the row.
     const {
         setNodeRef: setDropRef,
         isOver,
@@ -910,16 +899,22 @@ function SortableRow({
         transition,
         opacity: isDragging ? 0.55 : 1,
     };
+    // state to show hover 
+    const [isHovered, setIsHovered] = useState(false);
 
     return (
         <div
             ref={setNodeRef}
             style={rowStyle}
             className="element-tree__row"
+
         >
             {/* ROW HEADING AND DRAG HANDLE */}
 
-            <div className="element-tree__row-heading">
+            <div className="element-tree__row-heading"
+                // add these to get knonw mouse enter 
+                onMouseEnter={() => setIsHovered(true)}
+                onMouseLeave={() => setIsHovered(false)}>
                 {/* Folder icon changes to drag icon on hover */}
 
                 <span
@@ -939,6 +934,15 @@ function SortableRow({
                 <Text as="span" variant="bodySm">
                     Row
                 </Text>
+                {/* Reusable row toolbox */}
+                {isHovered && (
+                    <ElementActions
+                        element={row}
+                        onToggleElementVisibility={() => onToggleRowVisibility(pageId, row.id)}
+                        onDuplicateElement={() => onDuplicateRow(pageId, row.id)}
+                        onDeleteElement={() => onDeleteRow(pageId, row.id)}
+                    />
+                )}
             </div>
 
             {/* ROW FIELDS AND CREATED ELEMENTS */}
@@ -972,6 +976,9 @@ function SortableRow({
                                 field={field}
                                 rowId={row.id}
                                 pageId={pageId}
+                                onToggleElementVisibility={onToggleElementVisibility}
+                                onDuplicateElement={onDuplicateElement}
+                                onDeleteElement={onDeleteElement}
                             />
                         );
                     })}
@@ -985,12 +992,18 @@ function SortableRow({
                             type="element"
                             rowId={row.id}
                             pageId={pageId}
+
+                            // Pass toolbox handlers to row elements.
+                            onToggleElementVisibility={onToggleElementVisibility}
+                            onDuplicateElement={onDuplicateElement}
+                            onDeleteElement={onDeleteElement}
                         />
                     ))}
                 </SortableContext>
             </div>
 
             {/* ADD ELEMENT TO THIS ROW */}
+
             <button
                 type="button"
                 className="element-tree__add"
@@ -1011,7 +1024,18 @@ function SortableRow({
 // Shows the drag icon instead of the file icon on hover.
 // ======================================================
 
-function SortableSidebarField({ id, field, rowId, pageId }) {
+function SortableSidebarField({
+    id,
+    field,
+    rowId,
+    pageId,
+    onToggleElementVisibility,
+    onDuplicateElement,
+    onDeleteElement,
+}) {
+    // State to handle the hover.
+    const [isHovered, setIsHovered] = useState(false);
+
     const {
         attributes,
         listeners,
@@ -1035,6 +1059,9 @@ function SortableSidebarField({ id, field, rowId, pageId }) {
         opacity: isDragging ? 0.5 : 1,
     };
 
+    // Get the actual field ID, not the sortable drag ID.
+    const fieldId = field?.id;
+
     return (
         <div
             ref={setNodeRef}
@@ -1042,10 +1069,22 @@ function SortableSidebarField({ id, field, rowId, pageId }) {
             className="element-tree__field element-tree__field--draggable"
             {...attributes}
             {...listeners}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
         >
             <span className="element-tree__field-icon">
                 <span className="element-tree__default-icon">
-                    <Icon source={FileIcon} />
+                    <Icon
+                        source={getElementIcon(
+                            typeof field === "string"
+                                ? field === "First Name" || field === "Last Name"
+                                    ? "name"
+                                    : field
+                                : field?.type === "first_name" || field?.type === "last_name"
+                                    ? "name"
+                                    : field?.type
+                        )}
+                    />
                 </span>
 
                 <span className="element-tree__drag-icon">⠿</span>
@@ -1056,9 +1095,22 @@ function SortableSidebarField({ id, field, rowId, pageId }) {
                     ? field
                     : field?.label || field?.type || "Untitled field"}
             </span>
+
+            {/* Show reusable toolbox only when hovering.
+                Original string fields have no ID, so they cannot use ID-based actions. */}
+
+            {isHovered && fieldId != null && (
+                <ElementActions
+                    element={field}
+                    onToggleElementVisibility={onToggleElementVisibility}
+                    onDuplicateElement={onDuplicateElement}
+                    onDeleteElement={onDeleteElement}
+                />
+            )}
         </div>
     );
 }
+
 // ======================================================
 // COMPONENT: SORTABLE CREATED ELEMENT
 // Makes an element created by Add elements draggable.
@@ -1069,7 +1121,13 @@ function SortableCreatedElement({
     type = "element",
     rowId = null,
     pageId,
+    onToggleElementVisibility,
+    onDuplicateElement,
+    onDeleteElement,
 }) {
+    // State to handle the hover.
+    const [isHovered, setIsHovered] = useState(false);
+
     const {
         attributes,
         listeners,
@@ -1100,18 +1158,31 @@ function SortableCreatedElement({
             className="element-tree__field element-tree__field--draggable"
             {...attributes}
             {...listeners}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
         >
             <span className="element-tree__field-icon">
                 <span className="element-tree__default-icon">
-                    <Icon source={FileIcon} />
+                    <Icon source={getElementIcon(element.type)} />
                 </span>
 
                 <span className="element-tree__drag-icon">⠿</span>
             </span>
 
             <span className="element-tree__field-label">
-                {element.label}
+                {element.label || element.type || "Untitled element"}
             </span>
+
+            {/* Show reusable toolbox only when hovering */}
+
+            {isHovered && element?.id != null && (
+                <ElementActions
+                    element={element}
+                    onToggleElementVisibility={onToggleElementVisibility}
+                    onDuplicateElement={onDuplicateElement}
+                    onDeleteElement={onDeleteElement}
+                />
+            )}
         </div>
     );
 }

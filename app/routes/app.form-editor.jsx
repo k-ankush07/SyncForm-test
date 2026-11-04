@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 
 import { normalizeFormPages } from "../utils/normalizeFormPages.js";
@@ -102,6 +101,24 @@ const normalizeRows = (pages) =>
       rootElements,
     };
   });
+
+// Creates a duplicate of an object-based element
+// with a new ID and new option IDs.
+const createDuplicateElement = (element) => {
+  if (!element || typeof element !== "object") {
+    return element;
+  }
+
+  return {
+    ...element,
+    id: crypto.randomUUID(),
+    options: (element.options ?? []).map((option) =>
+      typeof option === "object" && option !== null
+        ? { ...option, id: crypto.randomUUID() }
+        : option
+    ),
+  };
+};
 
 export default function FormEditor() {
   const [searchParams] = useSearchParams();
@@ -677,6 +694,159 @@ export default function FormEditor() {
     );
 
     setSelectedElement(duplicate);
+  };
+
+  // =========================================
+  // ROW ACTIONS
+  // Show or hide, duplicate, and delete rows.
+  // =========================================
+
+  const handleToggleRowVisibility = (pageId, rowId) => {
+    setPages((previousPages) =>
+      previousPages.map((page) =>
+        page.id !== pageId
+          ? page
+          : {
+            ...page,
+            rows: (page.rows ?? []).map((row) =>
+              row.id === rowId
+                ? { ...row, visible: row.visible === false }
+                : row
+            ),
+          }
+      )
+    );
+  };
+
+  const handleDuplicateRow = (pageId, rowId) => {
+    setPages((previousPages) =>
+      previousPages.map((page) => {
+        if (page.id !== pageId) return page;
+
+        const rowIndex = (page.rows ?? []).findIndex(
+          (row) => row.id === rowId
+        );
+
+        if (rowIndex === -1) return page;
+
+        const originalRow = page.rows[rowIndex];
+
+        const duplicateRow = {
+          ...originalRow,
+          id: crypto.randomUUID(),
+
+          fields: (originalRow.fields ?? []).map((field) =>
+            typeof field === "object" && field !== null
+              ? createDuplicateElement(field)
+              : field
+          ),
+
+          elements: (originalRow.elements ?? []).map(
+            createDuplicateElement
+          ),
+        };
+
+        const updatedRows = [...page.rows];
+
+        updatedRows.splice(rowIndex + 1, 0, duplicateRow);
+
+        return {
+          ...page,
+          rows: updatedRows,
+        };
+      })
+    );
+  };
+
+  const handleDeleteRow = (pageId, rowId) => {
+    const deletedRow = pages
+      .find((page) => page.id === pageId)
+      ?.rows?.find((row) => row.id === rowId);
+
+    const deletedElementIds = [
+      ...(deletedRow?.fields ?? []),
+      ...(deletedRow?.elements ?? []),
+    ]
+      .filter((item) => typeof item === "object" && item !== null)
+      .map((item) => item.id);
+
+    setPages((previousPages) =>
+      previousPages.map((page) =>
+        page.id !== pageId
+          ? page
+          : {
+            ...page,
+            rows: (page.rows ?? []).filter(
+              (row) => row.id !== rowId
+            ),
+          }
+      )
+    );
+
+    setSelectedElement((previousElement) =>
+      previousElement &&
+        deletedElementIds.includes(previousElement.id)
+        ? null
+        : previousElement
+    );
+  };
+
+  // =========================================
+  // PAGE ACTIONS
+  // Duplicate a page and all its rows/elements.
+  // =========================================
+
+  const handleDuplicatePage = (pageId) => {
+    setPages((previousPages) => {
+      const pageIndex = previousPages.findIndex(
+        (page) => page.id === pageId
+      );
+
+      if (pageIndex === -1) return previousPages;
+
+      const originalPage = previousPages[pageIndex];
+
+      const duplicatePage = {
+        ...originalPage,
+        id: crypto.randomUUID(),
+        label: `${originalPage.label} Copy`,
+        open: true,
+
+        rows: (originalPage.rows ?? []).map((row) => ({
+          ...row,
+          id: crypto.randomUUID(),
+
+          fields: (row.fields ?? []).map((field) =>
+            typeof field === "object" && field !== null
+              ? createDuplicateElement(field)
+              : field
+          ),
+
+          elements: (row.elements ?? []).map(
+            createDuplicateElement
+          ),
+        })),
+
+        rootElements: (originalPage.rootElements ?? []).map(
+          createDuplicateElement
+        ),
+
+        submitButton: originalPage.submitButton
+          ? { ...originalPage.submitButton }
+          : originalPage.submitButton,
+      };
+
+      const updatedPages = previousPages.map((page) => ({
+        ...page,
+        open: false,
+      }));
+
+      updatedPages.splice(pageIndex + 1, 0, duplicatePage);
+
+      return updatedPages;
+    });
+
+    setSelectedElement(null);
   };
 
   // =========================================
@@ -1351,6 +1521,16 @@ export default function FormEditor() {
                     elementPickerPosition={elementPickerPosition}
                     setElementPickerPosition={setElementPickerPosition}
                     openElementPicker={openElementPicker}
+                    // NEW: Element toolbox actions
+                    onToggleElementVisibility={handleToggleElementVisibility}
+                    onDuplicateElement={handleDuplicateElement}
+                    onDeleteElement={handleDeleteElement}
+                    // NEW: Row toolbox actions
+                    onToggleRowVisibility={handleToggleRowVisibility}
+                    onDuplicateRow={handleDuplicateRow}
+                    onDeleteRow={handleDeleteRow}
+                    // NEW: Page toolbox actions
+                    onDuplicatePage={handleDuplicatePage}
                   />
                 )}
 

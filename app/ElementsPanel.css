@@ -240,12 +240,12 @@
 /* Page drag handle */
 
 .element-tree__page-icon {
-  cursor: grab;
+  cursor: pointer;
   touch-action: none;
 }
 
 .element-tree__page-icon:active {
-  cursor: grabbing;
+  cursor: pointer;
 }
 
 /* Page label */
@@ -326,7 +326,7 @@
 }
 
 .element-tree__row-drag-icon:active {
-  cursor: grabbing;
+  cursor: pointer;
 }
 
 /* Row fields indentation */
@@ -385,13 +385,13 @@
 /* Draggable fields */
 
 .element-tree__field--draggable {
-  cursor: grab;
+  cursor: pointer;
   user-select: none;
   touch-action: none;
 }
 
 .element-tree__field--draggable:active {
-  cursor: grabbing;
+  cursor: pointer;
 }
 
 .element-tree__field--draggable * {
@@ -611,4 +611,75 @@
   .element-tree {
     padding-inline: 6px;
   }
+}
+
+.element-tree__field {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.element-tree__field-label {
+    flex: 1;
+    min-width: 0;
+}
+
+.element-tree__field .Polaris-InlineStack {
+    flex-shrink: 0;
+}
+
+.element-tree__field button {
+    padding: 3px;
+}
+/* //fix btn on hover */
+/* Container for all three action icons */
+.element-tree__actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+/* Custom action button */
+.element-tree__action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 28px;
+    height: 28px;
+    padding: 0;
+
+    border: none;
+    border-radius: 5px;
+    background: transparent;
+
+    color: #616161;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+/* Custom icon size */
+.element-tree__action-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* Normal hover */
+.element-tree__action-btn:hover {
+    background: #f1f2f3;
+    color: #202223;
+}
+
+/* Delete button */
+.element-tree__action-btn--delete {
+    color: #d72c0d;
+}
+
+.element-tree__action-btn--delete:hover {
+    background: #fff0ee;
+    color: #bf0711;
 }

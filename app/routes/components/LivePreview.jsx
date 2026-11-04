@@ -181,7 +181,6 @@ function DraggablePreviewElement({
       onClick={() => onSelectElement?.(element)}
     >
       {/* Drop zones around the element */}
-      {/* Drop zones around the element */}
 
       {/* Standalone/root elements can have top and bottom insertion. */}
       {rowId === null && (
@@ -380,6 +379,8 @@ export default function LivePreview({
 
                         {/* Render rows only when they contain visible elements. */}
                         {(page.rows ?? [])
+                          // Hide the complete row when its visibility is false.
+                          .filter((row) => row.visible !== false)
                           .map((row) => {
                             // Combine fields and elements into one list.
                             // This lets the grid support any number of items.
