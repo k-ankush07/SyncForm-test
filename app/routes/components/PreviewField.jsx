@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import * as PolarisIcons from "@shopify/polaris-icons";
 import { Icon } from "@shopify/polaris";
-import DOMPurify from "dompurify";
+import createDOMPurify from "dompurify";
 import ReactCountryFlag from "react-country-flag";
 import {
   Text,
@@ -20,7 +20,8 @@ import { countries } from "../components/elementsettings/utils/countries.js";
 
 export default function PreviewField({ element, field }) {
   const currentElement = element ?? field;
-
+  // console.log("PreviewField received:", currentElement);
+  // console.log("PreviewField type:", currentElement?.type);
   const normalizedElement =
     typeof currentElement === "string"
       ? {
@@ -99,11 +100,11 @@ export default function PreviewField({ element, field }) {
   //for date and time
   const [dateValue, setDateValue] = useState(
     normalizedElement.defaultDate || ""
-);
+  );
 
-React.useEffect(() => {
+  React.useEffect(() => {
     setDateValue(normalizedElement.defaultDate || "");
-}, [normalizedElement.defaultDate]);
+  }, [normalizedElement.defaultDate]);
 
 
   const options = rawOptions.map((option, index) => {
@@ -162,6 +163,16 @@ React.useEffect(() => {
     width: "100%",
   };
 
+  const sanitizeHTML = (html) => {
+if (typeof window === "undefined") {
+  return html;
+}
+
+const purifier = createDOMPurify(window);
+
+return purifier.sanitize(html);
+};
+//cases to render duff inputs
   switch (type) {
     case "email":
       return (
@@ -462,15 +473,15 @@ React.useEffect(() => {
         />
       );
 
- case "date":
-    return (
+    case "date":
+      return (
         <TextField
-            {...commonTextFieldProps}
-            value={dateValue}
-            onChange={setDateValue}
-            readOnly
+          {...commonTextFieldProps}
+          value={dateValue}
+          onChange={setDateValue}
+          readOnly
         />
-    );
+      );
 
     case "hidden":
       return null;
@@ -543,7 +554,7 @@ React.useEffect(() => {
           <div
             className="rich-text-preview"
             dangerouslySetInnerHTML={{
-              __html: DOMPurify.sanitize(
+              __html: sanitizeHTML(
                 normalizedElement.content || `<p>${label}</p>`
               ),
             }}
@@ -780,7 +791,7 @@ React.useEffect(() => {
         ? normalizedElement.acceptedFileTypes
         : [];
 
- 
+
 
       return (
         <BlockStack gap="200">
@@ -897,6 +908,100 @@ React.useEffect(() => {
           {descriptionText}
         </BlockStack>
       );
+
+case "form_header": {
+  const headingTag = normalizedElement.headingTag || "h2";
+
+  const headingVariants = {
+    h1: "heading2xl",
+    h2: "headingXl",
+    h3: "headingLg",
+    h4: "headingMd",
+    h5: "headingSm",
+    h6: "headingXs",
+  };
+
+  return (
+    <div
+      style={{
+        textAlign: normalizedElement.alignment || "center",
+        width: "100%",
+      }}
+    >
+      {normalizedElement.showHeader !== false && (
+        <>
+          <Text
+            as={headingTag}
+            variant={headingVariants[headingTag] || "headingXl"}
+          >
+            {normalizedElement.title || "Contact us"}
+          </Text>
+
+          {normalizedElement.description && (
+            <div
+              className="rich-text-preview"
+              dangerouslySetInnerHTML={{
+                __html:sanitizeHTML(
+                  normalizedElement.description
+                ),
+              }}
+            />
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+   case "form_footer":
+  return (
+    <BlockStack gap="300">
+      {normalizedElement.text && (
+        <Text as="p">{normalizedElement.text}</Text>
+      )}
+
+      {normalizedElement.content && (
+        <div
+          className="rich-text-preview"
+          dangerouslySetInnerHTML={{
+            __html:sanitizeHTML(normalizedElement.content),
+          }}
+        />
+      )}
+
+      {normalizedElement.showDescriptionAtBottom &&
+        normalizedElement.bottomDescription && (
+          <Text as="p" variant="bodySm" tone="subdued">
+            {normalizedElement.bottomDescription}
+          </Text>
+        )}
+
+      <InlineStack
+        align="space-between"
+        blockAlign="center"
+        gap="200"
+      >
+        {normalizedElement.showPreviousButton && (
+          <Button>{normalizedElement.previousText || "Previous"}</Button>
+        )}
+
+        {normalizedElement.showNextButton && (
+          <Button>{normalizedElement.nextText || "Next"}</Button>
+        )}
+
+        {normalizedElement.showResetButton && (
+          <Button>{normalizedElement.resetButtonText || "Reset"}</Button>
+        )}
+
+        <Button
+          variant="primary"
+          fullWidth={Boolean(normalizedElement.fullWidthButton)}
+        >
+          {normalizedElement.submitText || "Submit"}
+        </Button>
+      </InlineStack>
+    </BlockStack>
+  );
 
     case "range_slider":
       return (

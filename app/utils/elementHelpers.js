@@ -71,7 +71,8 @@ export function createElementConfig(item) {
 
   return {
     ...DEFAULT_ELEMENT_SETTINGS,
-    id: crypto.randomUUID(),
+  // Preserve the existing ID or create a new one.
+    id: item.id || crypto.randomUUID(),
     type,
     label: item.label || item.type,
 

@@ -1410,14 +1410,16 @@ export default function FormEditor() {
     <div className="template-editor">
 
       {/* Main content */}
-      <div
-        className={`template-editor__main ${collpase
-          ? "template-editor__main--collapsed"
-          : selectedElement?.type === "paragraph"
-            ? "template-editor__main--paragraph"
-            : "template-editor__main--expanded"
-          }`}
-      >
+     <div
+  className={`template-editor__main ${collpase
+    ? "template-editor__main--collapsed"
+    : ["paragraph", "form_header", "form_footer"].includes(
+        selectedElement?.type
+      )
+      ? "template-editor__main--paragraph"
+      : "template-editor__main--expanded"
+    }`}
+>
 
         {/* Sidebar */}
         <div

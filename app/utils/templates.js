@@ -23,7 +23,7 @@ export  const templates = [
         showHeader: true,
         title: "Contact us",
         headingTag: "h2",
-        alignment: "left",
+        alignment: "center",
         description: "Leave your message and we'll get back to you shortly.",
         visible: true,
       },

@@ -3,9 +3,8 @@ import React, { useState } from "react";
 import SelectIcon from "./SelectIcon";
 import { Icon } from "@shopify/polaris";
 import * as PolarisIcons from "@shopify/polaris-icons";
-import { countries } from "../components/elementsettings/utils/countries.js"
-
-
+import { countries } from "../components/elementsettings/utils/countries.js";
+import { ArrowLeftIcon } from "@shopify/polaris-icons";
 import {
     BlockStack,
     TextField,
@@ -19,8 +18,6 @@ import {
     ButtonGroup
 } from "@shopify/polaris";
 
-import { ArrowLeftIcon } from "@shopify/polaris-icons";
-
 import ContactSettings from "./elementsettings/groups/ContactSettings";
 import TextSettings from "./elementsettings/groups/TextSettings";
 import ChoiceSettings from "./elementsettings/groups/ChoiceSettings";
@@ -29,7 +26,7 @@ import DateSettings from "./elementsettings/groups/DateSettings";
 import FileSettings from "./elementsettings/groups/FileUploadSettings";
 import StaticTextSettings from "./elementsettings/groups/StaticTextSettings";
 import RatingStarSettings from "./elementsettings/groups/RatingStarSettings";
-
+import HeaderFooterSettings from "./elementsettings/groups/HeaderFooterSettings";
 import { getElementSettingsType } from "./elementsettings/utils/elementSettingsConfig";
 
 
@@ -55,6 +52,27 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
     const type = String(element.type || "")
         .toLowerCase()
         .replace(/[\s-]+/g, "_");
+
+    // Check whether the selected element is Header or Footer.
+    const isHeaderFooter = [
+        "form_header",
+        "form_footer",
+    ].includes(type);
+
+    // Header and Footer have their own settings.
+    // The parent ElementSettings component already provides
+    // the main wrapper and scrollable content area.
+    // Therefore, do not create another wrapper here.
+    if (isHeaderFooter) {
+        return (
+            <BlockStack gap="400">
+                <HeaderFooterSettings
+                    element={element}
+                    onChange={onChange}
+                />
+            </BlockStack>
+        );
+    }
 
     // CONTACT TYPES
     const isName = ["name", "first_name", "last_name"].includes(type);
@@ -91,18 +109,18 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
         "divider",
     ].includes(type);
 
-    //URL and FILE
+    // URL and FILE
     const isFileUpload = type === "file_upload";
     const isUrl = type === "url";
 
-    //STAR RATING
+    // STAR RATING
     const isStarRating = [
         "rating",
         "rating_star",
         "star_rating",
     ].includes(type);
 
-    //Number
+    // NUMBER
     const isNumber = type === "number";
     const isQuantity = type === "quantity";
 
@@ -194,7 +212,6 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
         setBulkOptionsText("");
         setBulkAddOpen(false);
     };
-
 
 
     // CHOICE SETTINGS
@@ -463,20 +480,20 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
             {renderChoiceSettings()}
 
             {/* PLACEHOLDER */}
+
             {!isQuantity && (
                 isContactInput ||
                 isCountry ||
                 isDropdown ||
                 isDateTime
             ) && (
-                    <TextField
-                        label="Placeholder"
-                        value={element.placeholder || ""}
-                        onChange={(value) => update("placeholder", value)}
-                        autoComplete="off"
-                    />
-                )}
-
+                <TextField
+                    label="Placeholder"
+                    value={element.placeholder || ""}
+                    onChange={(value) => update("placeholder", value)}
+                    autoComplete="off"
+                />
+            )}
 
             {/* DEFAULT VALUE */}
 
@@ -510,7 +527,6 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
                     label={isHeading ? "Caption" : "Description"}
                     value={element.description || ""}
                     onChange={(value) => update("description", value)}
-                    //multiline={}
                     autoComplete="off"
                 />
             )}
@@ -611,16 +627,21 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
                         <Checkbox
                             label="Show required note if hide label?"
                             checked={element.showRequiredNote || false}
-                            onChange={(value) => update("showRequiredNote", value)}
+                            onChange={(value) =>
+                                update("showRequiredNote", value)
+                            }
                         />
                     )}
 
+                    {/* SELECT ICON */}
 
-                    {/* Select icon */}
                     {showSelectIcon && (
                         <BlockStack gap="200">
-                            {/* Heading and action buttons */}
-                            <InlineStack align="space-between" blockAlign="center">
+
+                            <InlineStack
+                                align="space-between"
+                                blockAlign="center"
+                            >
                                 <Text as="p" variant="bodyMd">
                                     Select icon
                                 </Text>
@@ -639,7 +660,9 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
                                             variant="plain"
                                             tone="critical"
                                             icon={PolarisIcons.DeleteIcon}
-                                            onClick={() => update("selectIcon", "")}
+                                            onClick={() =>
+                                                update("selectIcon", "")
+                                            }
                                         >
                                             Remove
                                         </Button>
@@ -647,7 +670,8 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
                                 )}
                             </InlineStack>
 
-                            {/* Selected icon preview */}
+                            {/* SELECTED ICON PREVIEW */}
+
                             <div className="select-icon-wrapper">
                                 {(element.ratingIcon || element.selectIcon) &&
                                     PolarisIcons[element.ratingIcon || element.selectIcon] ? (
@@ -662,6 +686,7 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
                                     </Button>
                                 )}
                             </div>
+
                         </BlockStack>
                     )}
                 </>
@@ -675,6 +700,7 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
 /* =========================================
    LAYOUT SETTINGS
    ALWAYS SHOWN AT THE BOTTOM
+   EXCEPT HEADER AND FOOTER
 ========================================= */
 
 function LayoutSettings({ element, onChange }) {
@@ -712,8 +738,7 @@ function LayoutSettings({ element, onChange }) {
                                 <button
                                     key={width}
                                     type="button"
-                                    className={`column-width-selector__option ${selected ? "is-selected" : ""
-                                        }`}
+                                    className={`column-width-selector__option ${selected ? "is-selected" : ""}`}
                                     onClick={() =>
                                         update("columnWidth", width)
                                     }
@@ -758,15 +783,23 @@ export default function ElementSettings({ element, onChange, onClose }) {
         .toLowerCase()
         .replace(/[\s-]+/g, "_");
 
+    // Identify Header and Footer.
+    const isHeaderFooter = [
+        "form_header",
+        "form_footer",
+    ].includes(type);
+
     const showOptionsPerLine =
         groupType === "choice" &&
-        ["radio",
+        [
+            "radio",
             "radio_group",
             "radio_button",
             "checkbox_group",
             "checkboxes",
             "dropdown",
-            "select"].includes(type);
+            "select"
+        ].includes(type);
 
     console.log("========== ELEMENT SETTINGS ==========");
     console.log("Element:", element);
@@ -805,6 +838,7 @@ export default function ElementSettings({ element, onChange, onClose }) {
             </div>
         );
     }
+
     // RATING ICON SECTION
 
     if (activeSection === "ratingIcon") {
@@ -824,101 +858,102 @@ export default function ElementSettings({ element, onChange, onClose }) {
         );
     }
 
-    return (
-        <div className="element-settings">
+    
+return (
+    <div className="element-settings">
 
-            {/* FIXED HEADER */}
+        {/* FIXED HEADER - BACK BUTTON */}
 
-            <div className="element-settings__header">
-                <Box paddingBlock="300">
-                    <InlineStack
-                        align="start"
-                        blockAlign="center"
-                        gap="200"
-                    >
-                        <Button
-                            icon={ArrowLeftIcon}
-                            variant="plain"
-                            onClick={onClose}
-                            accessibilityLabel="Back to elements"
-                        />
-
-                        <Text variant="headingMd" as="h2">
-                            {element.label || element.type}
-                        </Text>
-                    </InlineStack>
-                </Box>
-
-                <Divider />
-            </div>
-
-            {/* SCROLLABLE CONTENT */}
-
-            <div className="element-settings__content">
-                <BlockStack gap="400">
-
-                    {/* COMMON SETTINGS */}
-
-                    <CommonSettings
-                        element={element}
-                        onChange={onChange}
-                        onOpenSelectIcon={() =>
-                            setActiveSection("selectIcon")
-                        }
+        <div className="element-settings__header">
+            <Box paddingBlock="300">
+                <InlineStack
+                    align="start"
+                    blockAlign="center"
+                    gap="200"
+                >
+                    <Button
+                        icon={PolarisIcons.ArrowLeftIcon}
+                        variant="plain"
+                        onClick={onClose}
+                        accessibilityLabel="Back to elements"
                     />
 
-                    {/* ELEMENT-SPECIFIC SETTINGS */}
+                    <Text variant="headingMd" as="h2">
+                        {isHeaderFooter
+                            ? type === "form_header"
+                                ? "Header settings"
+                                : "Footer settings"
+                            : element.label || element.type}
+                    </Text>
+                </InlineStack>
+            </Box>
 
-                    {GroupComponent && (
-                        <GroupComponent
-                            element={element}
-                            onChange={onChange}
-                            onOpenRatingIcon={() =>
-                                setActiveSection("ratingIcon")
-                            }
-                        />
-                    )}
+            <Divider />
+        </div>
 
-                    {/* NUMBER OF OPTIONS PER LINE */}
+        {/* SCROLLABLE CONTENT */}
 
-                    {showOptionsPerLine && (
-                        <BlockStack gap="200">
-                            <Text variant="bodyMd">
-                                Number of options per line
-                            </Text>
+        <div className="element-settings__content">
+            <BlockStack gap="400">
 
-                            <div className="column-width-selector">
-                                {[5, 4, 3, 2, 1].map((number) => (
-                                    <div
-                                        key={number}
-                                        className={`chooseItem ${Number(element.optionsPerLine || 1) === number
+                <CommonSettings
+                    element={element}
+                    onChange={onChange}
+                    onOpenSelectIcon={() =>
+                        setActiveSection("selectIcon")
+                    }
+                />
+
+                {!isHeaderFooter && GroupComponent && (
+                    <GroupComponent
+                        element={element}
+                        onChange={onChange}
+                        onOpenRatingIcon={() =>
+                            setActiveSection("ratingIcon")
+                        }
+                    />
+                )}
+
+                {!isHeaderFooter && showOptionsPerLine && (
+                    <BlockStack gap="200">
+                        <Text variant="bodyMd">
+                            Number of options per line
+                        </Text>
+
+                        <div className="column-width-selector">
+                            {[5, 4, 3, 2, 1].map((number) => (
+                                <div
+                                    key={number}
+                                    className={`chooseItem ${
+                                        Number(element.optionsPerLine || 1) === number
                                             ? "active"
                                             : ""
-                                            }`}
-                                        onClick={() =>
-                                            onChange({
-                                                ...element,
-                                                optionsPerLine: number,
-                                            })
-                                        }
-                                    >
-                                        {number}
-                                    </div>
-                                ))}
-                            </div>
-                        </BlockStack>
-                    )}
+                                    }`}
+                                    onClick={() =>
+                                        onChange({
+                                            ...element,
+                                            optionsPerLine: number,
+                                        })
+                                    }
+                                >
+                                    {number}
+                                </div>
+                            ))}
+                        </div>
+                    </BlockStack>
+                )}
 
-                    {/* ALWAYS AT THE BOTTOM */}
-
+                {!isHeaderFooter && (
                     <LayoutSettings
                         element={element}
                         onChange={onChange}
                     />
+                )}
 
-                </BlockStack>
-            </div>
-
+            </BlockStack>
         </div>
-    );
+
+    </div>
+);
+
 }
