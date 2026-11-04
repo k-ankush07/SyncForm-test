@@ -31,9 +31,9 @@ import {
 
 import { ELEMENT_TYPES } from "../../utils/elementsConfig.js";
 // import the create element config 
-import { createElementConfig } from "../../utils/elementHelpers.js"
 import "../../ElementsPanel.css";
-import ElementPickerPopover from "./ElementPickerPopover.jsx";
+// import { createElementConfig } from "../../utils/elementHelpers.js"
+// import ElementPickerPopover from "./ElementPickerPopover.jsx";
 
 import {
     PlusCircleIcon,
@@ -49,16 +49,18 @@ import {
 // Manages pages and provides drag-and-drop handlers.
 // ======================================================
 
-export default function ElementsPanel({ pages, setPages }) {
+export default function ElementsPanel({
+    pages,
+    setPages,
+    // elementPickerOpen,
+    // setElementPickerOpen,
+    // elementTarget,
+    // setElementTarget,
+    // elementPickerPosition,
+    // setElementPickerPosition,
+    openElementPicker, }) {
 
-    // Show whether the element picker modal is open or not.
-    const [elementPickerOpen, setElementPickerOpen] = useState(false);
-    const [elementTarget, setElementTarget] = useState(null);
-    // position 
-    const [elementPickerPosition, setElementPickerPosition] = useState({
-        top: 150,
-        left: 490,
-    });
+
     // Configure the pointer sensor.
     // The user must move the pointer 5px before dragging starts.
     const sensors = useSensors(
@@ -482,91 +484,91 @@ export default function ElementsPanel({ pages, setPages }) {
     // Opens the modal and remembers where to add the element.
     // ======================================================
 
-    const openElementPicker = (pageId, rowId = null, event) => {
-        if (!event?.currentTarget) return;
+    // const openElementPicker = (pageId, rowId = null, event) => {
+    //     if (!event?.currentTarget) return;
 
-        const buttonRect = event.currentTarget.getBoundingClientRect();
+    //     const buttonRect = event.currentTarget.getBoundingClientRect();
 
-        const modalWidth = Math.min(680, window.innerWidth - 24);
-        const modalHeight = Math.min(430, window.innerHeight - 24);
+    //     const modalWidth = Math.min(680, window.innerWidth - 24);
+    //     const modalHeight = Math.min(430, window.innerHeight - 24);
 
-        // Position the picker to the right of the clicked button.
-        let left =
-            rowId !== null
-                ? buttonRect.left + 200
-                : buttonRect.right + 8;
+    //     // Position the picker to the right of the clicked button.
+    //     let left =
+    //         rowId !== null
+    //             ? buttonRect.left + 200
+    //             : buttonRect.right + 8;
 
-        // If there is not enough room on the right,
-        // move it to the left of the button.
-        if (left + modalWidth > window.innerWidth - 12) {
-            left = buttonRect.left - modalWidth - 8;
-        }
+    //     // If there is not enough room on the right,
+    //     // move it to the left of the button.
+    //     if (left + modalWidth > window.innerWidth - 12) {
+    //         left = buttonRect.left - modalWidth - 8;
+    //     }
 
-        // Keep the picker inside the screen horizontally.
-        left = Math.max(
-            12,
-            Math.min(left, window.innerWidth - modalWidth - 12)
-        );
+    //     // Keep the picker inside the screen horizontally.
+    //     left = Math.max(
+    //         12,
+    //         Math.min(left, window.innerWidth - modalWidth - 12)
+    //     );
 
-        // Align it with the clicked button when possible.
-        // Move it upward if it would extend beyond the screen.
-        const top = Math.max(
-            12,
-            Math.min(
-                buttonRect.top - 20,
-                window.innerHeight - modalHeight - 12
-            )
-        );
+    //     // Align it with the clicked button when possible.
+    //     // Move it upward if it would extend beyond the screen.
+    //     const top = Math.max(
+    //         12,
+    //         Math.min(
+    //             buttonRect.top - 20,
+    //             window.innerHeight - modalHeight - 12
+    //         )
+    //     );
 
-        setElementPickerPosition({ top, left });
-        setElementTarget({ pageId, rowId });
-        setElementPickerOpen(true);
-    };
+    //     setElementPickerPosition({ top, left });
+    //     setElementTarget({ pageId, rowId });
+    //     setElementPickerOpen(true);
+    // };
 
     // ======================================================
     // FUNCTION: SELECT AN ELEMENT
     // Adds the selected element to the correct page or row. pick from popover modal
     // ======================================================
 
-    const handleSelectElement = (item) => {
-        if (!elementTarget || !item?.type) return;
+    // const handleSelectElement = (item) => {
+    //     if (!elementTarget || !item?.type) return;
 
-        const newElement = createElementConfig(item);
+    //     const newElement = createElementConfig(item);
 
-        setPages((previousPages) =>
-            previousPages.map((page) => {
-                if (page.id !== elementTarget.pageId) return page;
+    //     setPages((previousPages) =>
+    //         previousPages.map((page) => {
+    //             if (page.id !== elementTarget.pageId) return page;
 
-                if (elementTarget.rowId != null) {
-                    return {
-                        ...page,
-                        rows: (page.rows || []).map((row) =>
-                            row.id !== elementTarget.rowId
-                                ? row
-                                : {
-                                    ...row,
-                                    elements: [
-                                        ...(row.elements || []),
-                                        newElement,
-                                    ],
-                                }
-                        ),
-                    };
-                }
+    //             if (elementTarget.rowId != null) {
+    //                 return {
+    //                     ...page,
+    //                     rows: (page.rows || []).map((row) =>
+    //                         row.id !== elementTarget.rowId
+    //                             ? row
+    //                             : {
+    //                                 ...row,
+    //                                 elements: [
+    //                                     ...(row.elements || []),
+    //                                     newElement,
+    //                                 ],
+    //                             }
+    //                     ),
+    //                 };
+    //             }
 
-                return {
-                    ...page,
-                    rootElements: [
-                        ...(page.rootElements || []),
-                        newElement,
-                    ],
-                };
-            })
-        );
+    //             return {
+    //                 ...page,
+    //                 rootElements: [
+    //                     ...(page.rootElements || []),
+    //                     newElement,
+    //                 ],
+    //             };
+    //         })
+    //     );
 
-        setElementPickerOpen(false);
-        setElementTarget(null);
-    };
+    //     setElementPickerOpen(false);
+    //     setElementTarget(null);
+    // };
 
 
     // ======================================================
@@ -675,7 +677,7 @@ export default function ElementsPanel({ pages, setPages }) {
 
             {/* ELEMENT PICKER MODAL */}
 
-            <ElementPickerPopover
+            {/* <ElementPickerPopover
                 open={elementPickerOpen}
                 position={elementPickerPosition}
                 onClose={() => {
@@ -683,7 +685,7 @@ export default function ElementsPanel({ pages, setPages }) {
                     setElementTarget(null);
                 }}
                 onSelect={handleSelectElement}
-            />
+            /> */}
 
         </div>
     );
@@ -714,21 +716,21 @@ function SortablePage({
     addRootElement,
     openElementPicker,
 }) {
-   const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-} = useSortable({
-    id: `page-${page.id}`,
-    data: {
-        type: "page",
-        pageId: page.id,
-        rowId: null,
-    },
-});
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging,
+    } = useSortable({
+        id: `page-${page.id}`,
+        data: {
+            type: "page",
+            pageId: page.id,
+            rowId: null,
+        },
+    });
 
     // Apply the drag position and visual feedback.
     const pageStyle = {

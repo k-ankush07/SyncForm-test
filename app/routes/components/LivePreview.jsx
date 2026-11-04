@@ -30,14 +30,15 @@ import {
 import PreviewField from "./PreviewField";
 
 // Drop zones around an element.
-// top/bottom = create a separate full-width row.
-// left/right = put elements side by side.
+// top/bottom = insert a separate full-width row.
+// left/right = insert elements side by side.
 function PreviewDropZone({
   pageId,
   rowId,
   elementId,
   collection,
   placement,
+  onOpenElementPicker,
 }) {
   const { setNodeRef, isOver } = useDroppable({
     id: `preview-drop-${pageId}-${rowId}-${collection}-${elementId}-${placement}`,
@@ -54,9 +55,42 @@ function PreviewDropZone({
   return (
     <div
       ref={setNodeRef}
-      className={`preview-drop-zone preview-drop-zone--${placement} ${isOver ? "preview-drop-zone--active" : ""
-        }`}
-    />
+      className={[
+        "preview-drop-zone",
+        `preview-drop-zone--${placement}`,
+        isOver ? "preview-drop-zone--active" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
+      <button
+        type="button"
+        className="preview-insert-button"
+        aria-label={`Insert element ${placement}`}
+        title={`Add element ${placement}`}
+        onPointerDown={(event) => {
+          // Prevent the parent preview element from starting a drag.
+          event.stopPropagation();
+        }}
+        onClick={(event) => {
+          event.stopPropagation();
+
+          // Open the existing element picker at this position.
+          onOpenElementPicker?.(
+            {
+              pageId,
+              rowId,
+              elementId,
+              collection,
+              placement,
+            },
+            event
+          );
+        }}
+      >
+        +
+      </button>
+    </div>
   );
 }
 
@@ -72,6 +106,7 @@ function DraggablePreviewElement({
   onDuplicateElement,
   onToggleElementVisibility,
   onDeleteElement,
+  onOpenElementPicker
 }) {
   const isSelected = element.id === selectedElementId;
   const isHidden = element.visible === false;
@@ -95,23 +130,23 @@ function DraggablePreviewElement({
     },
   });
 
-// =========================================
-// HANDLE DRAG FROM PREVIEW FIELD AND TOOLBAR
-// =========================================
+  // =========================================
+  // HANDLE DRAG FROM PREVIEW FIELD AND TOOLBAR
+  // =========================================
 
-const handlePreviewPointerDown = (event) => {
-  const target = event.target;
+  const handlePreviewPointerDown = (event) => {
+    const target = event.target;
 
-  // Do not start dragging from preview drop zones.
-  if (target.closest(".preview-drop-zone")) {
-    return;
-  }
+    // Do not start dragging from preview drop zones.
+    if (target.closest(".preview-drop-zone")) {
+      return;
+    }
 
-  // Allow dragging from anywhere inside the full preview element.
-  // This includes labels, inputs, placeholders, and empty space.
-  // The toolbar drag handle also works through this event.
-  listeners?.onPointerDown?.(event);
-};
+    // Allow dragging from anywhere inside the full preview element.
+    // This includes labels, inputs, placeholders, and empty space.
+    // The toolbar drag handle also works through this event.
+    listeners?.onPointerDown?.(event);
+  };
   const dragStyle = transform
     ? {
       transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
@@ -146,28 +181,39 @@ const handlePreviewPointerDown = (event) => {
       onClick={() => onSelectElement?.(element)}
     >
       {/* Drop zones around the element */}
-      <PreviewDropZone
-        pageId={pageId}
-        rowId={rowId}
-        elementId={element.id}
-        collection={collection}
-        placement="top"
-      />
+      {/* Drop zones around the element */}
 
-      <PreviewDropZone
-        pageId={pageId}
-        rowId={rowId}
-        elementId={element.id}
-        collection={collection}
-        placement="bottom"
-      />
+      {/* Standalone/root elements can have top and bottom insertion. */}
+      {rowId === null && (
+        <>
+          <PreviewDropZone
+            pageId={pageId}
+            rowId={rowId}
+            elementId={element.id}
+            collection={collection}
+            placement="top"
+            onOpenElementPicker={onOpenElementPicker}
+          />
 
+          <PreviewDropZone
+            pageId={pageId}
+            rowId={rowId}
+            elementId={element.id}
+            collection={collection}
+            placement="bottom"
+            onOpenElementPicker={onOpenElementPicker}
+          />
+        </>
+      )}
+
+      {/* Every element can have left and right insertion. */}
       <PreviewDropZone
         pageId={pageId}
         rowId={rowId}
         elementId={element.id}
         collection={collection}
         placement="left"
+        onOpenElementPicker={onOpenElementPicker}
       />
 
       <PreviewDropZone
@@ -176,6 +222,7 @@ const handlePreviewPointerDown = (event) => {
         elementId={element.id}
         collection={collection}
         placement="right"
+        onOpenElementPicker={onOpenElementPicker}
       />
 
       {isSelected && (
@@ -266,6 +313,7 @@ export default function LivePreview({
   onDuplicateElement,
   onToggleElementVisibility,
   onDeleteElement,
+  onOpenElementPicker,
 }) {
   return (
     <div
@@ -383,6 +431,7 @@ export default function LivePreview({
                                         onToggleElementVisibility
                                       }
                                       onDeleteElement={onDeleteElement}
+                                      onOpenElementPicker={onOpenElementPicker}
                                     />
                                   )
                                 )}
@@ -410,6 +459,7 @@ export default function LivePreview({
                                   onToggleElementVisibility
                                 }
                                 onDeleteElement={onDeleteElement}
+                                onOpenElementPicker={onOpenElementPicker}
                               />
                             ))}
                         </BlockStack>

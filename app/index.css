@@ -594,6 +594,8 @@
   margin: 0;
   padding: 24px;
   box-sizing: border-box;
+  height: 100vh !important;
+  overflow-y: auto !important;
   background: #ffffff;
 }
 
@@ -1586,4 +1588,74 @@
     grid-template-columns: minmax(0, 1fr) !important;
     gap: 16px;
   }
+}
+
+/* //preview elemnt add line  */
+/* =========================================
+   PREVIEW ELEMENT DROP ZONES
+========================================= */
+
+/* Each preview element is the positioning parent */
+/* Parent preview element */
+.preview-element {
+  position: relative;
+}
+
+/* Hide all + buttons by default */
+.preview-drop-zone {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+
+
+/* Show the + buttons only when hovering over the element */
+.preview-element:hover .preview-drop-zone {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+/* Top + button */
+.preview-drop-zone--top {
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* Bottom + button */
+.preview-drop-zone--bottom {
+  bottom: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* Left + button */
+.preview-drop-zone--left {
+  left: -12px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* Right + button */
+.preview-drop-zone--right {
+  right: -12px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+.preview-drop-zone {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #303030;
+  color: #ffffff;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
 }

@@ -3,6 +3,8 @@ import React, { useState } from "react";
 
 import { normalizeFormPages } from "../utils/normalizeFormPages.js";
 import ElementSettings from "../routes/components/ElementSettings.jsx";
+import { createElementConfig } from "../utils/elementHelpers.js";
+import ElementPickerPopover from "../routes/components/ElementPickerPopover.jsx";
 
 import {
   BlockStack,
@@ -111,6 +113,248 @@ export default function FormEditor() {
   const [selectedOption, setSelectedOption] = useState("Elements");
   const [collpase, setCollapse] = useState(false);
   const [selectedElement, setSelectedElement] = useState(null);
+
+  // elemnt poper states
+  // Show whether the element picker modal is open or not.
+  const [elementPickerOpen, setElementPickerOpen] = useState(false);
+  const [elementTarget, setElementTarget] = useState(null);
+  // position 
+  const [elementPickerPosition, setElementPickerPosition] = useState({
+    top: 150,
+    left: 490,
+  });
+
+  // =========================================
+  // FUNCTION: OPEN ELEMENT PICKER
+  // Opens the same picker from ElementsPanel
+  // or from LivePreview.
+  // =========================================
+
+  const openElementPicker = (targetOrPageId, rowIdOrEvent = null, maybeEvent) => {
+    // Check whether the call came from LivePreview.
+    // LivePreview sends an object containing insertion details.
+    const isPreviewTarget =
+      typeof targetOrPageId === "object" && targetOrPageId !== null;
+
+    // Support both calling styles:
+    //
+    // ElementsPanel:
+    // openElementPicker(pageId, rowId, event)
+    //
+    // LivePreview:
+    // openElementPicker(targetObject, event)
+
+    const target = isPreviewTarget
+      ? targetOrPageId
+      : {
+        pageId: targetOrPageId,
+        rowId: rowIdOrEvent ?? null,
+      };
+
+    const event = isPreviewTarget ? rowIdOrEvent : maybeEvent;
+
+    // Default position when the function is called without a button event.
+    let top = 150;
+    let left = 490;
+
+    if (event?.currentTarget) {
+      const buttonRect = event.currentTarget.getBoundingClientRect();
+
+      const modalWidth = Math.min(680, window.innerWidth - 24);
+      const modalHeight = Math.min(430, window.innerHeight - 24);
+
+      left = buttonRect.right + 8;
+
+      // If there is not enough room on the right,
+      // show the picker on the left.
+      if (left + modalWidth > window.innerWidth - 12) {
+        left = buttonRect.left - modalWidth - 8;
+      }
+
+      left = Math.max(
+        12,
+        Math.min(left, window.innerWidth - modalWidth - 12)
+      );
+
+      top = Math.max(
+        12,
+        Math.min(
+          buttonRect.top - 20,
+          window.innerHeight - modalHeight - 12
+        )
+      );
+    }
+
+    setElementPickerPosition({ top, left });
+    setElementTarget(target);
+    setElementPickerOpen(true);
+  };
+
+
+  // =========================================
+  // FUNCTION: SELECT AN ELEMENT
+  // Adds the selected element at the requested
+  // position or appends it from the sidebar.
+  // =========================================
+
+  const handleSelectElement = (item) => {
+    if (!elementTarget || !item?.type) return;
+
+    const newElement = createElementConfig(item);
+
+    setPages((previousPages) =>
+      previousPages.map((page) => {
+        if (page.id !== elementTarget.pageId) return page;
+
+        const {
+          rowId,
+          elementId,
+          collection,
+          placement,
+        } = elementTarget;
+
+        // =========================================
+        // CASE 1: PREVIEW INSERTION INTO A ROW
+        // Insert before or after the selected element.
+        // =========================================
+
+        if (rowId != null && elementId != null) {
+          return {
+            ...page,
+
+            rows: (page.rows || []).map((row) => {
+              if (row.id !== rowId) return row;
+
+              const targetCollection =
+                collection === "fields" ? "fields" : "elements";
+
+              const items = [...(row[targetCollection] || [])];
+
+              const targetIndex = items.findIndex(
+                (element) => element.id === elementId
+              );
+
+              if (targetIndex === -1) return row;
+
+              items.splice(
+                placement === "left" || placement === "top"
+                  ? targetIndex
+                  : targetIndex + 1,
+                0,
+                newElement
+              );
+
+              return {
+                ...row,
+                [targetCollection]: items,
+              };
+            }),
+          };
+        }
+
+        // =========================================
+        // CASE 2: PREVIEW INSERTION BESIDE A ROOT ELEMENT
+        // Convert the target and new element into a row.
+        // =========================================
+
+        if (
+          rowId == null &&
+          elementId != null &&
+          (placement === "left" || placement === "right")
+        ) {
+          const rootElements = [...(page.rootElements || [])];
+
+          const targetIndex = rootElements.findIndex(
+            (element) => element.id === elementId
+          );
+
+          if (targetIndex === -1) return page;
+
+          const targetElement = rootElements.splice(targetIndex, 1)[0];
+
+          const newRow = {
+            id: crypto.randomUUID(),
+            fields: [],
+            elements:
+              placement === "left"
+                ? [newElement, targetElement]
+                : [targetElement, newElement],
+          };
+
+          return {
+            ...page,
+            rootElements,
+            rows: [...(page.rows || []), newRow],
+          };
+        }
+
+        // =========================================
+        // CASE 3: PREVIEW INSERTION ABOVE OR BELOW
+        // A root element.
+        // =========================================
+
+        if (
+          rowId == null &&
+          elementId != null &&
+          (placement === "top" || placement === "bottom")
+        ) {
+          const rootElements = [...(page.rootElements || [])];
+
+          const targetIndex = rootElements.findIndex(
+            (element) => element.id === elementId
+          );
+
+          if (targetIndex === -1) return page;
+
+          rootElements.splice(
+            placement === "top" ? targetIndex : targetIndex + 1,
+            0,
+            newElement
+          );
+
+          return {
+            ...page,
+            rootElements,
+          };
+        }
+
+        // =========================================
+        // CASE 4: SIDEBAR ADD ELEMENT
+        // Keep the existing append behavior.
+        // =========================================
+
+        if (rowId != null) {
+          return {
+            ...page,
+
+            rows: (page.rows || []).map((row) =>
+              row.id !== rowId
+                ? row
+                : {
+                  ...row,
+                  elements: [
+                    ...(row.elements || []),
+                    newElement,
+                  ],
+                }
+            ),
+          };
+        }
+
+        // Add directly to the page when no row is selected.
+        return {
+          ...page,
+          rootElements: [
+            ...(page.rootElements || []),
+            newElement,
+          ],
+        };
+      })
+    );
+
+    setElementPickerOpen(false);
+    setElementTarget(null);
+  };
 
   const sidebarOptions = [
     { label: "Elements", icon: FormsIcon },
@@ -919,7 +1163,7 @@ export default function FormEditor() {
         // This allows fields and created elements to share a row.
         const targetArray =
           overData.targetCollection === "fields" ||
-          overData.targetCollection === "elements"
+            overData.targetCollection === "elements"
             ? overData.targetCollection
             : activeData.type === "field"
               ? "fields"
@@ -997,22 +1241,20 @@ export default function FormEditor() {
 
       {/* Main content */}
       <div
-        className={`template-editor__main ${
-          collpase
-            ? "template-editor__main--collapsed"
-            : selectedElement?.type === "paragraph"
-              ? "template-editor__main--paragraph"
-              : "template-editor__main--expanded"
-        }`}
+        className={`template-editor__main ${collpase
+          ? "template-editor__main--collapsed"
+          : selectedElement?.type === "paragraph"
+            ? "template-editor__main--paragraph"
+            : "template-editor__main--expanded"
+          }`}
       >
 
         {/* Sidebar */}
         <div
-          className={`template-editor__sidebar ${
-            collpase
-              ? "template-editor__sidebar--collapsed"
-              : ""
-          }`}
+          className={`template-editor__sidebar ${collpase
+            ? "template-editor__sidebar--collapsed"
+            : ""
+            }`}
         >
           <div className="template-editor__sidebar-options">
             <BlockStack gap="100">
@@ -1031,15 +1273,13 @@ export default function FormEditor() {
                     <button
                       type="button"
                       onClick={() => setSelectedOption(option.label)}
-                      className={`template-editor__option ${
-                        selectedOption === option.label
-                          ? "template-editor__option--selected"
-                          : ""
-                      } ${
-                        collpase
+                      className={`template-editor__option ${selectedOption === option.label
+                        ? "template-editor__option--selected"
+                        : ""
+                        } ${collpase
                           ? "template-editor__option--collapsed"
                           : ""
-                      }`}
+                        }`}
                       aria-label={option.label}
                     >
                       <span className="template-editor__option-icon">
@@ -1103,6 +1343,14 @@ export default function FormEditor() {
                     setPages={setPages}
                     sensors={sensors}
                     handleDragEnd={handleDragEnd}
+                    //pass the popover states
+                    elementPickerOpen={elementPickerOpen}
+                    setElementPickerOpen={setElementPickerOpen}
+                    elementTarget={elementTarget}
+                    setElementTarget={setElementTarget}
+                    elementPickerPosition={elementPickerPosition}
+                    setElementPickerPosition={setElementPickerPosition}
+                    openElementPicker={openElementPicker}
                   />
                 )}
 
@@ -1168,10 +1416,21 @@ export default function FormEditor() {
               onDuplicateElement={handleDuplicateElement}
               onToggleElementVisibility={handleToggleElementVisibility}
               onDeleteElement={handleDeleteElement}
+              onOpenElementPicker={openElementPicker}
             />
           </DndContext>
         </div>
 
+        {/* SHARED ELEMENT PICKER */}
+        <ElementPickerPopover
+          open={elementPickerOpen}
+          position={elementPickerPosition}
+          onClose={() => {
+            setElementPickerOpen(false);
+            setElementTarget(null);
+          }}
+          onSelect={handleSelectElement}
+        />
       </div>
     </div>
   );
