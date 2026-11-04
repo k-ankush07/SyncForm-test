@@ -12,6 +12,7 @@ import {
   BlockStack,
   Icon,
 } from "@shopify/polaris";
+
 import {
   DragHandleIcon,
   LayoutColumns3Icon,
@@ -21,7 +22,222 @@ import {
   DeleteIcon,
 } from "@shopify/polaris-icons";
 
+import {
+  useDraggable,
+  useDroppable,
+} from "@dnd-kit/core";
+
 import PreviewField from "./PreviewField";
+
+// Drop zones around an element.
+// top/bottom = create a separate full-width row.
+// left/right = put elements side by side.
+function PreviewDropZone({
+  pageId,
+  rowId,
+  elementId,
+  collection,
+  placement,
+}) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: `preview-drop-${pageId}-${rowId}-${collection}-${elementId}-${placement}`,
+    data: {
+      type: "previewDrop",
+      pageId,
+      targetRowId: rowId,
+      targetElementId: elementId,
+      targetCollection: collection,
+      placement,
+    },
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`preview-drop-zone preview-drop-zone--${placement} ${
+        isOver ? "preview-drop-zone--active" : ""
+      }`}
+    />
+  );
+}
+
+// Each preview element has its own drag behavior.
+function DraggablePreviewElement({
+  element,
+  pageId,
+  rowId,
+  collection,
+  selectedElementId,
+  onSelectElement,
+  onDuplicateElement,
+  onToggleElementVisibility,
+  onDeleteElement,
+}) {
+  const isSelected = element.id === selectedElementId;
+  const isHidden = element.visible === false;
+
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    setActivatorNodeRef,
+    transform,
+    isDragging,
+  } = useDraggable({
+    id: `preview-element-${pageId}-${collection}-${element.id}`,
+    disabled: isHidden,
+    data: {
+      type: "previewElement",
+      pageId,
+      rowId,
+      collection,
+      elementId: element.id,
+    },
+  });
+
+  const dragStyle = transform
+    ? {
+        transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+        zIndex: isDragging ? 100 : undefined,
+        opacity: isDragging ? 0.45 : 1,
+      }
+    : undefined;
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        ...dragStyle,
+        display: isHidden ? "none" : undefined,
+      }}
+      className={[
+        "preview-element",
+        isSelected ? "preview-element--selected" : "",
+        isHidden ? "preview-element--hidden" : "",
+        isDragging ? "preview-element--dragging" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+      onClick={() => onSelectElement?.(element)}
+    >
+      {/* Drop zones around the element */}
+      <PreviewDropZone
+        pageId={pageId}
+        rowId={rowId}
+        elementId={element.id}
+        collection={collection}
+        placement="top"
+      />
+
+      <PreviewDropZone
+        pageId={pageId}
+        rowId={rowId}
+        elementId={element.id}
+        collection={collection}
+        placement="bottom"
+      />
+
+      <PreviewDropZone
+        pageId={pageId}
+        rowId={rowId}
+        elementId={element.id}
+        collection={collection}
+        placement="left"
+      />
+
+      <PreviewDropZone
+        pageId={pageId}
+        rowId={rowId}
+        elementId={element.id}
+        collection={collection}
+        placement="right"
+      />
+
+      {isSelected && (
+        <div
+          className="element-floating-toolbar"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <button
+            ref={setActivatorNodeRef}
+            type="button"
+            title="Drag field"
+            aria-label="Drag field"
+            className="element-toolbar-button element-drag-handle"
+            {...listeners}
+            {...attributes}
+          >
+            <Icon source={DragHandleIcon} />
+          </button>
+
+          <button
+            type="button"
+            title="Layout settings"
+            aria-label="Layout settings"
+            className="element-toolbar-button"
+            onClick={() => onSelectElement?.(element)}
+          >
+            <Icon source={LayoutColumns3Icon} />
+          </button>
+
+          <button
+            type="button"
+            title="Duplicate field"
+            aria-label="Duplicate field"
+            className="element-toolbar-button"
+            onClick={() => onDuplicateElement?.(element)}
+          >
+            <Icon source={DuplicateIcon} />
+          </button>
+
+          <button
+            type="button"
+            title={isHidden ? "Show field" : "Hide field"}
+            aria-label={isHidden ? "Show field" : "Hide field"}
+            className="element-toolbar-button"
+            onClick={() => onToggleElementVisibility?.(element)}
+          >
+            <Icon source={isHidden ? ViewIcon : HideIcon} />
+          </button>
+
+          <button
+            type="button"
+            title="Delete field"
+            aria-label="Delete field"
+            className="element-toolbar-button element-toolbar-button--delete"
+            onClick={() => onDeleteElement?.(element)}
+          >
+            <Icon source={DeleteIcon} />
+          </button>
+        </div>
+      )}
+
+      <PreviewField element={element} />
+    </div>
+  );
+}
+
+// The empty preview area is a drop target for root elements.
+function PreviewRootDropArea({ pageId, children }) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: `preview-root-drop-${pageId}`,
+    data: {
+      type: "rootDrop",
+      pageId,
+    },
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`preview-root-drop-area ${
+        isOver ? "preview-root-drop-area--active" : ""
+      }`}
+    >
+      {children}
+    </div>
+  );
+}
 
 export default function LivePreview({
   pages = [],
@@ -33,102 +249,11 @@ export default function LivePreview({
   onToggleElementVisibility,
   onDeleteElement,
 }) {
-  // Select an element when the user clicks it in the preview.
-
-  const renderElement = (element, key) => {
-    if (!element || typeof element !== "object") {
-      return (
-        <div key={key} className="preview-element">
-          <PreviewField field={element} />
-        </div>
-      );
-    }
-
-    const isSelected = element.id === selectedElementId;
-    const isHidden = element.visible === false;
-
-    return (
-      <div
-        key={key}
-        className={[
-
-          "preview-element",
-          isSelected ? "preview-element--selected" : "",
-          isHidden ? "preview-element--hidden" : "",
-        ].filter(Boolean).join(" ")}
-        onClick={() => onSelectElement?.(element)}
-        style={{
-          display: isHidden ? "none" : undefined,
-        }}
-      >
-
-        {isSelected && (
-          <div
-            className="element-floating-toolbar"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <button
-              type="button"
-              title="Drag field"
-              aria-label="Drag field"
-              className="element-toolbar-button element-drag-handle"
-            >
-              <Icon source={DragHandleIcon} />
-            </button>
-
-            <button
-              type="button"
-              title="Layout settings"
-              aria-label="Layout settings"
-              className="element-toolbar-button"
-              onClick={() => onSelectElement?.(element)}
-            >
-              <Icon source={LayoutColumns3Icon} />
-            </button>
-
-            <button
-              type="button"
-              title="Duplicate field"
-              aria-label="Duplicate field"
-              className="element-toolbar-button"
-              onClick={() => onDuplicateElement?.(element)}
-            >
-              <Icon source={DuplicateIcon} />
-            </button>
-
-            <button
-              type="button"
-              title={isHidden ? "Show field" : "Hide field"}
-              aria-label={isHidden ? "Show field" : "Hide field"}
-              className="element-toolbar-button"
-              onClick={() => onToggleElementVisibility?.(element)}
-            >
-              <Icon source={isHidden ? ViewIcon : HideIcon} />
-            </button>
-
-            <button
-              type="button"
-              title="Delete field"
-              aria-label="Delete field"
-              className="element-toolbar-button element-toolbar-button--delete"
-              onClick={() => onDeleteElement?.(element)}
-            >
-              <Icon source={DeleteIcon} />
-            </button>
-          </div>
-        )}
-
-
-        <PreviewField element={element} />
-      </div>
-    );
-  };
-
-
   return (
     <div
-      className={`live-preview live-preview--${formSettings.theme || "classic"
-        }`}
+      className={`live-preview live-preview--${
+        formSettings.theme || "classic"
+      }`}
     >
       <Box background="bg-surface" padding="300">
         <InlineStack
@@ -140,6 +265,7 @@ export default function LivePreview({
             <Text variant="bodyMd" fontWeight="semibold">
               {templateTitle}
             </Text>
+
             <Badge>Draft</Badge>
           </InlineStack>
 
@@ -148,6 +274,7 @@ export default function LivePreview({
               <Button>Mobile</Button>
               <Button variant="primary">Desktop</Button>
             </ButtonGroup>
+
             <Button>English</Button>
             <Button disabled>Undo</Button>
             <Button disabled>Redo</Button>
@@ -177,55 +304,112 @@ export default function LivePreview({
 
             <div className="live-preview__content">
               {pages
-                .filter((page) => page.visible !== false && page.open)
+                .filter(
+                  (page) =>
+                    page.visible !== false && page.open
+                )
                 .map((page) => (
                   <div key={page.id} className="preview-page">
-                    <BlockStack gap="400">
-                      {(page.rows ?? []).map((row) => (
-                        <div key={row.id} className="preview-row">
-                          <div className="preview-row-grid">
-                            {(row.fields ?? []).map(
-                              (field, index) =>
-                                renderElement(
-                                  field,
-                                  typeof field === "object"
-                                    ? field.id
-                                    : `${field}-${index}`
-                                )
-                            )}
+                    <PreviewRootDropArea pageId={page.id}>
+                      <BlockStack gap="400">
 
-                            {(row.elements ?? []).map(
-                              (element, index) =>
-                                renderElement(
-                                  element,
-                                  element.id ?? `element-${index}`
-                                )
-                            )}
-                          </div>
-                        </div>
-                      ))}
+                        {/* Render rows only when they contain visible elements. */}
+                        {(page.rows ?? [])
+                          .map((row) => {
+                            // Combine fields and elements into one list.
+                            // This lets the grid support any number of items.
+                            const rowItems = [
+                              ...(row.fields ?? []).map((field) => ({
+                                element: field,
+                                collection: "fields",
+                              })),
+                              ...(row.elements ?? []).map((element) => ({
+                                element,
+                                collection: "elements",
+                              })),
+                            ].filter(
+                              ({ element }) =>
+                                element.visible !== false
+                            );
 
-                      <BlockStack gap="300">
-                        {(page.rootElements ?? []).map(
-                          (element, index) =>
-                            renderElement(
-                              element,
-                              element.id ?? `root-${index}`
+                            return {
+                              row,
+                              rowItems,
+                            };
+                          })
+                          // IMPORTANT: Empty rows are not rendered.
+                          // This removes the empty row and its spacing.
+                          .filter(({ rowItems }) => rowItems.length > 0)
+                          .map(({ row, rowItems }) => (
+                            <div
+                              key={row.id}
+                              className="preview-row"
+                            >
+                              <div
+                                className="preview-row-grid"
+                                style={{
+                                  "--preview-column-count": rowItems.length,
+                                }}
+                              >
+                                {rowItems.map(
+                                  ({ element, collection }) => (
+                                    <DraggablePreviewElement
+                                      key={`${collection}-${element.id}`}
+                                      element={element}
+                                      pageId={page.id}
+                                      rowId={row.id}
+                                      collection={collection}
+                                      selectedElementId={selectedElementId}
+                                      onSelectElement={onSelectElement}
+                                      onDuplicateElement={onDuplicateElement}
+                                      onToggleElementVisibility={
+                                        onToggleElementVisibility
+                                      }
+                                      onDeleteElement={onDeleteElement}
+                                    />
+                                  )
+                                )}
+                              </div>
+                            </div>
+                          ))}
+
+                        {/* Root elements remain full width. */}
+                        <BlockStack gap="300">
+                          {(page.rootElements ?? [])
+                            .filter(
+                              (element) => element.visible !== false
                             )
+                            .map((element) => (
+                              <DraggablePreviewElement
+                                key={element.id}
+                                element={element}
+                                pageId={page.id}
+                                rowId={null}
+                                collection="rootElements"
+                                selectedElementId={selectedElementId}
+                                onSelectElement={onSelectElement}
+                                onDuplicateElement={onDuplicateElement}
+                                onToggleElementVisibility={
+                                  onToggleElementVisibility
+                                }
+                                onDeleteElement={onDeleteElement}
+                              />
+                            ))}
+                        </BlockStack>
+
+                        {/* Submit button */}
+                        {page.submitButton?.enabled && (
+                          <Box paddingBlockStart="400">
+                            <button
+                              type="button"
+                              className="Polaris-Button--primary end-btn"
+                            >
+                              {page.submitButton.label}
+                            </button>
+                          </Box>
                         )}
                       </BlockStack>
-
-                      {page.submitButton?.enabled && (
-                        <Box paddingBlockStart="400">
-                          <button
-                            type="button"
-                            className="Polaris-Button--primary end-btn"
-                          >
-                            {page.submitButton.label}
-                          </button>
-                        </Box>
-                      )}
-                    </BlockStack>
+                    </PreviewRootDropArea>
                   </div>
                 ))}
             </div>

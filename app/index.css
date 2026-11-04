@@ -1428,3 +1428,162 @@
 .target-days-option.selected span:last-child {
     font-weight: 600;
 }
+
+/* //end of drag and drop in livepreview */
+
+/* =========================================
+   PREVIEW DRAG AND DROP
+========================================= */
+
+/* Keep two columns available for elements in the same row. */
+.live-preview--classic .preview-row-grid,
+.live-preview--query .preview-row-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-flow: row;
+}
+
+/* A single element in a row takes the full width. */
+.live-preview--classic .preview-row-grid > .preview-element:only-child,
+.live-preview--query .preview-row-grid > .preview-element:only-child {
+  grid-column: 1 / -1;
+}
+
+/* Root elements always take full width. */
+.preview-root-drop-area > .Polaris-BlockStack > .preview-element {
+  width: 100%;
+}
+
+/* Each element is a positioning container for its drop zones. */
+.preview-element {
+  position: relative;
+}
+
+/* Drop zones around each element. */
+.preview-drop-zone {
+  position: absolute;
+  z-index: 30;
+  background: transparent;
+  border-radius: 4px;
+}
+
+/* Top and bottom drop zones create separate rows. */
+.preview-drop-zone--top,
+.preview-drop-zone--bottom {
+  left: 0;
+  right: 0;
+  height: 10px;
+}
+
+.preview-drop-zone--top {
+  top: -5px;
+}
+
+.preview-drop-zone--bottom {
+  bottom: -5px;
+}
+
+/* Left and right drop zones create side-by-side elements. */
+.preview-drop-zone--left,
+.preview-drop-zone--right {
+  top: 0;
+  bottom: 0;
+  width: 12px;
+}
+
+.preview-drop-zone--left {
+  left: -6px;
+}
+
+.preview-drop-zone--right {
+  right: -6px;
+}
+
+/* Show the active drop location. */
+.preview-drop-zone--active {
+  background: rgba(44, 110, 203, 0.35);
+  outline: 1px solid #2c6ecb;
+}
+
+/* Highlight the root area when dropping outside a row. */
+.preview-root-drop-area--active {
+  outline: 2px dashed #2c6ecb;
+  outline-offset: 4px;
+  border-radius: 5px;
+}
+
+/* Keep the drag handle visually interactive. */
+.element-drag-handle {
+  cursor: grab;
+  touch-action: none;
+}
+
+.element-drag-handle:active {
+  cursor: grabbing;
+}
+
+.preview-element--dragging {
+  pointer-events: none;
+}
+
+@media (max-width: 600px) {
+  .live-preview--classic .preview-row-grid,
+  .live-preview--query .preview-row-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* =========================================
+   DYNAMIC PREVIEW ROW WIDTH
+========================================= */
+
+/* Dynamic columns based on visible elements */
+.preview-row-grid {
+  display: grid !important;
+  grid-template-columns: repeat(
+    var(--preview-column-count, 1),
+    minmax(0, 1fr)
+  ) !important;
+  grid-auto-flow: row;
+  grid-auto-columns: unset;
+  gap: 20px 16px;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+/* Classic and query themes */
+.live-preview--classic .preview-row-grid,
+.live-preview--query .preview-row-grid {
+  grid-template-columns: repeat(
+    var(--preview-column-count, 1),
+    minmax(0, 1fr)
+  ) !important;
+  gap: 16px;
+}
+
+/* Every element should fit inside its column */
+.preview-row-grid > .preview-element {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+/* A single element takes full width */
+.preview-row-grid > .preview-element:only-child {
+  grid-column: 1 / -1;
+}
+
+/* Empty rows should not occupy space */
+.preview-row:empty {
+  display: none !important;
+}
+
+/* Mobile: always use one column */
+@media (max-width: 600px) {
+  .preview-row-grid,
+  .live-preview--classic .preview-row-grid,
+  .live-preview--query .preview-row-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 16px;
+  }
+}
