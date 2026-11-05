@@ -127,153 +127,146 @@ export default function HeaderFooterSettings({ element, onChange }) {
        FOOTER SETTINGS
     ========================================= */
 
-    return (
-        <BlockStack gap="400">
 
-         
-            {/* FOOTER TEXT */}
 
-            <TextField
-                label="Text"
-                value={element.text || ""}
+return (
+    <BlockStack gap="400">
+
+        {/* FOOTER DESCRIPTION - ONLY ONE RICH TEXT EDITOR */}
+
+        <BlockStack gap="200">
+            <Text variant="bodyMd" as="p">
+                Footer description
+            </Text>
+
+            <RichTextEditor
+                value={element.content || ""}
                 onChange={(value) =>
-                    update("text", value)
+                    update("content", value)
+                }
+            />
+        </BlockStack>
+
+        <Divider />
+
+        {/* MOVE DESCRIPTION TO BOTTOM */}
+
+        <Checkbox
+            label="Show description at bottom"
+            checked={Boolean(element.showDescriptionAtBottom)}
+            onChange={(value) =>
+                update("showDescriptionAtBottom", value)
+            }
+        />
+
+        <Divider />
+
+        {/* PREVIOUS BUTTON TEXT */}
+
+        <TextField
+            label="Previous button text"
+            value={element.previousText || ""}
+            onChange={(value) =>
+                update("previousText", value)
+            }
+            autoComplete="off"
+            placeholder="Previous"
+        />
+
+        {/* NEXT BUTTON TEXT */}
+
+        <TextField
+            label="Next button text"
+            value={element.nextText || ""}
+            onChange={(value) =>
+                update("nextText", value)
+            }
+            autoComplete="off"
+            placeholder="Next"
+        />
+
+        <Divider />
+
+        {/* SUBMIT BUTTON TEXT */}
+
+        <TextField
+            label="Submit button text"
+            value={element.submitText || ""}
+            onChange={(value) =>
+                update("submitText", value)
+            }
+            autoComplete="off"
+            placeholder="Submit"
+        />
+
+        {/* RESET BUTTON */}
+
+        <Checkbox
+            label="Show Reset button"
+            checked={Boolean(element.showResetButton)}
+            onChange={(value) =>
+                update("showResetButton", value)
+            }
+        />
+
+        {element.showResetButton && (
+            <TextField
+                label="Reset button text"
+                value={element.resetButtonText || "Reset"}
+                onChange={(value) =>
+                    update("resetButtonText", value)
                 }
                 autoComplete="off"
-                multiline={2}
-                placeholder="Footer text"
             />
+        )}
 
-            {/* FOOTER RICH TEXT AREA */}
+        <Divider />
 
+        {/* FULL WIDTH FOOTER BUTTON */}
+
+        <Checkbox
+            label="Full width footer button"
+            checked={Boolean(element.fullWidthButton)}
+            onChange={(value) =>
+                update("fullWidthButton", value)
+            }
+        />
+
+        {/* BUTTON ALIGNMENT */}
+
+        {!element.fullWidthButton && (
             <BlockStack gap="200">
-                <Text variant="bodyMd" as="p">
-                    Rich text area
+                <Text variant="bodyMd">
+                    Footer button alignment
                 </Text>
 
-                <RichTextEditor
-                    value={element.content || ""}
-                    onChange={(value) =>
-                        update("content", value)
-                    }
-                />
+                <div className="column-width-selector">
+                    {[
+                        { label: "Left", value: "left" },
+                        { label: "Center", value: "center" },
+                        { label: "Right", value: "right" },
+                    ].map((alignment) => (
+                        <button
+                            key={alignment.value}
+                            type="button"
+                            className={`column-width-selector__option ${
+                                (element.buttonAlignment || "left") === alignment.value
+                                    ? "is-selected"
+                                    : ""
+                            }`}
+                            onClick={() =>
+                                update("buttonAlignment", alignment.value)
+                            }
+                        >
+                            {alignment.label}
+                        </button>
+                    ))}
+                </div>
             </BlockStack>
+        )}
 
-            <Divider />
+    </BlockStack>
+);
 
-            {/* DESCRIPTION AT BOTTOM */}
 
-            <Checkbox
-                label="Show description at bottom"
-                checked={Boolean(element.showDescriptionAtBottom)}
-                onChange={(value) =>
-                    update("showDescriptionAtBottom", value)
-                }
-            />
-
-            {element.showDescriptionAtBottom && (
-                <TextField
-                    label="Bottom description"
-                    value={element.bottomDescription || ""}
-                    onChange={(value) =>
-                        update("bottomDescription", value)
-                    }
-                    autoComplete="off"
-                    multiline={2}
-                />
-            )}
-
-            <Divider />
-
-            {/* PREVIOUS BUTTON */}
-
-            <Checkbox
-                label="Show Previous button"
-                checked={Boolean(element.showPreviousButton)}
-                onChange={(value) =>
-                    update("showPreviousButton", value)
-                }
-            />
-
-            {element.showPreviousButton && (
-                <TextField
-                    label="Previous button text"
-                    value={element.previousText || "Previous"}
-                    onChange={(value) =>
-                        update("previousText", value)
-                    }
-                    autoComplete="off"
-                />
-            )}
-
-            {/* NEXT BUTTON */}
-
-            <Checkbox
-                label="Show Next button"
-                checked={Boolean(element.showNextButton)}
-                onChange={(value) =>
-                    update("showNextButton", value)
-                }
-            />
-
-            {element.showNextButton && (
-                <TextField
-                    label="Next button text"
-                    value={element.nextText || "Next"}
-                    onChange={(value) =>
-                        update("nextText", value)
-                    }
-                    autoComplete="off"
-                />
-            )}
-
-            <Divider />
-
-            {/* SUBMIT BUTTON TEXT */}
-
-            <TextField
-                label="Submit button text"
-                value={element.submitText || ""}
-                onChange={(value) =>
-                    update("submitText", value)
-                }
-                autoComplete="off"
-                placeholder="Submit"
-            />
-
-            {/* RESET BUTTON */}
-
-            <Checkbox
-                label="Show Reset button"
-                checked={Boolean(element.showResetButton)}
-                onChange={(value) =>
-                    update("showResetButton", value)
-                }
-            />
-
-            {element.showResetButton && (
-                <TextField
-                    label="Reset button text"
-                    value={element.resetButtonText || "Reset"}
-                    onChange={(value) =>
-                        update("resetButtonText", value)
-                    }
-                    autoComplete="off"
-                />
-            )}
-
-            <Divider />
-
-            {/* FULL WIDTH BUTTON */}
-
-            <Checkbox
-                label="Full width footer button"
-                checked={Boolean(element.fullWidthButton)}
-                onChange={(value) =>
-                    update("fullWidthButton", value)
-                }
-            />
-
-        </BlockStack>
-    );
 }

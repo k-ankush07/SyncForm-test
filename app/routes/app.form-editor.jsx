@@ -420,11 +420,59 @@ export default function FormEditor() {
     },
   };
 
-  // Normalize the selected template pages.
+  // =========================================
+  // SHARED FORM HEADER AND FOOTER
+  // These belong to the whole form, not individual pages.
+  // =========================================
+
+  const defaultHeader = {
+    id: 100,
+    type: "form_header",
+    label: "form_header",
+    title: "Contact us",
+    description: "Leave your message and we'll get back to you shortly.",
+    showHeader: true,
+    headingTag: "h2",
+    alignment: "left",
+    visible: true,
+  };
+
+  const defaultFooter = {
+    id: 104,
+    type: "form_footer",
+    label: "form_footer",
+    content: "",
+    previousText: "Previous",
+    nextText: "Next",
+    submitText: "Send message",
+    resetButtonText: "Reset",
+    showResetButton: false,
+    showDescriptionAtBottom: true,
+    fullWidthButton: false,
+    buttonAlignment: "left",
+    visible: true,
+  };
+
+  // Read the existing header/footer from the template, if available.
+  // Otherwise, use the default objects above.
+  const [header, setHeader] = useState(
+    () =>
+      selectedTemplate?.pages?.find((page) => page.header)?.header ??
+      defaultHeader
+  );
+
+  const [footer, setFooter] = useState(
+    () =>
+      selectedTemplate?.pages?.find((page) => page.footer)?.footer ??
+      defaultFooter
+  );
+
+  // Keep your existing pages state.
+  // Remove page-level header/footer because they are now shared.
   const [pages, setPages] = useState(() =>
     normalizeFormPages(
       selectedTemplate?.pages ?? [defaultPages]
-    )
+    ).map(({ header, footer, ...page }) => page)
   );
 
   // =========================================
@@ -514,12 +562,31 @@ export default function FormEditor() {
     }
   };
 
+
   // =========================================
   // UPDATE SELECTED ELEMENT
   // Used by ElementSettings.
+  //
+  // Header and footer update their shared state.
+  // Normal elements continue updating inside pages.
   // =========================================
 
   const updateSelectedElement = (updatedElement) => {
+    // CASE 1: Update the shared form header.
+    if (updatedElement.type === "form_header") {
+      setHeader(updatedElement);
+      setSelectedElement(updatedElement);
+      return;
+    }
+
+    // CASE 2: Update the shared form footer.
+    if (updatedElement.type === "form_footer") {
+      setFooter(updatedElement);
+      setSelectedElement(updatedElement);
+      return;
+    }
+
+    // CASE 3: Update a normal page element.
     setPages((previousPages) =>
       previousPages.map((page) => ({
         ...page,
@@ -1410,16 +1477,16 @@ export default function FormEditor() {
     <div className="template-editor">
 
       {/* Main content */}
-     <div
-  className={`template-editor__main ${collpase
-    ? "template-editor__main--collapsed"
-    : ["paragraph", "form_header", "form_footer"].includes(
-        selectedElement?.type
-      )
-      ? "template-editor__main--paragraph"
-      : "template-editor__main--expanded"
-    }`}
->
+      <div
+        className={`template-editor__main ${collpase
+          ? "template-editor__main--collapsed"
+          : ["paragraph", "form_header", "form_footer"].includes(
+            selectedElement?.type
+          )
+            ? "template-editor__main--paragraph"
+            : "template-editor__main--expanded"
+          }`}
+      >
 
         {/* Sidebar */}
         <div
@@ -1591,6 +1658,8 @@ export default function FormEditor() {
           >
             <LivePreview
               pages={pages}
+              header={header}
+              footer={footer}
               templateTitle={templateTitle}
               formSettings={selectedTemplate}
               selectedElementId={selectedElement?.id}

@@ -328,9 +328,12 @@ function PreviewRootDropArea({ pageId, children }) {
   );
 }
 
+
 export default function LivePreview({
   pages = [],
   templateTitle = "Untitled form",
+  header,
+  footer,
   formSettings = {},
   selectedElementId,
   onSelectElement,
@@ -376,173 +379,180 @@ export default function LivePreview({
       <div className="live-preview__body">
         <div className="live-preview__form">
           <div className="live-preview__data">
-            {/* <div className="live-preview__header">
-              <Text
-                as="h2"
-                variant="headingLg"
-                fontWeight="semibold"
-              >
-                {formSettings?.title || "Contact us"}
-              </Text>
-
-              <Text as="p" variant="bodyMd" tone="subdued">
-                {formSettings?.description ||
-                  "Leave your message and we'll get back to you shortly."}
-              </Text>
-            </div> */}
 
             <div className="live-preview__content">
-  {pages
-    .filter(
-      (page) =>
-        page.visible !== false && page.open
-    )
-    .map((page) => (
-    //       console.log("Current page:", page),
-    // console.log("Header:", page.header),
-    // console.log("Footer:", page.footer),
-      <div key={page.id} className="preview-page">
 
-        {/* =========================================
-            HEADER: Fixed at the top of the page
-            Selectable, but NOT draggable.
-        ========================================= */}
-        {page.header && (
-          <FixedPreviewElement
-            element={page.header}
-            selectedElementId={selectedElementId}
-            onSelectElement={onSelectElement}
-          />
-        )}
+              {/* =========================================
+                  SHARED HEADER
+                  Rendered only ONCE for the entire form.
+                  It is not inside pages.map().
+                  It is selectable but NOT draggable.
+              ========================================= */}
 
-        {/* =========================================
-            MIDDLE: Normal draggable form elements
-        ========================================= */}
-        <PreviewRootDropArea pageId={page.id}>
-          <BlockStack gap="400">
+              {header && header.visible !== false && (
+                <FixedPreviewElement
+                  element={header}
+                  selectedElementId={selectedElementId}
+                  onSelectElement={onSelectElement}
+                />
+              )}
 
-            {/* Render rows only when they contain visible elements. */}
-            {(page.rows ?? [])
-              // Hide the complete row when its visibility is false.
-              .filter((row) => row.visible !== false)
-              .map((row) => {
-                // Combine fields and elements into one list.
-                // This lets the grid support any number of items.
-                const rowItems = [
-                  ...(row.fields ?? []).map((field) => ({
-                    element: field,
-                    collection: "fields",
-                  })),
-                  ...(row.elements ?? []).map((element) => ({
-                    element,
-                    collection: "elements",
-                  })),
-                ].filter(
-                  ({ element }) =>
-                    element.visible !== false
-                );
+              {/* =========================================
+                  PAGE CONTENT
+                  Each page contains its own rows and
+                  rootElements, but no separate header
+                  or footer.
+              ========================================= */}
 
-                return {
-                  row,
-                  rowItems,
-                };
-              })
-
-              // IMPORTANT: Empty rows are not rendered.
-              // This removes the empty row and its spacing.
-              .filter(({ rowItems }) => rowItems.length > 0)
-              .map(({ row, rowItems }) => (
-                <div
-                  key={row.id}
-                  className="preview-row"
-                >
-                  <div
-                    className="preview-row-grid"
-                    style={{
-                      "--preview-column-count": rowItems.length,
-                    }}
-                  >
-                    {rowItems.map(
-                      ({ element, collection }) => (
-                        <DraggablePreviewElement
-                          key={`${collection}-${element.id}`}
-                          element={element}
-                          pageId={page.id}
-                          rowId={row.id}
-                          collection={collection}
-                          selectedElementId={selectedElementId}
-                          onSelectElement={onSelectElement}
-                          onDuplicateElement={onDuplicateElement}
-                          onToggleElementVisibility={
-                            onToggleElementVisibility
-                          }
-                          onDeleteElement={onDeleteElement}
-                          onOpenElementPicker={onOpenElementPicker}
-                        />
-                      )
-                    )}
-                  </div>
-                </div>
-              ))}
-
-            {/* Root elements remain full width. */}
-            <BlockStack gap="300">
-              {(page.rootElements ?? [])
+              {pages
                 .filter(
-                  (element) => element.visible !== false
+                  (page) =>
+                    page.visible !== false && page.open
                 )
-                .map((element) => (
-                  <DraggablePreviewElement
-                    key={element.id}
-                    element={element}
-                    pageId={page.id}
-                    rowId={null}
-                    collection="rootElements"
-                    selectedElementId={selectedElementId}
-                    onSelectElement={onSelectElement}
-                    onDuplicateElement={onDuplicateElement}
-                    onToggleElementVisibility={
-                      onToggleElementVisibility
-                    }
-                    onDeleteElement={onDeleteElement}
-                    onOpenElementPicker={onOpenElementPicker}
-                  />
+                .map((page) => (
+                  <div
+                    key={page.id}
+                    className="preview-page"
+                  >
+
+                    {/* =========================================
+                        MIDDLE: Normal draggable form elements
+                    ========================================= */}
+
+                    <PreviewRootDropArea pageId={page.id}>
+                      <BlockStack gap="400">
+
+                        {/* Render rows only when they contain visible elements. */}
+                        {(page.rows ?? [])
+
+                          // Hide the complete row when its visibility is false.
+                          .filter((row) => row.visible !== false)
+
+                          .map((row) => {
+                            // Combine fields and elements into one list.
+                            // This lets the grid support any number of items.
+                            const rowItems = [
+                              ...(row.fields ?? []).map((field) => ({
+                                element: field,
+                                collection: "fields",
+                              })),
+
+                              ...(row.elements ?? []).map((element) => ({
+                                element,
+                                collection: "elements",
+                              })),
+                            ].filter(
+                              ({ element }) =>
+                                element.visible !== false
+                            );
+
+                            return {
+                              row,
+                              rowItems,
+                            };
+                          })
+
+                          // IMPORTANT: Empty rows are not rendered.
+                          // This removes the empty row and its spacing.
+                          .filter(({ rowItems }) => rowItems.length > 0)
+
+                          .map(({ row, rowItems }) => (
+                            <div
+                              key={row.id}
+                              className="preview-row"
+                            >
+                              <div
+                                className="preview-row-grid"
+                                style={{
+                                  "--preview-column-count": rowItems.length,
+                                }}
+                              >
+                                {rowItems.map(
+                                  ({ element, collection }) => (
+                                    <DraggablePreviewElement
+                                      key={`${collection}-${element.id}`}
+                                      element={element}
+                                      pageId={page.id}
+                                      rowId={row.id}
+                                      collection={collection}
+                                      selectedElementId={selectedElementId}
+                                      onSelectElement={onSelectElement}
+                                      onDuplicateElement={onDuplicateElement}
+                                      onToggleElementVisibility={
+                                        onToggleElementVisibility
+                                      }
+                                      onDeleteElement={onDeleteElement}
+                                      onOpenElementPicker={onOpenElementPicker}
+                                    />
+                                  )
+                                )}
+                              </div>
+                            </div>
+                          ))}
+
+                        {/* Root elements remain full width. */}
+                        <BlockStack gap="300">
+                          {(page.rootElements ?? [])
+                            .filter(
+                              (element) => element.visible !== false
+                            )
+                            .map((element) => (
+                              <DraggablePreviewElement
+                                key={element.id}
+                                element={element}
+                                pageId={page.id}
+                                rowId={null}
+                                collection="rootElements"
+                                selectedElementId={selectedElementId}
+                                onSelectElement={onSelectElement}
+                                onDuplicateElement={onDuplicateElement}
+                                onToggleElementVisibility={
+                                  onToggleElementVisibility
+                                }
+                                onDeleteElement={onDeleteElement}
+                                onOpenElementPicker={onOpenElementPicker}
+                              />
+                            ))}
+                        </BlockStack>
+
+                        {/* Existing submit button */}
+                        {/* {page.submitButton?.enabled && (
+                          <Box paddingBlockStart="400">
+                            <button
+                              type="button"
+                              className="Polaris-Button--primary end-btn"
+                            >
+                              {page.submitButton.label}
+                            </button>
+                          </Box>
+                        )} */}
+
+                      </BlockStack>
+                    </PreviewRootDropArea>
+
+                  </div>
                 ))}
-            </BlockStack>
 
-            {/* Existing submit button */}
-            {/* {page.submitButton?.enabled && (
-              <Box paddingBlockStart="400">
-                <button
-                  type="button"
-                  className="Polaris-Button--primary end-btn"
-                >
-                  {page.submitButton.label}
-                </button>
-              </Box>
-            )} */}
+              {/* =========================================
+                  SHARED FOOTER
+                  Rendered only ONCE for the entire form.
+                  It is not inside pages.map().
+                  It is selectable but NOT draggable.
+              ========================================= */}
 
-          </BlockStack>
-        </PreviewRootDropArea>
+              {footer && footer.visible !== false && (
+                <FixedPreviewElement
+                  element={footer}
+                  selectedElementId={selectedElementId}
+                  onSelectElement={onSelectElement}
+                />
+              )}
 
-        {/* =========================================
-            FOOTER: Fixed at the bottom of the page
-            Selectable, but NOT draggable.
-        ========================================= */}
-        {page.footer && (
-          <FixedPreviewElement
-            element={page.footer}
-            selectedElementId={selectedElementId}
-            onSelectElement={onSelectElement}
-          />
-        )}
-
-      </div>
-    ))}
-</div>
+            </div>
           </div>
         </div>
       </div>
     </div>
   );
 }
+
