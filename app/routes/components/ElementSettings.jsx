@@ -94,8 +94,11 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
         "checkboxes",
     ].includes(type);
 
+       //is button
+    const isButton = type === "button";
+
     const isChoiceInput =
-        isDropdown || isRadio || isCheckbox;
+        isDropdown || isRadio || isCheckbox || isButton;
 
     // STATIC TEXT TYPES
     const isHeading = type === "heading";
@@ -131,6 +134,8 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
         "datetime",
         "time",
     ].includes(type);
+
+ 
 
     // CONDITIONAL SETTINGS
     const showDefaultValue =

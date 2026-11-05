@@ -29,6 +29,7 @@ export function createElementConfig(item) {
     "radio_button",
     "dropdown",
     "select",
+    "button"
   ];
 
   // Default options for choice elements

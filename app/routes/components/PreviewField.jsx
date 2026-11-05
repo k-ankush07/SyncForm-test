@@ -447,8 +447,16 @@ export default function PreviewField({ element, field }) {
         </BlockStack>
       );
 
-    case "button":
-      return <Button>{label}</Button>;
+  case "button":
+  return (
+    <InlineStack gap="200" align="center">
+      {(normalizedElement.options || []).map((option) => (
+        <Button key={option.id}>
+          {option.label}
+        </Button>
+      ))}
+    </InlineStack>
+  );
 
     case "product":
       return (

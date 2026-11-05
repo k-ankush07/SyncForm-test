@@ -1,4 +1,8 @@
 // return the settings accroding to field selected like if email then that settings or checkbox then acc to that
+// i have creted diffrent settings for each elemnts that are not common the common setting include in common type but unique one for thier 
+// specific type that why this copmnte exist 
+// when user click on any elemnt type it return the setting type othewise only common
+// in case of button i want to show btn setting then this is used to retur the btnsetting.jsx to elemntsettig page 
 const TEXT_TYPES = [
   "text",
   "short_text",
