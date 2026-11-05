@@ -1613,6 +1613,7 @@ export default function FormEditor() {
               <ElementSettings
                 element={selectedElement}
                 onChange={updateSelectedElement}
+                 onDelete={() => handleDeleteElement(selectedElement.id)}
                 onClose={() => setSelectedElement(null)}
               />
             ) : (

@@ -487,13 +487,13 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
                 isDropdown ||
                 isDateTime
             ) && (
-                <TextField
-                    label="Placeholder"
-                    value={element.placeholder || ""}
-                    onChange={(value) => update("placeholder", value)}
-                    autoComplete="off"
-                />
-            )}
+                    <TextField
+                        label="Placeholder"
+                        value={element.placeholder || ""}
+                        onChange={(value) => update("placeholder", value)}
+                        autoComplete="off"
+                    />
+                )}
 
             {/* DEFAULT VALUE */}
 
@@ -703,7 +703,7 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
    EXCEPT HEADER AND FOOTER
 ========================================= */
 
-function LayoutSettings({ element, onChange }) {
+function LayoutSettings({ element, onChange, onDelete }) {
 
     const update = (key, value) => {
         onChange({
@@ -738,10 +738,9 @@ function LayoutSettings({ element, onChange }) {
                                 <button
                                     key={width}
                                     type="button"
-                                    className={`column-width-selector__option ${selected ? "is-selected" : ""}`}
-                                    onClick={() =>
-                                        update("columnWidth", width)
-                                    }
+                                    className={`column-width-selector__option ${selected ? "is-selected" : ""
+                                        }`}
+                                    onClick={() => update("columnWidth", width)}
                                 >
                                     {width}%
                                 </button>
@@ -756,11 +755,28 @@ function LayoutSettings({ element, onChange }) {
             <TextField
                 label="Custom CSS class"
                 value={element.customClass || ""}
-                onChange={(value) =>
-                    update("customClass", value)
-                }
+                onChange={(value) => update("customClass", value)}
                 autoComplete="off"
             />
+
+            {/* REMOVE ELEMENT */}
+
+            {/* {onDelete && (
+                <>
+                    <Divider />
+
+                    <Button
+                        variant="plain"
+                        tone="critical"
+                        icon={PolarisIcons.DeleteIcon}
+                        onClick={onDelete}
+                        accessibilityLabel="Remove element"
+                        className="remove-element-btn"
+                    >
+                        Remove element
+                    </Button>
+                </>
+            )} */}
 
         </BlockStack>
     );
@@ -771,7 +787,7 @@ function LayoutSettings({ element, onChange }) {
    ELEMENT SETTINGS CONTROLLER
 ========================================= */
 
-export default function ElementSettings({ element, onChange, onClose }) {
+export default function ElementSettings({ element, onChange, onClose, onDelete }) {
 
     const [activeSection, setActiveSection] = useState("main");
 
@@ -858,11 +874,11 @@ export default function ElementSettings({ element, onChange, onClose }) {
         );
     }
 
-    
-return (
+
+  return (
     <div className="element-settings">
 
-        {/* FIXED HEADER - BACK BUTTON */}
+        {/* FIXED HEADER */}
 
         <div className="element-settings__header">
             <Box paddingBlock="300">
@@ -953,7 +969,23 @@ return (
             </BlockStack>
         </div>
 
+        {/* FIXED BOTTOM REMOVE BUTTON */}
+
+        {!isHeaderFooter && (
+            <div className="element-settings__footer">
+                <Button
+                    variant="plain"
+                    tone="critical"
+                    icon={PolarisIcons.DeleteIcon}
+                    onClick={onDelete}
+                    className="remove-element-btn"
+                    accessibilityLabel="Remove element"
+                >
+                    Remove element
+                </Button>
+            </div>
+        )}
+
     </div>
 );
-
 }
