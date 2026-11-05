@@ -27,6 +27,7 @@ import FileSettings from "./elementsettings/groups/FileUploadSettings";
 import StaticTextSettings from "./elementsettings/groups/StaticTextSettings";
 import RatingStarSettings from "./elementsettings/groups/RatingStarSettings";
 import HeaderFooterSettings from "./elementsettings/groups/HeaderFooterSettings";
+import ButtonSettings from "./elementsettings/groups/ButtonSettings";
 import { getElementSettingsType } from "./elementsettings/utils/elementSettingsConfig";
 
 
@@ -94,7 +95,7 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
         "checkboxes",
     ].includes(type);
 
-       //is button
+    //is button
     const isButton = type === "button";
 
     const isChoiceInput =
@@ -135,7 +136,7 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
         "time",
     ].includes(type);
 
- 
+
 
     // CONDITIONAL SETTINGS
     const showDefaultValue =
@@ -800,6 +801,7 @@ export default function ElementSettings({ element, onChange, onClose, onDelete }
 
     const groupType = getElementSettingsType(element.type);
 
+
     const type = String(element.type || "")
         .toLowerCase()
         .replace(/[\s-]+/g, "_");
@@ -827,11 +829,13 @@ export default function ElementSettings({ element, onChange, onClose, onDelete }
     console.log("Element type:", element.type);
     console.log("Settings group:", groupType);
     console.log("======================================");
+    // console.log("Choice types:", CHOICE_TYPES);
 
     const settingsGroups = {
         contact: ContactSettings,
         text: TextSettings,
         choice: ChoiceSettings,
+        button: ButtonSettings,
         number: NumberSettings,
         date: DateSettings,
         file: FileSettings,
@@ -880,117 +884,116 @@ export default function ElementSettings({ element, onChange, onClose, onDelete }
     }
 
 
-  return (
-    <div className="element-settings">
+    return (
+        <div className="element-settings">
 
-        {/* FIXED HEADER */}
+            {/* FIXED HEADER */}
 
-        <div className="element-settings__header">
-            <Box paddingBlock="300">
-                <InlineStack
-                    align="start"
-                    blockAlign="center"
-                    gap="200"
-                >
-                    <Button
-                        icon={PolarisIcons.ArrowLeftIcon}
-                        variant="plain"
-                        onClick={onClose}
-                        accessibilityLabel="Back to elements"
-                    />
+            <div className="element-settings__header">
+                <Box paddingBlock="300">
+                    <InlineStack
+                        align="start"
+                        blockAlign="center"
+                        gap="200"
+                    >
+                        <Button
+                            icon={PolarisIcons.ArrowLeftIcon}
+                            variant="plain"
+                            onClick={onClose}
+                            accessibilityLabel="Back to elements"
+                        />
 
-                    <Text variant="headingMd" as="h2">
-                        {isHeaderFooter
-                            ? type === "form_header"
-                                ? "Header settings"
-                                : "Footer settings"
-                            : element.label || element.type}
-                    </Text>
-                </InlineStack>
-            </Box>
+                        <Text variant="headingMd" as="h2">
+                            {isHeaderFooter
+                                ? type === "form_header"
+                                    ? "Header settings"
+                                    : "Footer settings"
+                                : element.label || element.type}
+                        </Text>
+                    </InlineStack>
+                </Box>
 
-            <Divider />
-        </div>
+                <Divider />
+            </div>
 
-        {/* SCROLLABLE CONTENT */}
+            {/* SCROLLABLE CONTENT */}
 
-        <div className="element-settings__content">
-            <BlockStack gap="400">
+            <div className="element-settings__content">
+                <BlockStack gap="400">
 
-                <CommonSettings
-                    element={element}
-                    onChange={onChange}
-                    onOpenSelectIcon={() =>
-                        setActiveSection("selectIcon")
-                    }
-                />
-
-                {!isHeaderFooter && GroupComponent && (
-                    <GroupComponent
+                    <CommonSettings
                         element={element}
                         onChange={onChange}
-                        onOpenRatingIcon={() =>
-                            setActiveSection("ratingIcon")
+                        onOpenSelectIcon={() =>
+                            setActiveSection("selectIcon")
                         }
                     />
-                )}
 
-                {!isHeaderFooter && showOptionsPerLine && (
-                    <BlockStack gap="200">
-                        <Text variant="bodyMd">
-                            Number of options per line
-                        </Text>
+                    {!isHeaderFooter && GroupComponent && (
+                        <GroupComponent
+                            element={element}
+                            onChange={onChange}
+                            onOpenRatingIcon={() =>
+                                setActiveSection("ratingIcon")
+                            }
+                        />
+                    )}
 
-                        <div className="column-width-selector">
-                            {[5, 4, 3, 2, 1].map((number) => (
-                                <div
-                                    key={number}
-                                    className={`chooseItem ${
-                                        Number(element.optionsPerLine || 1) === number
-                                            ? "active"
-                                            : ""
-                                    }`}
-                                    onClick={() =>
-                                        onChange({
-                                            ...element,
-                                            optionsPerLine: number,
-                                        })
-                                    }
-                                >
-                                    {number}
-                                </div>
-                            ))}
-                        </div>
-                    </BlockStack>
-                )}
+                    {!isHeaderFooter && showOptionsPerLine && (
+                        <BlockStack gap="200">
+                            <Text variant="bodyMd">
+                                Number of options per line
+                            </Text>
 
-                {!isHeaderFooter && (
-                    <LayoutSettings
-                        element={element}
-                        onChange={onChange}
-                    />
-                )}
+                            <div className="column-width-selector">
+                                {[5, 4, 3, 2, 1].map((number) => (
+                                    <div
+                                        key={number}
+                                        className={`chooseItem ${Number(element.optionsPerLine || 1) === number
+                                                ? "active"
+                                                : ""
+                                            }`}
+                                        onClick={() =>
+                                            onChange({
+                                                ...element,
+                                                optionsPerLine: number,
+                                            })
+                                        }
+                                    >
+                                        {number}
+                                    </div>
+                                ))}
+                            </div>
+                        </BlockStack>
+                    )}
 
-            </BlockStack>
-        </div>
+                    {!isHeaderFooter && (
+                        <LayoutSettings
+                            element={element}
+                            onChange={onChange}
+                        />
+                    )}
 
-        {/* FIXED BOTTOM REMOVE BUTTON */}
-
-        {!isHeaderFooter && (
-            <div className="element-settings__footer">
-                <Button
-                    variant="plain"
-                    tone="critical"
-                    icon={PolarisIcons.DeleteIcon}
-                    onClick={onDelete}
-                    className="remove-element-btn"
-                    accessibilityLabel="Remove element"
-                >
-                    Remove element
-                </Button>
+                </BlockStack>
             </div>
-        )}
 
-    </div>
-);
+            {/* FIXED BOTTOM REMOVE BUTTON */}
+
+            {!isHeaderFooter && (
+                <div className="element-settings__footer">
+                    <Button
+                        variant="plain"
+                        tone="critical"
+                        icon={PolarisIcons.DeleteIcon}
+                        onClick={onDelete}
+                        className="remove-element-btn"
+                        accessibilityLabel="Remove element"
+                    >
+                        Remove element
+                    </Button>
+                </div>
+            )}
+
+        </div>
+    );
 }
