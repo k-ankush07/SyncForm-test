@@ -1,11 +1,10 @@
 /* =========================================
-   EDITOR SHELL
+   1. EDITOR SHELL & LAYOUT
 ========================================= */
 
 .template-editor {
   position: fixed;
-  top: 0;
-  left: 0;
+  inset: 0;
   width: 100vw;
   height: 100vh;
   z-index: 9999;
@@ -28,18 +27,35 @@
   z-index: 99999 !important;
 }
 
-
+.template-editor__main {
+  display: grid;
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+  transition: grid-template-columns 0.2s ease;
+}
 
 .template-editor__main--expanded {
-  grid-template-columns: 220px 320px minmax(0, 1fr);
+  grid-template-columns: 220px 350px minmax(0, 1fr) !important;
+}
+
+.template-editor__main--paragraph {
+  grid-template-columns: 220px 500px minmax(0, 1fr);
 }
 
 .template-editor__main--collapsed {
-  grid-template-columns: 56px 320px minmax(0, 1fr);
+  grid-template-columns: 56px 260px minmax(0, 1fr);
+}
+
+.template-editor__preview {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
 }
 
 /* =========================================
-   SIDEBAR
+   2. SIDEBAR
 ========================================= */
 
 .template-editor__sidebar {
@@ -95,17 +111,8 @@
 }
 
 /* =========================================
-   SETTINGS PANEL - FIXED HEIGHT + SCROLL
+   3. SETTINGS PANEL (fixed height + scroll)
 ========================================= */
-
-.template-editor__main {
-  display: grid;
-  flex: 1;
-  min-height: 0;
-  height: 0;
-  overflow: hidden;
-  transition: grid-template-columns 0.2s ease;
-}
 
 .template-editor__settings {
   display: flex;
@@ -121,6 +128,7 @@
   display: flex;
   flex-direction: column;
   flex: 1;
+  min-width: 0;
   min-height: 0;
   height: 100%;
   overflow: hidden;
@@ -140,23 +148,26 @@
   display: flex;
   flex-direction: column;
   flex: 1;
+  min-width: 0;
   min-height: 0;
   height: 100%;
   overflow: hidden;
 }
 
-/* Header stays fixed */
+/* Fixed top header */
 .element-settings__header {
   flex-shrink: 0;
   padding-bottom: 12px;
+  background: #fff;
+  z-index: 2;
 }
 
-/* Only this section scrolls */
+/* Scrollable middle content (only this section scrolls) */
 .element-settings__content {
   flex: 1;
   min-height: 0;
   height: 0;
-  overflow-y: scroll;
+  overflow-y: auto;
   overflow-x: hidden;
   padding: 24px !important;
   scrollbar-width: thin;
@@ -176,128 +187,30 @@
   background: transparent;
 }
 
-/* =========================================
-   PREVIEW AREA
-========================================= */
-
-/* =========================================
-   EDITOR LAYOUT
-========================================= */
-
-.template-editor {
-  position: fixed;
-  inset: 0;
-  width: 100vw;
-  height: 100vh;
-  z-index: 9999;
-  background: #ffffff;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.template-editor__main {
-  display: grid;
-  flex: 1;
-  min-height: 0;
-  height: 100%;
-  overflow: hidden;
-  transition: grid-template-columns 0.2s ease;
-}
-
-.template-editor__main--expanded {
-  grid-template-columns: 220px 350px minmax(0, 1fr) !important;
-}
-
-.template-editor__main--paragraph {
-    grid-template-columns: 220px 500px minmax(0, 1fr);
-}
-
-.template-editor__main--collapsed {
-    grid-template-columns: 56px 260px minmax(0, 1fr);
-}
-
-
-/* =========================================
-   SETTINGS PANEL
-========================================= */
-
-.template-editor__settings {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  min-height: 0;
-  height: 100%;
-  overflow: hidden;
-  border-right: 1px solid #e1e3e5;
-}
-
-.template-editor__settings-inner {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-width: 0;
-  min-height: 0;
-  height: 100%;
-  overflow: hidden;
-}
-
-/* Element settings wrapper */
-
-.element-settings {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-width: 0;
-  min-height: 0;
-  height: 100%;
-  overflow: hidden;
-}
-
-/* Fixed settings header */
-
-.element-settings__header {
+/* Fixed bottom footer */
+.element-settings__footer {
   flex-shrink: 0;
+  padding: 12px 16px;
+  text-align: center;
+  border-top: 1px solid #e1e3e5;
+  background: #fff;
 }
 
-/* Scrollable settings content */
-
-.element-settings__content {
-  flex: 1;
-  min-height: 0;
-  height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding: 12px 8px 20px 0;
-  scrollbar-width: thin;
-  scrollbar-color: #999 transparent;
+/* Remove button */
+.remove-element-btn {
+  width: 100%;
+  justify-content: flex-start;
+  padding: 10px 12px;
+  border-radius: 6px;
+  transition: background-color 0.2s ease;
 }
 
-.element-settings__content::-webkit-scrollbar {
-  width: 7px;
-}
-
-.element-settings__content::-webkit-scrollbar-thumb {
-  background: #999;
-  border-radius: 10px;
-}
-
-.element-settings__content::-webkit-scrollbar-track {
-  background: transparent;
+.remove-element-btn:hover {
+  background-color: #f1f1f1;
 }
 
 /* =========================================
-   PREVIEW
-========================================= */
-
-.template-editor__preview {
-  min-width: 0;
-  min-height: 0;
-  overflow: hidden;
-}
-
-/* =========================================
-   ELEMENT PICKER POPOVER
+   4. ELEMENT PICKER POPOVER
 ========================================= */
 
 .element-picker-backdrop {
@@ -565,7 +478,7 @@
 }
 
 /* =========================================
-   LIVE PREVIEW – BASE LAYOUT
+   5. LIVE PREVIEW - BASE LAYOUT
 ========================================= */
 
 .live-preview {
@@ -624,38 +537,56 @@
   box-sizing: border-box;
 }
 
+.end-btn {
+  cursor: pointer;
+}
+
+/* Rows */
 .preview-row {
   width: 100%;
   min-width: 0;
   box-sizing: border-box;
 }
 
+/* Empty rows should not occupy space */
+.preview-row:empty {
+  display: none !important;
+}
+
+/* Dynamic columns based on visible elements */
 .preview-row-grid {
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(0, 1fr);
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  display: grid !important;
+  grid-template-columns: repeat(
+    var(--preview-column-count, 1),
+    minmax(0, 1fr)
+  ) !important;
+  grid-auto-flow: row;
+  grid-auto-columns: unset;
   gap: 20px 16px;
   width: 100%;
   min-width: 0;
+  box-sizing: border-box;
 }
 
-.end-btn {
-  cursor: pointer;
+/* Every element fits inside its column */
+.preview-row-grid > .preview-element {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
-@media (max-width: 600px) {
-  .live-preview__form {
-    padding: 16px;
-  }
+/* A single element in a row takes the full width */
+.preview-row-grid > .preview-element:only-child {
+  grid-column: 1 / -1;
+}
 
-  .preview-row-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
+/* Root elements always take full width */
+.preview-root-drop-area > .Polaris-BlockStack > .preview-element {
+  width: 100%;
 }
 
 /* =========================================
-   PREVIEW ELEMENT + FLOATING TOOLBAR
+   6. PREVIEW ELEMENT + FLOATING TOOLBAR
 ========================================= */
 
 .preview-element {
@@ -666,6 +597,7 @@
   border-radius: 6px;
   padding: 2px;
   cursor: pointer;
+  overflow: visible;
 }
 
 .preview-element:hover {
@@ -688,6 +620,10 @@
   margin-top: 4px;
   color: #6d7175;
   font-size: 11px;
+}
+
+.preview-element--dragging {
+  pointer-events: none;
 }
 
 .element-floating-toolbar {
@@ -731,11 +667,192 @@
 
 .element-drag-handle {
   cursor: grab;
+  touch-action: none;
+}
+
+.element-drag-handle:active {
+  cursor: grabbing;
 }
 
 /* =========================================
-   THEMES: SHARED RULES
-   (.live-preview--classic and .live-preview--query)
+   7. DRAG AND DROP + INSERTION LINES
+========================================= */
+
+/* Highlight the root area when dropping outside a row */
+.preview-root-drop-area--active {
+  outline: 2px dashed #2c6ecb;
+  outline-offset: 4px;
+  border-radius: 5px;
+}
+
+/* Drop zone base (hidden until the parent element is hovered) */
+.preview-drop-zone {
+  position: absolute;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 120ms ease,
+    visibility 120ms ease;
+}
+
+.preview-element:hover .preview-drop-zone {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+/* Top and bottom zones create separate rows */
+.preview-drop-zone--top,
+.preview-drop-zone--bottom {
+  left: 12px;
+  right: 12px;
+  width: auto;
+  height: 20px;
+}
+
+.preview-drop-zone--top {
+  top: -10px;
+}
+
+.preview-drop-zone--bottom {
+  bottom: -10px;
+}
+
+/* Left and right zones create side-by-side elements */
+.preview-drop-zone--left,
+.preview-drop-zone--right {
+  top: 2px;
+  bottom: 2px;
+  width: 20px;
+  height: auto;
+}
+
+.preview-drop-zone--left {
+  left: -10px;
+}
+
+.preview-drop-zone--right {
+  right: -10px;
+}
+
+/* Blue insertion line */
+.preview-drop-line {
+  position: absolute;
+  display: block;
+  background: #2c6ecb;
+  border-radius: 4px;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    transform 220ms cubic-bezier(0.22, 1, 0.36, 1) 120ms,
+    opacity 100ms ease 120ms;
+}
+
+/* Horizontal lines (top / bottom) */
+.preview-drop-zone--top .preview-drop-line,
+.preview-drop-zone--bottom .preview-drop-line {
+  top: 50%;
+  left: 50%;
+  width: 100%;
+  height: 4px;
+  transform: translate(-50%, -50%) scaleX(0);
+  transform-origin: center;
+}
+
+/* Vertical lines (left / right) */
+.preview-drop-zone--left .preview-drop-line,
+.preview-drop-zone--right .preview-drop-line {
+  top: 50%;
+  left: 50%;
+  width: 4px;
+  height: 100%;
+  transform: translate(-50%, -50%) scaleY(0);
+  transform-origin: center;
+}
+
+/* Plus button */
+.preview-insert-button {
+  position: absolute;
+  z-index: 2;
+  top: 50%;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  background: #2c6ecb;
+  color: #ffffff;
+  font-size: 17px;
+  font-weight: 500;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.5);
+  transition:
+    opacity 100ms ease,
+    transform 150ms ease,
+    background 150ms ease;
+}
+
+/* Show only the hovered drop zone */
+.preview-drop-zone--top:hover .preview-insert-button,
+.preview-drop-zone--bottom:hover .preview-insert-button,
+.preview-drop-zone--left:hover .preview-insert-button,
+.preview-drop-zone--right:hover .preview-insert-button {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.preview-drop-zone--top:hover .preview-drop-line,
+.preview-drop-zone--bottom:hover .preview-drop-line {
+  opacity: 1;
+  transform: translate(-50%, -50%) scaleX(1);
+}
+
+.preview-drop-zone--left:hover .preview-drop-line,
+.preview-drop-zone--right:hover .preview-drop-line {
+  opacity: 1;
+  transform: translate(-50%, -50%) scaleY(1);
+}
+
+/* Active state while dragging
+   (must stay after the base line/button rules above)
+   Note: the old `background: rgba(44,110,203,.35)` was always overridden by
+   `.preview-drop-zone { background: transparent }`, so it is not kept here. */
+.preview-drop-zone--active {
+  outline: 1px solid #2c6ecb;
+}
+
+.preview-drop-zone--active .preview-insert-button {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.preview-drop-zone--active .preview-drop-line {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+/* Plus button hover (stays visible while hovered) */
+.preview-insert-button:hover {
+  background: #1f5199;
+  opacity: 1;
+}
+
+/* =========================================
+   8. THEMES: SHARED (classic + query)
 ========================================= */
 
 .live-preview--classic,
@@ -805,7 +922,10 @@
 
 .live-preview--classic .preview-row-grid,
 .live-preview--query .preview-row-grid {
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: repeat(
+    var(--preview-column-count, 1),
+    minmax(0, 1fr)
+  ) !important;
   gap: 16px;
 }
 
@@ -884,46 +1004,8 @@
   padding: 14px 12px;
 }
 
-/* Small screens */
-@media (max-width: 600px) {
-  .live-preview--classic .live-preview__header,
-  .live-preview--query .live-preview__header {
-    padding: 22px 18px;
-  }
-
-  .live-preview--classic .live-preview__content,
-  .live-preview--query .live-preview__content {
-    padding: 0 18px 24px;
-  }
-
-  .live-preview--classic .survey-gender-options,
-  .live-preview--query .survey-gender-options {
-    grid-template-columns: 1fr;
-  }
-}
-
 /* =========================================
-   THEME: QUERY (button only)
-========================================= */
-
-.live-preview--query .Polaris-Button--primary {
-  min-height: 35px;
-  padding: 0 25px;
-  border: 0;
-  border-radius: 7px;
-  background: #1c1c1c;
-  color: #fff;
-  box-shadow: none;
-  font-size: 13px;
-  font-weight: 500;
-}
-
-.live-preview--query .Polaris-Button--primary:hover {
-  background: #333;
-}
-
-/* =========================================
-   THEME: CLASSIC (additions on top of shared rules)
+   9. THEME: CLASSIC (additions)
 ========================================= */
 
 .live-preview--classic {
@@ -959,6 +1041,11 @@
   line-height: 1.4;
 }
 
+.live-preview--classic .preview-page > .Polaris-BlockStack {
+  width: 100%;
+  min-width: 0;
+}
+
 .live-preview--classic .preview-row-grid > div {
   width: 100%;
   min-width: 0;
@@ -966,11 +1053,6 @@
 
 .live-preview--classic .preview-row-grid > div:only-child {
   grid-column: 1 / -1;
-}
-
-.live-preview--classic .preview-page > .Polaris-BlockStack {
-  width: 100%;
-  min-width: 0;
 }
 
 /* Labels */
@@ -1059,173 +1141,202 @@
   outline: 2px solid #303030;
   outline-offset: 3px;
 }
-/* //choice list css setting page  */
+
+/* =========================================
+   10. THEME: QUERY (button only)
+========================================= */
+
+.live-preview--query .Polaris-Button--primary {
+  min-height: 35px;
+  padding: 0 25px;
+  border: 0;
+  border-radius: 7px;
+  background: #1c1c1c;
+  color: #fff;
+  box-shadow: none;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.live-preview--query .Polaris-Button--primary:hover {
+  background: #333;
+}
+
+/* =========================================
+   11. LIVE PREVIEW - MOBILE (<= 600px)
+   Keep this after all the rules it overrides.
+========================================= */
+
+@media (max-width: 600px) {
+  .live-preview__form {
+    padding: 16px;
+  }
+
+  .preview-row-grid,
+  .live-preview--classic .preview-row-grid,
+  .live-preview--query .preview-row-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 16px;
+  }
+
+  .live-preview--classic .live-preview__header,
+  .live-preview--query .live-preview__header {
+    padding: 22px 18px;
+  }
+
+  .live-preview--classic .live-preview__content,
+  .live-preview--query .live-preview__content {
+    padding: 0 18px 24px;
+  }
+
+  .live-preview--classic .survey-gender-options,
+  .live-preview--query .survey-gender-options {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* =========================================
+   12. SETTINGS CONTROLS
+========================================= */
+
 /* Column width setting */
 .column-width-setting {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
 }
 
-/* Main segmented container */
+/* Segmented container (used by column width + options per line) */
 .column-width-selector {
-    display: flex;
-    align-items: center;
-    width: 100%;
-    padding: 3px;
-    background: #f1f1f1;
-    border: 1px solid #e3e3e3;
-    border-radius: 10px;
-    box-sizing: border-box;
-    gap: 2px;
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 2px;
+  width: 100%;
+  padding: 3px;
+  background: var(--p-color-bg-surface-secondary);
+  border: 1px solid #e3e3e3;
+  border-radius: 9px;
+  box-sizing: border-box;
 }
 
-/* Individual options */
+/* Segmented options - variant 1 */
 .column-width-option {
-    flex: 1;
-    min-width: 0;
-    height: 32px;
-    padding: 0 8px;
-    border: none;
-    border-radius: 7px;
-    background: transparent;
-    color: #616161;
-    font-size: 13px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background 0.15s ease, box-shadow 0.15s ease;
+  flex: 1;
+  min-width: 0;
+  height: 32px;
+  padding: 0 8px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: #616161;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease, box-shadow 0.15s ease;
 }
 
-/* Selected option */
 .column-width-option--active {
-    background: #ffffff;
-    color: #303030;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  background: #ffffff;
+  color: #303030;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
 }
 
-/* Hover */
 .column-width-option:not(.column-width-option--active):hover {
-    background: rgba(255, 255, 255, 0.5);
-}
-/* // extra css for min-maxa  andcol settings */
-/* Character limit settings */
-
-.character-limit-settings {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    width: 100%;
+  background: rgba(255, 255, 255, 0.5);
 }
 
-.character-limit-settings__fields {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
-    width: 100%;
-}
-
-.character-limit-settings__fields .Polaris-TextField {
-    min-width: 0;
-}
-
-.character-limit-settings .Polaris-Text--root {
-    font-size: 13px;
-    line-height: 1.5;
-}
-/* //icon-seletor */
-.select-icon-container {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    min-height: 60px;
-    padding: 12px;
-    background: #f6f6f7;
-    border: 1px solid #e1e3e5;
-    border-radius: 6px;
-    box-sizing: border-box;
-}
-.select-icon-wrapper {
-    width: 100%;
-    min-height: 75px;
-    background: #f7f7f7;
-    border: 1px solid #e1e1e1;
-    border-radius: 4px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-sizing: border-box;
-}
-
-/* // width selector in row */
-.column-width-selector {
-    display: flex;
-    align-items: center;
-    width: 100%;
-    padding: 3px;
-    gap: 2px;
-    background: var(--p-color-bg-surface-secondary);
-    border-radius: 9px;
-    box-sizing: border-box;
-}
-
+/* Segmented options - variant 2 (row width selector) */
 .column-width-selector__option {
-    flex: 1;
-    min-width: 0;
-    height: 32px;
-    border: 1px solid transparent;
-    border-radius: 7px;
-    background: transparent;
-    color: var(--p-color-text);
-    font-size: 13px;
-    cursor: pointer;
+  flex: 1;
+  min-width: 0;
+  height: 32px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--p-color-text);
+  font-size: 13px;
+  cursor: pointer;
 }
 
 .column-width-selector__option.is-selected {
-    background: var(--p-color-bg-surface);
-    border-color: var(--p-color-border);
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
-}
-/* //Number of option per line settings */
-.column-width-selector {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    width: 100%;
-    flex-wrap: nowrap;
+  background: var(--p-color-bg-surface);
+  border-color: var(--p-color-border);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
 }
 
-.column-width-selector {
-    display: flex;
-    align-items: center;
-    width: 100%;
-    padding: 3px;
-    gap: 2px;
-    background: var(--p-color-bg-surface-secondary);
-    border-radius: 9px;
-    box-sizing: border-box;
-}
-
+/* Segmented options - variant 3 (number of options per line) */
 .chooseItem {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 7px 4px;
-    border-radius: 7px;
-    background: transparent;
-    color: var(--p-color-text);
-    cursor: pointer;
-    font-size: 13px;
-    transition: background 0.15s ease;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 7px 4px;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--p-color-text);
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.15s ease;
 }
 
 .chooseItem.active {
-    background: #ffffff;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
 }
-/* // css preivew for text editor */
+
+/* Character limit (min / max) settings */
+.character-limit-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.character-limit-settings__fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  width: 100%;
+}
+
+.character-limit-settings__fields .Polaris-TextField {
+  min-width: 0;
+}
+
+.character-limit-settings .Polaris-Text--root {
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* Icon selector */
+.select-icon-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 60px;
+  padding: 12px;
+  background: #f6f6f7;
+  border: 1px solid #e1e3e5;
+  border-radius: 6px;
+  box-sizing: border-box;
+}
+
+.select-icon-wrapper {
+  width: 100%;
+  min-height: 75px;
+  background: #f7f7f7;
+  border: 1px solid #e1e1e1;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+/* Rich text preview */
 .rich-text-preview h1 {
   font-size: 32px;
   font-weight: 700;
@@ -1273,568 +1384,8 @@
   border-left: 3px solid #8c9196;
   background: #f6f6f7;
 }
-/* =========================================
-   COLOR PICKER POPOVER
-========================================= */
 
-.Polaris-PositionedOverlay {
-    z-index: 100000 !important;
-}
-
-.Polaris-Popover {
-    z-index: 100000 !important;
-}
-/* //DATE &TIEM */
-.flatpickr-calendar.hasTime.noCalendar {
-    width: 180px;
-}
-
-.flatpickr-time {
-    height: 45px !important;
-    max-height: 45px !important;
-    border-top: none !important;
-}
-
-.flatpickr-time input {
-    font-size: 14px !important;
-}
-
-.flatpickr-time .numInputWrapper {
-    height: 40px;
-}
-.date-time-flatpickr-input {
-    width: 100%;
-    height: 38px;
-    padding: 8px 12px;
-    border: 1px solid #8a8a8a !important;
-    border-radius: 8px;
-    background: #ffffff !important;
-    color: #303030;
-    font-size: 14px;
-    box-sizing: border-box;
-    outline: none;
-    box-shadow: none;
-}
-
-.date-time-flatpickr-input:focus {
-    border: 2px solid #303030 !important;
-    box-shadow: none !important;
-}
-
-/* date picker */
-.target-days-picker {
-    position: relative;
-    width: 100%;
-}
-
-.target-days-selection {
-    min-height: 40px;
-    width: 100%;
-    padding: 5px 8px;
-    border: 1px solid #b5bdc5;
-    border-radius: 4px;
-    background: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    cursor: pointer;
-    box-sizing: border-box;
-}
-
-.target-days-selection:hover {
-    border-color: #8a9199;
-}
-
-.target-days-values {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 5px;
-    flex: 1;
-}
-
-.target-day-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    padding: 5px 9px;
-    border-radius: 4px;
-    background: #e1e5e9;
-    color: #202a35;
-    font-size: 13px;
-    line-height: 20px;
-}
-
-.target-day-chip button {
-    border: none;
-    background: transparent;
-    color: #40505f;
-    padding: 0;
-    font-size: 17px;
-    line-height: 14px;
-    cursor: pointer;
-}
-
-.target-days-placeholder {
-    color: #737373;
-    font-size: 13px;
-}
-
-.target-days-arrow {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0 4px;
-    color: #737373;
-}
-
-.target-days-arrow.open {
-    transform: rotate(180deg);
-}
-
-.target-days-options {
-    position: absolute;
-    top: calc(100% + 4px);
-    left: 0;
-    right: 0;
-    z-index: 100;
-    background: #fff;
-    border: 1px solid #d1d5db;
-    border-radius: 6px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-    padding: 5px;
-    max-height: 220px;
-    overflow-y: auto;
-}
-
-.target-days-option {
-    padding: 9px 10px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 13px;
-    border-radius: 4px;
-    cursor: pointer;
-}
-
-.target-days-option:hover {
-    background: #f1f2f3;
-}
-
-.target-days-option.selected {
-    background: #eaf1f8;
-    color: #202a35;
-}
-
-.target-days-option.selected span:last-child {
-    font-weight: 600;
-}
-
-/* //end of drag and drop in livepreview */
-
-/* =========================================
-   PREVIEW DRAG AND DROP
-========================================= */
-
-/* Keep two columns available for elements in the same row. */
-.live-preview--classic .preview-row-grid,
-.live-preview--query .preview-row-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  grid-auto-flow: row;
-}
-
-/* A single element in a row takes the full width. */
-.live-preview--classic .preview-row-grid > .preview-element:only-child,
-.live-preview--query .preview-row-grid > .preview-element:only-child {
-  grid-column: 1 / -1;
-}
-
-/* Root elements always take full width. */
-.preview-root-drop-area > .Polaris-BlockStack > .preview-element {
-  width: 100%;
-}
-
-/* Each element is a positioning container for its drop zones. */
-.preview-element {
-  position: relative;
-}
-
-/* Drop zones around each element. */
-.preview-drop-zone {
-  position: absolute;
-  z-index: 30;
-  background: transparent;
-  border-radius: 4px;
-}
-
-/* Top and bottom drop zones create separate rows. */
-.preview-drop-zone--top,
-.preview-drop-zone--bottom {
-  left: 0;
-  right: 0;
-  height: 10px;
-}
-
-.preview-drop-zone--top {
-  top: -5px;
-}
-
-.preview-drop-zone--bottom {
-  bottom: -5px;
-}
-
-/* Left and right drop zones create side-by-side elements. */
-.preview-drop-zone--left,
-.preview-drop-zone--right {
-  top: 0;
-  bottom: 0;
-  width: 12px;
-}
-
-.preview-drop-zone--left {
-  left: -6px;
-}
-
-.preview-drop-zone--right {
-  right: -6px;
-}
-
-/* Show the active drop location. */
-.preview-drop-zone--active {
-  background: rgba(44, 110, 203, 0.35);
-  outline: 1px solid #2c6ecb;
-}
-
-/* Highlight the root area when dropping outside a row. */
-.preview-root-drop-area--active {
-  outline: 2px dashed #2c6ecb;
-  outline-offset: 4px;
-  border-radius: 5px;
-}
-
-/* Keep the drag handle visually interactive. */
-.element-drag-handle {
-  cursor: grab;
-  touch-action: none;
-}
-
-.element-drag-handle:active {
-  cursor: grabbing;
-}
-
-.preview-element--dragging {
-  pointer-events: none;
-}
-
-@media (max-width: 600px) {
-  .live-preview--classic .preview-row-grid,
-  .live-preview--query .preview-row-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
-/* =========================================
-   DYNAMIC PREVIEW ROW WIDTH
-========================================= */
-
-/* Dynamic columns based on visible elements */
-.preview-row-grid {
-  display: grid !important;
-  grid-template-columns: repeat(
-    var(--preview-column-count, 1),
-    minmax(0, 1fr)
-  ) !important;
-  grid-auto-flow: row;
-  grid-auto-columns: unset;
-  gap: 20px 16px;
-  width: 100%;
-  min-width: 0;
-  box-sizing: border-box;
-}
-
-/* Classic and query themes */
-.live-preview--classic .preview-row-grid,
-.live-preview--query .preview-row-grid {
-  grid-template-columns: repeat(
-    var(--preview-column-count, 1),
-    minmax(0, 1fr)
-  ) !important;
-  gap: 16px;
-}
-
-/* Every element should fit inside its column */
-.preview-row-grid > .preview-element {
-  width: 100%;
-  min-width: 0;
-  box-sizing: border-box;
-}
-
-/* A single element takes full width */
-.preview-row-grid > .preview-element:only-child {
-  grid-column: 1 / -1;
-}
-
-/* Empty rows should not occupy space */
-.preview-row:empty {
-  display: none !important;
-}
-
-/* Mobile: always use one column */
-@media (max-width: 600px) {
-  .preview-row-grid,
-  .live-preview--classic .preview-row-grid,
-  .live-preview--query .preview-row-grid {
-    grid-template-columns: minmax(0, 1fr) !important;
-    gap: 16px;
-  }
-}
-
-
-
-
-/* =========================================
-   PREVIEW ELEMENT INSERTION LINES
-========================================= */
-
-/* Parent preview element */
-.preview-element {
-  position: relative;
-  overflow: visible;
-}
-
-/* =========================================
-   DROP ZONE BASE
-========================================= */
-
-.preview-drop-zone {
-  position: absolute;
-  z-index: 30;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  background: transparent;
-  border: none;
-  border-radius: 0;
-
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-
-  transition:
-    opacity 120ms ease,
-    visibility 120ms ease;
-}
-
-/* Make the four drop zones available when hovering an element */
-.preview-element:hover .preview-drop-zone {
-  opacity: 1;
-  visibility: visible;
-  pointer-events: auto;
-}
-
-/* =========================================
-   TOP AND BOTTOM DROP ZONES
-========================================= */
-
-.preview-drop-zone--top,
-.preview-drop-zone--bottom {
-  left: 12px;
-  right: 12px;
-  width: auto;
-  height: 20px;
-}
-
-.preview-drop-zone--top {
-  top: -10px;
-}
-
-.preview-drop-zone--bottom {
-  bottom: -10px;
-}
-
-/* =========================================
-   LEFT AND RIGHT DROP ZONES
-========================================= */
-
-.preview-drop-zone--left,
-.preview-drop-zone--right {
-  top: 2px;
-  bottom: 2px;
-  width: 20px;
-  height: auto;
-}
-
-.preview-drop-zone--left {
-  left: -10px;
-}
-
-.preview-drop-zone--right {
-  right: -10px;
-}
-
-/* =========================================
-   BLUE INSERTION LINE
-========================================= */
-
-.preview-drop-line {
-  position: absolute;
-  display: block;
-
-  background: #2c6ecb;
-  border-radius: 4px;
-
-  opacity: 0;
-  pointer-events: none;
-
-  transition:
-    transform 220ms cubic-bezier(0.22, 1, 0.36, 1) 120ms,
-    opacity 100ms ease 120ms;
-}
-
-/* Top and bottom horizontal lines */
-.preview-drop-zone--top .preview-drop-line,
-.preview-drop-zone--bottom .preview-drop-line {
-  top: 50%;
-  left: 50%;
-
-  width: 100%;
-  height: 4px;
-  transform: translate(-50%, -50%) scaleX(0);
-  transform-origin: center;
-}
-
-/* Left and right vertical lines */
-.preview-drop-zone--left .preview-drop-line,
-.preview-drop-zone--right .preview-drop-line {
-  top: 50%;
-  left: 50%;
-
-  width: 4px;
-  height: 100%;
-
-  transform: translate(-50%, -50%) scaleY(0);
-  transform-origin: center;
-}
-
-/* =========================================
-   PLUS BUTTON
-========================================= */
-
-.preview-insert-button {
-  position: absolute;
-  z-index: 2;
-
-  top: 50%;
-  left: 50%;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  width: 22px;
-  height: 22px;
-  padding: 0;
-
-  border: 2px solid #ffffff;
-  border-radius: 50%;
-
-  background: #2c6ecb;
-  color: #ffffff;
-
-  font-size: 17px;
-  font-weight: 500;
-  line-height: 1;
-
-  cursor: pointer;
-
-  opacity: 0;
-  transform: translate(-50%, -50%) scale(0.5);
-
-  transition:
-    opacity 100ms ease,
-    transform 150ms ease,
-    background 150ms ease;
-}
-
-/* =========================================
-   SHOW ONLY THE HOVERED DROP ZONE
-========================================= */
-
-/* Top */
-.preview-drop-zone--top:hover .preview-insert-button {
-  opacity: 1;
-  transform: translate(-50%, -50%) scale(1);
-}
-
-.preview-drop-zone--top:hover .preview-drop-line {
-  opacity: 1;
-  transform: translate(-50%, -50%) scaleX(1);
-}
-
-/* Bottom */
-.preview-drop-zone--bottom:hover .preview-insert-button {
-  opacity: 1;
-  transform: translate(-50%, -50%) scale(1);
-}
-
-.preview-drop-zone--bottom:hover .preview-drop-line {
-  opacity: 1;
-  transform: translate(-50%, -50%) scaleX(1);
-}
-
-/* Left */
-.preview-drop-zone--left:hover .preview-insert-button {
-  opacity: 1;
-  transform: translate(-50%, -50%) scale(1);
-}
-
-.preview-drop-zone--left:hover .preview-drop-line {
-  opacity: 1;
-  transform: translate(-50%, -50%) scaleY(1);
-}
-
-/* Right */
-.preview-drop-zone--right:hover .preview-insert-button {
-  opacity: 1;
-  transform: translate(-50%, -50%) scale(1);
-}
-
-.preview-drop-zone--right:hover .preview-drop-line {
-  opacity: 1;
-  transform: translate(-50%, -50%) scaleY(1);
-}
-
-/* =========================================
-   DRAG AND DROP ACTIVE STATE
-========================================= */
-
-.preview-drop-zone--active .preview-insert-button {
-  opacity: 1;
-  transform: translate(-50%, -50%) scale(1);
-}
-
-.preview-drop-zone--active .preview-drop-line {
-  opacity: 1;
-  transform: translate(-50%, -50%) scale(1);
-}
-
-/* =========================================
-   BUTTON HOVER
-========================================= */
-
-.preview-insert-button:hover {
-  background: #1f5199;
-}
-
-/* Keep the plus button visible while hovering it */
-.preview-insert-button:hover {
-  opacity: 1;
-}
-
-/* //default heder footer gloabal */
+/* Footer color setting */
 .footer-color-setting {
   display: flex;
   align-items: center;
@@ -1851,48 +1402,195 @@
   cursor: pointer;
   flex-shrink: 0;
 }
-/* //setting pannel heder footer */
-.element-settings {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    min-height: 0;
-    overflow: hidden;
+
+/* =========================================
+   13. POPOVERS & DATE / TIME PICKERS
+========================================= */
+
+/* Layering: the editor is 9999, the element picker 10001 and the modal 99999.
+   Everything that floats above them is set here, so all of it stays visible. */
+
+/* Polaris popovers, tooltips, color picker, autocomplete, listbox, etc.
+   (all of these render inside a PositionedOverlay) */
+.Polaris-PositionedOverlay,
+.Polaris-Popover,
+.Polaris-Popover__PopoverOverlay,
+.Polaris-Tooltip-TooltipOverlay,
+.Polaris-Listbox,
+.Polaris-Autocomplete__MenuContainer {
+  z-index: 100000 !important;
 }
 
-/* Fixed top header */
-.element-settings__header {
-    flex-shrink: 0;
-    background: #fff;
-    z-index: 2;
+/* Popover height: Polaris clamps the popover to the scrollable settings panel
+   it was opened from, which makes it very short. Let it size to its content
+   and scroll only when it is genuinely tall. */
+.Polaris-Popover__Content {
+  height: auto !important;
+  min-height: 0;
+  max-height: min(75vh, 520px) !important;
 }
 
-/* Scrollable middle content */
-.element-settings__content {
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
-    padding: 16px;
+.Polaris-Popover__Pane {
+  max-height: min(75vh, 520px) !important;
+  overflow-y: auto;
 }
 
-/* Fixed bottom footer */
-.element-settings__footer {
-    flex-shrink: 0;
-    padding: 12px 16px;
-    text-align:  center;
-    border-top: 1px solid #e1e3e5;
-    background: #fff;
+/* Date / time pickers (Flatpickr appends its calendar to <body>) */
+.flatpickr-calendar,
+.flatpickr-calendar.open {
+  z-index: 100001 !important;
 }
 
-/* Remove button */
-.remove-element-btn {
-    width: 100%;
-    justify-content: flex-start;
-    padding: 10px 12px;
-    border-radius: 6px;
-    transition: background-color 0.2s ease;
+/* Toasts always on top */
+.Polaris-Frame-ToastManager,
+.Polaris-Frame-ToastManager__ToastWrapper {
+  z-index: 100002 !important;
 }
 
-.remove-element-btn:hover {
-    background-color: #f1f1f1;
+/* Flatpickr time */
+.flatpickr-calendar.hasTime.noCalendar {
+  width: 180px;
+}
+
+.flatpickr-time {
+  height: 45px !important;
+  max-height: 45px !important;
+  border-top: none !important;
+}
+
+.flatpickr-time input {
+  font-size: 14px !important;
+}
+
+.flatpickr-time .numInputWrapper {
+  height: 40px;
+}
+
+.date-time-flatpickr-input {
+  width: 100%;
+  height: 38px;
+  padding: 8px 12px;
+  border: 1px solid #8a8a8a !important;
+  border-radius: 8px;
+  background: #ffffff !important;
+  color: #303030;
+  font-size: 14px;
+  box-sizing: border-box;
+  outline: none;
+  box-shadow: none;
+}
+
+.date-time-flatpickr-input:focus {
+  border: 2px solid #303030 !important;
+  box-shadow: none !important;
+}
+
+/* Target days picker */
+.target-days-picker {
+  position: relative;
+  width: 100%;
+}
+
+.target-days-selection {
+  min-height: 40px;
+  width: 100%;
+  padding: 5px 8px;
+  border: 1px solid #b5bdc5;
+  border-radius: 4px;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.target-days-selection:hover {
+  border-color: #8a9199;
+}
+
+.target-days-values {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  flex: 1;
+}
+
+.target-day-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 9px;
+  border-radius: 4px;
+  background: #e1e5e9;
+  color: #202a35;
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.target-day-chip button {
+  border: none;
+  background: transparent;
+  color: #40505f;
+  padding: 0;
+  font-size: 17px;
+  line-height: 14px;
+  cursor: pointer;
+}
+
+.target-days-placeholder {
+  color: #737373;
+  font-size: 13px;
+}
+
+.target-days-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  color: #737373;
+}
+
+.target-days-arrow.open {
+  transform: rotate(180deg);
+}
+
+.target-days-options {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  padding: 5px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.target-days-option {
+  padding: 9px 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.target-days-option:hover {
+  background: #f1f2f3;
+}
+
+.target-days-option.selected {
+  background: #eaf1f8;
+  color: #202a35;
+}
+
+.target-days-option.selected span:last-child {
+  font-weight: 600;
 }

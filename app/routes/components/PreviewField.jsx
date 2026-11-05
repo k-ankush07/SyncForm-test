@@ -4,6 +4,7 @@ import * as PolarisIcons from "@shopify/polaris-icons";
 import { Icon } from "@shopify/polaris";
 import createDOMPurify from "dompurify";
 import ReactCountryFlag from "react-country-flag";
+import ColorInput from "../components/RichTextEditor/ColorInput.jsx"
 import {
   Text,
   Divider,
@@ -80,6 +81,7 @@ export default function PreviewField({ element, field }) {
   const [confirmPasswordValue, setConfirmPasswordValue] = useState("");
   // const [dateValue, setDateValue] = useState(defaultValue);
   const [uploadedFiles, setUploadedFiles] = useState([]);
+  const [imagePreview, setImagePreview] = useState("");
   const [rangeValue, setRangeValue] = useState(50);
   const [colorValue, setColorValue] = useState("#563D7C");
   const [rating, setRating] = useState(0);
@@ -350,7 +352,6 @@ export default function PreviewField({ element, field }) {
 
     case "dropdown":
     case "select":
-    case "image_dropdown":
       return (
         <Select
           {...commonSelectProps}
@@ -363,10 +364,47 @@ export default function PreviewField({ element, field }) {
           readOnly
         />
       );
+    case "rating_level": {
+      const maxLevel = Math.min(10, Math.max(2, Number(normalizedElement.maxLevel) || 5));
+
+      return (
+        <BlockStack gap="200">
+          {fieldLabelWithIcon}
+          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+            {Array.from({ length: maxLevel }, (_, i) => i + 1).map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => setRating(n)}
+                style={{
+                  width: "36px",
+                  height: "36px",
+                  borderRadius: "8px",
+                  cursor: "pointer",
+                  border: "1px solid #8c9196",
+                  background: n <= rating ? "#303030" : "#fff",
+                  color: n <= rating ? "#fff" : "#303030",
+                }}
+              >
+                {n}
+              </button>
+            ))}
+          </div>
+          <InlineStack align="space-between">
+            <Text as="span" variant="bodySm" tone="subdued">
+              {normalizedElement.lowLabel || "Low"}
+            </Text>
+            <Text as="span" variant="bodySm" tone="subdued">
+              {normalizedElement.highLabel || "High"}
+            </Text>
+          </InlineStack>
+          {descriptionText}
+        </BlockStack>
+      );
+    }
 
     case "checkboxes":
     case "checkbox_group":
-    case "image_options":
       return (
         <BlockStack gap="200">
           {fieldLabelWithIcon}
@@ -397,9 +435,6 @@ export default function PreviewField({ element, field }) {
     case "radio":
     case "radio_button":
     case "radio_group":
-    case "feedback":
-    case "matrix":
-    case "rating_level":
       return (
         <BlockStack gap="200">
           {fieldLabelWithIcon}
@@ -432,9 +467,7 @@ export default function PreviewField({ element, field }) {
         </BlockStack>
       );
 
-    case "consent":
     case "checkbox":
-    case "switch":
       return (
         <BlockStack gap="200">
           <Checkbox
@@ -447,28 +480,16 @@ export default function PreviewField({ element, field }) {
         </BlockStack>
       );
 
-  case "button":
-  return (
-    <InlineStack gap="200" align="center">
-      {(normalizedElement.options || []).map((option) => (
-        <Button key={option.id}>
-          {option.label}
-        </Button>
-      ))}
-    </InlineStack>
-  );
-
-    case "product":
+    case "button":
       return (
-        <TextField
-          {...commonTextFieldProps}
-          placeholder={placeholder || "Search products"}
-          value={value}
-          onChange={setValue}
-          readOnly
-        />
+        <InlineStack gap="200" align="center">
+          {(normalizedElement.options || []).map((option) => (
+            <Button key={option.id}>
+              {option.label}
+            </Button>
+          ))}
+        </InlineStack>
       );
-
     case "url":
       return (
         <TextField
@@ -491,17 +512,31 @@ export default function PreviewField({ element, field }) {
         />
       );
 
-    case "hidden":
-      return null;
 
     case "repeater":
       return (
-        <TextField
-          {...commonTextFieldProps}
-          placeholder={placeholder || "Repeater preview"}
-          value={value}
-          onChange={setValue}
-        />
+        <BlockStack gap="200">
+          {fieldLabelWithIcon}
+          <InlineStack gap="200" blockAlign="end" wrap={false}>
+            <div style={{ flex: 1 }}>
+              <TextField
+                label=""
+                labelHidden
+                placeholder={placeholder || "Repeater preview"}
+                value={value}
+                onChange={setValue}
+                autoComplete="off"
+              />
+            </div>
+            <Button icon={PolarisIcons.DeleteIcon} accessibilityLabel="Remove" />
+          </InlineStack>
+          <div>
+            <Button icon={PolarisIcons.PlusIcon}>
+              {normalizedElement.addButtonText || "Add more"}
+            </Button>
+          </div>
+          {descriptionText}
+        </BlockStack>
       );
 
     case "signature":
@@ -867,6 +902,89 @@ export default function PreviewField({ element, field }) {
       );
     }
 
+    case "image_options": {
+      return (
+        <BlockStack gap="200">
+          {/* Field label */}
+          {!hideLabel && (
+            <Text as="p" variant="bodyMd">
+              {label}
+              {required && (
+                <span style={{ color: "var(--p-color-text-critical)" }}>
+                  {" "}*
+                </span>
+              )}
+            </Text>
+          )}
+
+          {/* Image upload */}
+          <div
+            style={{
+              width: "100%",
+              minHeight: "150px",
+              background: "#eeeeee",
+              border: "1px dashed #8c9196",
+              borderRadius: "8px",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "10px",
+              padding: "16px",
+              boxSizing: "border-box",
+            }}
+          >
+            {imagePreview ? (
+              <img
+                src={imagePreview}
+                alt="Selected image preview"
+                style={{
+                  maxWidth: "100%",
+                  maxHeight: "180px",
+                  objectFit: "contain",
+                  borderRadius: "6px",
+                }}
+              />
+            ) : (
+              <Text as="p" variant="bodyMd">
+                {normalizedElement.placeholder || "Choose an image"}
+              </Text>
+            )}
+
+            <label
+              style={{
+                padding: "7px 14px",
+                border: "1px solid #8c9196",
+                borderRadius: "5px",
+                color: "#303030",
+                fontSize: "14px",
+                background: "#ffffff",
+                cursor: "pointer",
+              }}
+            >
+              {imagePreview ? "Change image" : "Browse image"}
+
+              <input
+                type="file"
+                accept="image/*"
+                hidden
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+
+                  if (file && file.type.startsWith("image/")) {
+                    setImagePreview(URL.createObjectURL(file));
+                  }
+                }}
+              />
+            </label>
+          </div>
+
+          {/* Description */}
+          {descriptionText}
+        </BlockStack>
+      );
+    }
+
     case "color_swatch":
       return (
         <BlockStack gap="200">
@@ -903,15 +1021,10 @@ export default function PreviewField({ element, field }) {
     case "color_picker":
       return (
         <BlockStack gap="200">
-          {!hideLabel && (
-            <Text as="p" variant="bodyMd">
-              {label}
-            </Text>
-          )}
-          <input
-            type="color"
+          <ColorInput
+            label={hideLabel ? "" : label}
             value={colorValue}
-            onChange={(event) => setColorValue(event.target.value)}
+            onChange={setColorValue}
           />
           {descriptionText}
         </BlockStack>
@@ -960,116 +1073,136 @@ export default function PreviewField({ element, field }) {
         </div>
       );
     }
-
-
-case "form_footer":
-  return (
-    <BlockStack gap="300">
-      {/* Footer text */}
-      {normalizedElement.text && (
-        <Text as="p">{normalizedElement.text}</Text>
-      )}
-
-      {/* Rich text content */}
-      {normalizedElement.content && (
+    case "hidden":
+      return (
         <div
-          className="rich-text-preview"
-          dangerouslySetInnerHTML={{
-            __html: sanitizeHTML(normalizedElement.content),
-          }}
-        />
-      )}
-
-      {/* Description at the bottom */}
-      {normalizedElement.showDescriptionAtBottom &&
-        normalizedElement.bottomDescription && (
-          <Text as="p" variant="bodySm" tone="subdued">
-            {normalizedElement.bottomDescription}
-          </Text>
-        )}
-
-      {/* Footer buttons */}
-      <div
-        style={{
-          display: "flex",
-          flexDirection: normalizedElement.fullWidthButton
-            ? "column"
-            : "row",
-          alignItems: normalizedElement.fullWidthButton
-            ? "stretch"
-            : "center",
-          justifyContent: normalizedElement.fullWidthButton
-            ? "flex-start"
-            : normalizedElement.buttonAlignment === "center"
-              ? "center"
-              : normalizedElement.buttonAlignment === "right"
-                ? "flex-end"
-                : "flex-start",
-          flexWrap: "wrap",
-          gap: "8px",
-          width: "100%",
-        }}
-      >
-        {/* Previous button */}
-        {normalizedElement.showPreviousButton && (
-          <div
-            style={{
-              width: normalizedElement.fullWidthButton ? "100%" : "auto",
-            }}
-          >
-            <Button fullWidth={Boolean(normalizedElement.fullWidthButton)}>
-              {normalizedElement.previousText || "Previous"}
-            </Button>
-          </div>
-        )}
-
-        {/* Next button */}
-        {normalizedElement.showNextButton && (
-          <div
-            style={{
-              width: normalizedElement.fullWidthButton ? "100%" : "auto",
-            }}
-          >
-            <Button fullWidth={Boolean(normalizedElement.fullWidthButton)}>
-              {normalizedElement.nextText || "Next"}
-            </Button>
-          </div>
-        )}
-
-        {/* Reset button */}
-        {normalizedElement.showResetButton && (
-          <div
-            style={{
-              width: normalizedElement.fullWidthButton ? "100%" : "auto",
-            }}
-          >
-            <Button fullWidth={Boolean(normalizedElement.fullWidthButton)}>
-              {normalizedElement.resetButtonText || "Reset"}
-            </Button>
-          </div>
-        )}
-
-        {/* Submit button */}
-        <button
-          type="button"
           style={{
-            width: normalizedElement.fullWidthButton ? "100%" : "auto",
-            backgroundColor:
-              normalizedElement.buttonBackgroundColor || "#303030",
-            color: normalizedElement.buttonTextColor || "#ffffff",
-            border: "none",
-            borderRadius: "6px",
-            padding: "12px 20px",
-            fontSize: "14px",
-            fontWeight: 600,
-            cursor: "pointer",
+            border: "1px dashed #8c9196",
+            borderRadius: "8px",
+            padding: "10px 24px",
+            background: "#f7f7f7",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "8px",
           }}
         >
-          {normalizedElement.submitText || "Submit"}
-        </button>
-      </div>
-    </BlockStack>
-  );
+
+          <Text as="span" variant="bodySm" tone="subdued">
+            {value || "Hidden field"}
+          </Text>
+        </div>
+      );
+
+
+    case "form_footer":
+      return (
+        <BlockStack gap="300">
+          {/* Footer text */}
+          {normalizedElement.text && (
+            <Text as="p">{normalizedElement.text}</Text>
+          )}
+
+          {/* Rich text content */}
+          {normalizedElement.content && (
+            <div
+              className="rich-text-preview"
+              dangerouslySetInnerHTML={{
+                __html: sanitizeHTML(normalizedElement.content),
+              }}
+            />
+          )}
+
+          {/* Description at the bottom */}
+          {normalizedElement.showDescriptionAtBottom &&
+            normalizedElement.bottomDescription && (
+              <Text as="p" variant="bodySm" tone="subdued">
+                {normalizedElement.bottomDescription}
+              </Text>
+            )}
+
+          {/* Footer buttons */}
+          <div
+            style={{
+              display: "flex",
+              flexDirection: normalizedElement.fullWidthButton
+                ? "column"
+                : "row",
+              alignItems: normalizedElement.fullWidthButton
+                ? "stretch"
+                : "center",
+              justifyContent: normalizedElement.fullWidthButton
+                ? "flex-start"
+                : normalizedElement.buttonAlignment === "center"
+                  ? "center"
+                  : normalizedElement.buttonAlignment === "right"
+                    ? "flex-end"
+                    : "flex-start",
+              flexWrap: "wrap",
+              gap: "8px",
+              width: "100%",
+            }}
+          >
+            {/* Previous button */}
+            {normalizedElement.showPreviousButton && (
+              <div
+                style={{
+                  width: normalizedElement.fullWidthButton ? "100%" : "auto",
+                }}
+              >
+                <Button fullWidth={Boolean(normalizedElement.fullWidthButton)}>
+                  {normalizedElement.previousText || "Previous"}
+                </Button>
+              </div>
+            )}
+
+            {/* Next button */}
+            {normalizedElement.showNextButton && (
+              <div
+                style={{
+                  width: normalizedElement.fullWidthButton ? "100%" : "auto",
+                }}
+              >
+                <Button fullWidth={Boolean(normalizedElement.fullWidthButton)}>
+                  {normalizedElement.nextText || "Next"}
+                </Button>
+              </div>
+            )}
+
+            {/* Reset button */}
+            {normalizedElement.showResetButton && (
+              <div
+                style={{
+                  width: normalizedElement.fullWidthButton ? "100%" : "auto",
+                }}
+              >
+                <Button fullWidth={Boolean(normalizedElement.fullWidthButton)}>
+                  {normalizedElement.resetButtonText || "Reset"}
+                </Button>
+              </div>
+            )}
+
+            {/* Submit button */}
+            <button
+              type="button"
+              style={{
+                width: normalizedElement.fullWidthButton ? "100%" : "auto",
+                backgroundColor:
+                  normalizedElement.buttonBackgroundColor || "#303030",
+                color: normalizedElement.buttonTextColor || "#ffffff",
+                border: "none",
+                borderRadius: "6px",
+                padding: "12px 20px",
+                fontSize: "14px",
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              {normalizedElement.submitText || "Submit"}
+            </button>
+          </div>
+        </BlockStack>
+      );
 
     case "range_slider":
       return (
@@ -1096,6 +1229,213 @@ case "form_footer":
         </BlockStack>
       );
 
+    case "matrix": {
+      const toLabel = (x, i, p) =>
+        typeof x === "string" ? x : x?.label || x?.value || `${p} ${i + 1}`;
+
+      const matrixRows = (
+        normalizedElement.rows?.length ? normalizedElement.rows : ["Row 1", "Row 2"]
+      ).map((r, i) => toLabel(r, i, "Row"));
+
+      const matrixCols = (
+        normalizedElement.columns?.length
+          ? normalizedElement.columns
+          : options.length
+            ? options
+            : ["Poor", "Good", "Great"]
+      ).map((c, i) => toLabel(c, i, "Column"));
+
+      return (
+        <BlockStack gap="200">
+          {fieldLabelWithIcon}
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+              <thead>
+                <tr>
+                  <th />
+                  {matrixCols.map((c) => (
+                    <th key={c} style={{ padding: "6px", fontWeight: 500 }}>{c}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {matrixRows.map((r) => (
+                  <tr key={r} style={{ borderTop: "1px solid #e1e3e5" }}>
+                    <td style={{ padding: "8px 6px" }}>{r}</td>
+                    {matrixCols.map((c) => (
+                      <td key={c} style={{ textAlign: "center" }}>
+                        <input
+                          type="radio"
+                          name={`matrix-${normalizedElement.id}-${r}`}
+                          checked={selected.includes(`${r}::${c}`)}
+                          onChange={() =>
+                            setSelected((prev) => [
+                              ...prev.filter((v) => !v.startsWith(`${r}::`)),
+                              `${r}::${c}`,
+                            ])
+                          }
+                        />
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {descriptionText}
+        </BlockStack>
+      );
+    }
+    case "feedback": {
+      const emojis = ["😡", "🙁", "😐", "🙂", "😍"];
+      const items = options.length > 0 ? options : emojis.map((e) => ({ label: e, value: e }));
+
+      return (
+        <BlockStack gap="200">
+          {fieldLabelWithIcon}
+          <div style={{ display: "flex", gap: "12px" }}>
+            {items.map((item) => (
+              <button
+                key={item.value}
+                type="button"
+                onClick={() => setSelected([item.value])}
+                style={{
+                  fontSize: "26px",
+                  background: "transparent",
+                  cursor: "pointer",
+                  padding: "4px 8px",
+                  borderRadius: "8px",
+                  border:
+                    selected[0] === item.value
+                      ? "2px solid #303030"
+                      : "1px solid transparent",
+                }}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+          {descriptionText}
+        </BlockStack>
+      );
+    }
+    case "switch":
+      return (
+        <BlockStack gap="200">
+          <InlineStack gap="300" blockAlign="center">
+            <button
+              type="button"
+              role="switch"
+              aria-checked={checked}
+              onClick={() => setChecked((prev) => !prev)}
+              style={{
+                width: "42px",
+                height: "24px",
+                minWidth: "42px",
+                borderRadius: "20px",
+                border: "none",
+                padding: "3px",
+                cursor: "pointer",
+                backgroundColor: checked ? "#008060" : "#8C9196",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: checked ? "flex-end" : "flex-start",
+                transition: "background-color 0.2s ease",
+              }}
+            >
+              <span
+                style={{
+                  width: "18px",
+                  height: "18px",
+                  borderRadius: "50%",
+                  backgroundColor: "#ffffff",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.25)",
+                  transition: "transform 0.2s ease",
+                }}
+              />
+            </button>
+
+            {fieldLabelWithIcon}
+          </InlineStack>
+
+          {descriptionText}
+        </BlockStack>
+      );
+
+    case "image_dropdown": {
+      const imageOptions = rawOptions.filter(
+        (opt) => typeof opt === "object" && opt?.image
+      );
+
+      return (
+        <BlockStack gap="200">
+          <Select
+            {...commonSelectProps}
+            options={[{ label: "Select an option", value: "" }, ...options]}
+            value={value}
+            onChange={setValue}
+            readOnly
+          />
+          {imageOptions.length > 0 && (
+            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+              {imageOptions.map((opt, i) => (
+                <img
+                  key={opt.value || i}
+                  src={opt.image}
+                  alt={opt.label || ""}
+                  onClick={() => setValue(opt.value || opt.label)}
+                  style={{
+                    width: "44px",
+                    height: "44px",
+                    objectFit: "cover",
+                    borderRadius: "6px",
+                    cursor: "pointer",
+                    border:
+                      value === (opt.value || opt.label)
+                        ? "2px solid #303030"
+                        : "1px solid #d2d5d8",
+                  }}
+                />
+              ))}
+            </div>
+          )}
+        </BlockStack>
+      );
+    }
+    case "product":
+      return (
+        <BlockStack gap="200">
+          <TextField
+            {...commonTextFieldProps}
+            placeholder={placeholder || "Search products"}
+            prefix={<Icon source={PolarisIcons.SearchIcon} />}
+            value={value}
+            onChange={setValue}
+            readOnly
+          />
+          <div style={{ display: "flex", gap: "8px" }}>
+            {[1, 2, 3].map((n) => (
+              <div
+                key={n}
+                style={{
+                  flex: 1,
+                  height: "56px",
+                  borderRadius: "8px",
+                  background: "#eeeeee",
+                  border: "1px dashed #8c9196",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "12px",
+                  color: "#6D7175",
+                }}
+              >
+                Product {n}
+              </div>
+            ))}
+          </div>
+        </BlockStack>
+      );
     default:
       return (
         <TextField

@@ -52,7 +52,7 @@ export const ELEMENT_TYPES = [
     { type: "consent", label: "Consent", category: "Selects", icon: CheckboxIcon },
     { type: "switch", label: "Switch", category: "Selects", icon: ToggleOnIcon, disabled: true, badge: "New" },
     
-    // { type: "range_slider", label: "Range slider", category: "Selects", icon: SliderIcon, disabled: true, badge: "New" },
+     { type: "range_slider", label: "Range slider", category: "Selects", icon: SelectIcon, disabled: true, badge: "New" },
     { type: "image_dropdown", label: "Image Dropdown", category: "Selects", icon: SelectIcon, disabled: true, badge: "New" },
     { type: "button", label: "Button", category: "Selects", icon: ButtonIcon },
     { type: "product", label: "Product", category: "Selects", icon: ProductIcon, disabled: true, badge: "Hot" },
@@ -78,9 +78,9 @@ export const ELEMENT_TYPES = [
     { type: "number", label: "Number", category: "Number", icon: HashtagDecimalIcon },
     { type: "quantity", label: "Quantity", category: "Number", icon: HashtagDecimalIcon, badge: "Hot" },
 
-    // Ratings
-    // { type: "feedback", label: "Feedback", category: "Ratings", icon: EmojiHappyIcon, disabled: true, badge: "Hot" },
-    // { type: "matrix", label: "Matrix", category: "Ratings", icon: TableIcon, disabled: true },
+    // Ratings 2 coomon icon
+     { type: "feedback", label: "Feedback", category: "Ratings", icon: ChartVerticalIcon, disabled: true, badge: "Hot" },
+     { type: "matrix", label: "Matrix", category: "Ratings", icon: StarIcon, disabled: true },
     { type: "rating_level", label: "Rating level", category: "Ratings", icon: ChartVerticalIcon, disabled: true, badge: "New" },
     { type: "rating_star", label: "Rating star", category: "Ratings", icon: StarIcon },
 
