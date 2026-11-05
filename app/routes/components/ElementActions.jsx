@@ -17,10 +17,15 @@ export default function ElementActions({
 }) {
     // Get the element ID
     const elementId = element.id;
+    
+    // Prevent clicks inside the toolbox from reaching parent elements.
+    const handleActionsClick = (event) => {
+        event.stopPropagation();
+    };
 
     return (
         <div className="element-tree__actions">
-
+            
             {/* Hide / Show */}
             <button
                 type="button"

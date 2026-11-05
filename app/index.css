@@ -1590,171 +1590,246 @@
   }
 }
 
-/* //preview elemnt add line  */
+
+
+
 /* =========================================
-   PREVIEW ELEMENT DROP ZONES
+   PREVIEW ELEMENT INSERTION LINES
 ========================================= */
 
-/* Each preview element is the positioning parent */
 /* Parent preview element */
 .preview-element {
   position: relative;
+  overflow: visible;
 }
 
-/* Hide all + buttons by default */
+/* =========================================
+   DROP ZONE BASE
+========================================= */
+
 .preview-drop-zone {
+  position: absolute;
+  z-index: 30;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: transparent;
+  border: none;
+  border-radius: 0;
+
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
-  transition: opacity 0.15s ease;
+
+  transition:
+    opacity 120ms ease,
+    visibility 120ms ease;
 }
 
-
-/* Show the + buttons only when hovering over the element */
+/* Make the four drop zones available when hovering an element */
 .preview-element:hover .preview-drop-zone {
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
 }
 
-/* Top + button */
-.preview-drop-zone--top {
-  top: -12px;
-  left: 50%;
-  transform: translateX(-50%);
-}
+/* =========================================
+   TOP AND BOTTOM DROP ZONES
+========================================= */
 
-/* Bottom + button */
-.preview-drop-zone--bottom {
-  bottom: -12px;
-  left: 50%;
-  transform: translateX(-50%);
-}
-
-/* Left + button */
-.preview-drop-zone--left {
-  left: -12px;
-  top: 50%;
-  transform: translateY(-50%);
-}
-
-/* Right + button */
-.preview-drop-zone--right {
-  right: -12px;
-  top: 50%;
-  transform: translateY(-50%);
-}
-.preview-drop-zone {
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #303030;
-  color: #ffffff;
-  border: 2px solid #ffffff;
-  border-radius: 50%;
-  font-size: 18px;
-  font-weight: 600;
-  cursor: pointer;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
-}
-
-/* Parent element must allow insertion indicators outside its boundaries */
-.preview-element {
-    position: relative;
-    overflow: visible;
-}
-
-/* Base drop zone */
-.preview-drop-zone {
-    position: absolute;
-    z-index: 20;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    opacity: 0;
-    transition: opacity 150ms ease;
-}
-
-/* Horizontal insertion zones */
 .preview-drop-zone--top,
 .preview-drop-zone--bottom {
-    left: 0;
-    width: 100%;
-    height: 20px;
+  left: 12px;
+  right: 12px;
+  width: auto;
+  height: 20px;
 }
 
 .preview-drop-zone--top {
-    top: -10px;
+  top: -10px;
 }
 
 .preview-drop-zone--bottom {
-    bottom: -10px;
+  bottom: -10px;
 }
+
+/* =========================================
+   LEFT AND RIGHT DROP ZONES
+========================================= */
 
 .preview-drop-zone--left,
 .preview-drop-zone--right {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    width: 20px;
-    height: auto;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  top: 2px;
+  bottom: 2px;
+  width: 20px;
+  height: auto;
 }
 
 .preview-drop-zone--left {
-    left: -10px;
+  left: -10px;
 }
 
 .preview-drop-zone--right {
-    right: -10px;
+  right: -10px;
 }
 
-/* Center the vertical insertion line */
+/* =========================================
+   BLUE INSERTION LINE
+========================================= */
+
+.preview-drop-line {
+  position: absolute;
+  display: block;
+
+  background: #2c6ecb;
+  border-radius: 4px;
+
+  opacity: 0;
+  pointer-events: none;
+
+  transition:
+    transform 220ms cubic-bezier(0.22, 1, 0.36, 1) 120ms,
+    opacity 100ms ease 120ms;
+}
+
+/* Top and bottom horizontal lines */
+.preview-drop-zone--top .preview-drop-line,
+.preview-drop-zone--bottom .preview-drop-line {
+  top: 50%;
+  left: 50%;
+
+  width: 100%;
+  height: 4px;
+  transform: translate(-50%, -50%) scaleX(0);
+  transform-origin: center;
+}
+
+/* Left and right vertical lines */
 .preview-drop-zone--left .preview-drop-line,
 .preview-drop-zone--right .preview-drop-line {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 3px;
-    height: 100%;
-    transform: translate(-50%, -50%);
+  top: 50%;
+  left: 50%;
+
+  width: 4px;
+  height: 100%;
+
+  transform: translate(-50%, -50%) scaleY(0);
+  transform-origin: center;
 }
 
-/* Keep plus icon exactly at the center */
-.preview-drop-zone--left .preview-insert-button,
-.preview-drop-zone--right .preview-insert-button {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-}
+/* =========================================
+   PLUS BUTTON
+========================================= */
 
-/* Plus button in the center of the line */
 .preview-insert-button {
-    position: absolute;
-    z-index: 2;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 22px;
-    height: 22px;
-    padding: 0;
-    border: 2px solid #ffffff;
-    border-radius: 50%;
-    background: #2c6ecb;
-    color: #ffffff;
-    font-size: 17px;
-    font-weight: 600;
-    line-height: 1;
-    cursor: pointer;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  position: absolute;
+  z-index: 2;
+
+  top: 50%;
+  left: 50%;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 22px;
+  height: 22px;
+  padding: 0;
+
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+
+  background: #2c6ecb;
+  color: #ffffff;
+
+  font-size: 17px;
+  font-weight: 500;
+  line-height: 1;
+
+  cursor: pointer;
+
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.5);
+
+  transition:
+    opacity 100ms ease,
+    transform 150ms ease,
+    background 150ms ease;
 }
+
+/* =========================================
+   SHOW ONLY THE HOVERED DROP ZONE
+========================================= */
+
+/* Top */
+.preview-drop-zone--top:hover .preview-insert-button {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.preview-drop-zone--top:hover .preview-drop-line {
+  opacity: 1;
+  transform: translate(-50%, -50%) scaleX(1);
+}
+
+/* Bottom */
+.preview-drop-zone--bottom:hover .preview-insert-button {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.preview-drop-zone--bottom:hover .preview-drop-line {
+  opacity: 1;
+  transform: translate(-50%, -50%) scaleX(1);
+}
+
+/* Left */
+.preview-drop-zone--left:hover .preview-insert-button {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.preview-drop-zone--left:hover .preview-drop-line {
+  opacity: 1;
+  transform: translate(-50%, -50%) scaleY(1);
+}
+
+/* Right */
+.preview-drop-zone--right:hover .preview-insert-button {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.preview-drop-zone--right:hover .preview-drop-line {
+  opacity: 1;
+  transform: translate(-50%, -50%) scaleY(1);
+}
+
+/* =========================================
+   DRAG AND DROP ACTIVE STATE
+========================================= */
+
+.preview-drop-zone--active .preview-insert-button {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.preview-drop-zone--active .preview-drop-line {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+/* =========================================
+   BUTTON HOVER
+========================================= */
 
 .preview-insert-button:hover {
-    background: #1a5bb5;
-    transform: scale(1.1);
+  background: #1f5199;
+}
+
+/* Keep the plus button visible while hovering it */
+.preview-insert-button:hover {
+  opacity: 1;
 }

@@ -211,7 +211,7 @@ return purifier.sanitize(html);
 
     case "phone":
       return (
-        <BlockStack gap="200">
+        <BlockStack gap="400">
           {!hideLabel && (
             <div
               style={{

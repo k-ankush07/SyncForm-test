@@ -662,7 +662,7 @@ export default function FormEditor() {
       )
     );
 
-    setSelectedElement(updatedElement);
+    //setSelectedElement(updatedElement);
   };
 
   // =========================================
@@ -760,7 +760,7 @@ export default function FormEditor() {
       }))
     );
 
-    setSelectedElement(duplicate);
+    //  setSelectedElement(duplicate);
   };
 
   // =========================================
@@ -1600,6 +1600,9 @@ export default function FormEditor() {
                     onDeleteRow={handleDeleteRow}
                     // NEW: Page toolbox actions
                     onDuplicatePage={handleDuplicatePage}
+                    header={header}
+                    footer={footer}
+                    onSelectElement={setSelectedElement}
                   />
                 )}
 

@@ -70,6 +70,10 @@ const getElementIcon = (type) => {
 export default function ElementsPanel({
     pages,
     setPages,
+    // Header and footer settings
+    header,
+    footer,
+    onSelectElement,
     // elementPickerOpen,
     // setElementPickerOpen,
     // elementTarget,
@@ -565,7 +569,18 @@ export default function ElementsPanel({
 
             {/* HEADER SECTION */}
 
-            <div className="elements-panel__header">
+            {/* HEADER SECTION */}
+
+            <button
+                type="button"
+                className="elements-panel__header elements-panel__header--clickable"
+                onClick={() => {
+                    if (header) {
+                        onSelectElement?.(header);
+                    }
+                }}
+                disabled={!header}
+            >
                 <span className="elements-panel__section-icon">
                     <Icon source={LayoutSectionIcon} />
                 </span>
@@ -573,7 +588,9 @@ export default function ElementsPanel({
                 <Text as="span" fontWeight="semibold">
                     Header
                 </Text>
-            </div>
+            </button>
+
+            <Divider />
 
             <Divider />
 
@@ -708,10 +725,21 @@ export default function ElementsPanel({
 
             {/* FOOTER SECTION */}
 
+            {/* FOOTER SECTION */}
+
             <div className="elements-panel__footer">
                 <Divider />
 
-                <div className="elements-panel__header">
+                <button
+                    type="button"
+                    className="elements-panel__header elements-panel__header--clickable"
+                    onClick={() => {
+                        if (footer) {
+                            onSelectElement?.(footer);
+                        }
+                    }}
+                    disabled={!footer}
+                >
                     <span className="elements-panel__section-icon">
                         <Icon source={LayoutSectionIcon} />
                     </span>
@@ -719,7 +747,7 @@ export default function ElementsPanel({
                     <Text as="span" fontWeight="semibold">
                         Footer
                     </Text>
-                </div>
+                </button>
             </div>
 
             {/* ELEMENT PICKER MODAL */}
@@ -1040,7 +1068,10 @@ function SortableRow({
         <div
             ref={setNodeRef}
             style={rowStyle}
-            className="element-tree__row"
+            className={`element-tree__row ${row.visible === false
+                ? "element-tree__row--hidden"
+                : ""
+                }`}
         >
             {/* ROW HEADING AND DRAG HANDLE */}
 
@@ -1219,7 +1250,10 @@ function SortableSidebarField({
         <div
             ref={setNodeRef}
             style={style}
-            className="element-tree__field element-tree__field--draggable"
+            className={`element-tree__field element-tree__field--draggable ${field?.visible === false
+                ? "element-tree__field--hidden"
+                : ""
+                }`}
             {...attributes}
             {...listeners}
             onMouseEnter={() => setIsHovered(true)}
@@ -1320,7 +1354,10 @@ function SortableCreatedElement({
         <div
             ref={setNodeRef}
             style={style}
-            className="element-tree__field element-tree__field--draggable"
+            className={`element-tree__field element-tree__field--draggable ${element.visible === false
+                ? "element-tree__field--hidden"
+                : ""
+                }`}
             {...attributes}
             {...listeners}
             onMouseEnter={() => setIsHovered(true)}

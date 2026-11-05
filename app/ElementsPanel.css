@@ -31,10 +31,10 @@
   display: flex;
   align-items: center;
   gap: 10px;
-
+ background-color: #ffff;
   height: 43px;
   min-height: 43px;
-
+ border: none;
   padding: 0 32px;
   flex-shrink: 0;
 }
@@ -73,6 +73,9 @@
 .elements-panel__footer .elements-panel__header {
   height: 43px;
   min-height: 43px;
+  width: stretch;
+  background-color: #ffff;
+  border: none;
 }
 
 /* ======================================================
@@ -551,7 +554,7 @@
 /* Add element inside a row */
 
 .element-tree__row > .element-tree__add {
-  margin-left: 28px;
+  margin-left: 50px;
 }
 
 /* Root elements outside rows */
@@ -728,4 +731,16 @@
     font-size: 13px;
     font-weight: 500;
     color: #202223;
+}
+/* Hidden element appearance */
+.element-tree__field--hidden {
+    opacity: 0.45;
+    background-color: #f4f4f4;
+    transition: opacity 0.2s ease, background-color 0.2s ease;
+}
+/* //rows */
+.element-tree__row--hidden {
+    opacity: 0.45;
+    background-color: #f4f4f4;
+    transition: opacity 0.2s ease, background-color 0.2s ease;
 }

@@ -289,6 +289,13 @@ function FixedPreviewElement({
 
   const isSelected = element.id === selectedElementId;
 
+  const type = String(element.type || "")
+    .toLowerCase()
+    .replace(/[\s-]+/g, "_");
+
+  const isHeader = type === "form_header";
+  const isFooter = type === "form_footer";
+
   return (
     <div
       className={[
@@ -299,13 +306,18 @@ function FixedPreviewElement({
         .filter(Boolean)
         .join(" ")}
       onClick={() => onSelectElement?.(element)}
-      style={{ cursor: "pointer" }}
+      style={{
+        cursor: "pointer",
+
+        // Fixed spacing for header and footer.
+        marginTop: isHeader || isFooter ? "20px" : undefined,
+        marginBottom: isHeader || isFooter ? "30px" : undefined,
+      }}
     >
       <PreviewField element={element} />
     </div>
   );
 }
-
 
 // The empty preview area is a drop target for root elements.
 function PreviewRootDropArea({ pageId, children }) {
