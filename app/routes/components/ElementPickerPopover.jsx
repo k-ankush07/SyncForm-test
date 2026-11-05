@@ -117,8 +117,6 @@ export default function ElementPickerPopover({
     if (!open) return null;
 
     const handleSelect = (item) => {
-        if (item.disabled) return;
-
         onSelect?.(item);
         onClose?.();
     };
@@ -202,23 +200,9 @@ export default function ElementPickerPopover({
                                                 <button
                                                     key={item.type}
                                                     type="button"
-                                                    disabled={Boolean(item.disabled)}
-                                                    className={[
-                                                        "element-picker-item",
-                                                        item.disabled
-                                                            ? "is-disabled"
-                                                            : "",
-                                                    ]
-                                                        .filter(Boolean)
-                                                        .join(" ")}
-                                                    onClick={() =>
-                                                        handleSelect(item)
-                                                    }
-                                                    title={
-                                                        item.disabled
-                                                            ? `${item.label} is unavailable`
-                                                            : `Add ${item.label}`
-                                                    }
+                                                    className="element-picker-item"
+                                                    onClick={() => handleSelect(item)}
+                                                    title={`Add ${item.label}`}
                                                 >
                                                     <span className="element-picker-item__icon">
                                                         {item.icon && (
