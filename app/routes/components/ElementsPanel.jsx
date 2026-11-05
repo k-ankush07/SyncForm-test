@@ -8,6 +8,7 @@ import {
     useSensor,
     useSensors,
     useDroppable,
+    DragOverlay,
 } from "@dnd-kit/core";
 
 import {
@@ -86,6 +87,8 @@ export default function ElementsPanel({
     onDeleteRow,
     onDuplicatePage,
 }) {
+    //state to store the drag item data 
+    const [activeDragItem, setActiveDragItem] = useState(null);
 
     // Configure the pointer sensor.
     // The user must move the pointer 5px before dragging starts.
@@ -589,12 +592,11 @@ export default function ElementsPanel({
                 {/* SHARED DRAG AND DROP CONTEXT */}
 
                 <DndContext
-                    // now it can reconiz epage srows and elemnts 
                     sensors={sensors}
+
                     collisionDetection={(args) => {
                         const activeType = args.active.data.current?.type;
 
-                        // When dragging a page, detect only other pages.
                         if (activeType === "page") {
                             const pageContainers = args.droppableContainers.filter(
                                 (container) => container.data.current?.type === "page"
@@ -606,7 +608,6 @@ export default function ElementsPanel({
                             });
                         }
 
-                        // When dragging a row, detect only other rows.
                         if (activeType === "row") {
                             const rowContainers = args.droppableContainers.filter(
                                 (container) => container.data.current?.type === "row"
@@ -618,10 +619,30 @@ export default function ElementsPanel({
                             });
                         }
 
-                        // Keep existing collision detection for fields and elements.
                         return closestCenter(args);
                     }}
-                    onDragEnd={handleAllDragEnd}
+
+                    // NEW: Store the item being dragged.
+                    onDragStart={(event) => {
+                        const data = event.active.data.current;
+
+                        setActiveDragItem({
+                            label: data?.label || "Element",
+                            icon: data?.icon || FileIcon,
+                            type: data?.type,
+                        });
+                    }}
+
+                    // Existing drop logic remains unchanged.
+                    onDragEnd={(event) => {
+                        handleAllDragEnd(event);
+                        setActiveDragItem(null);
+                    }}
+
+                    // NEW: Clear overlay if dragging is cancelled.
+                    onDragCancel={() => {
+                        setActiveDragItem(null);
+                    }}
                 >
                     <SortableContext
                         items={pages.map((page) => `page-${page.id}`)}
@@ -657,6 +678,20 @@ export default function ElementsPanel({
                             />
                         ))}
                     </SortableContext>
+                    {/* Floating drag card */}
+                    <DragOverlay>
+                        {activeDragItem ? (
+                            <div className="element-tree__drag-overlay">
+                                <span className="element-tree__field-icon">
+                                    <Icon source={activeDragItem.icon} />
+                                </span>
+
+                                <span className="element-tree__field-label">
+                                    {activeDragItem.label}
+                                </span>
+                            </div>
+                        ) : null}
+                    </DragOverlay>
                 </DndContext>
 
                 {/* ADD PAGE BUTTON */}
@@ -755,6 +790,8 @@ function SortablePage({
             type: "page",
             pageId: page.id,
             rowId: null,
+            label: page.label,
+            icon: FileIcon,
         },
     });
 
@@ -762,7 +799,18 @@ function SortablePage({
     const pageStyle = {
         transform: CSS.Transform.toString(transform),
         transition,
-        opacity: isDragging ? 0.55 : 1,
+
+        // Floating card effect while dragging
+        background: isDragging ? "#FFFFFF" : "transparent",
+        boxShadow: isDragging
+            ? "0 8px 24px rgba(0, 0, 0, 0.15)"
+            : "none",
+
+        border: isDragging ? "1px solid #E5E7EB" : "1px solid transparent",
+        borderRadius: "10px",
+
+        position: "relative",
+        zIndex: isDragging ? 10 : "auto",
     };
     //hover
     return (
@@ -795,7 +843,7 @@ function SortablePage({
 
                 <span
                     className="element-tree__field-icon element-tree__page-icon"
-                 
+
                 >
                     <span className="element-tree__default-icon">
                         <Icon source={FileIcon} />
@@ -950,6 +998,8 @@ function SortableRow({
             type: "row",
             rowId: row.id,
             pageId,
+            label: "Row",
+            icon: FolderIcon,
         },
     });
 
@@ -970,7 +1020,17 @@ function SortableRow({
     const rowStyle = {
         transform: CSS.Transform.toString(transform),
         transition,
-        opacity: isDragging ? 0.55 : 1,
+
+        background: isDragging ? "#FFFFFF" : "transparent",
+        boxShadow: isDragging
+            ? "0 6px 18px rgba(0, 0, 0, 0.12)"
+            : "none",
+
+        border: isDragging ? "1px solid #E5E7EB" : "1px solid transparent",
+        borderRadius: "8px",
+
+        position: "relative",
+        zIndex: isDragging ? 10 : "auto",
     };
 
     // state to show hover 
@@ -1127,13 +1187,29 @@ function SortableSidebarField({
             rowId,
             pageId,
             itemId: id,
+            label: typeof field === "string"
+                ? field
+                : field?.label || field?.type || "Untitled field",
+            icon: getElementIcon(
+                typeof field === "string" ? field : field?.type
+            ),
         },
     });
 
     const style = {
         transform: CSS.Transform.toString(transform),
         transition,
-        opacity: isDragging ? 0.5 : 1,
+
+        background: isDragging ? "#FFFFFF" : "transparent",
+        boxShadow: isDragging
+            ? "0 5px 15px rgba(0, 0, 0, 0.14)"
+            : "none",
+
+        border: isDragging ? "1px solid #E5E7EB" : "1px solid transparent",
+        borderRadius: "8px",
+
+        position: "relative",
+        zIndex: isDragging ? 10 : "auto",
     };
 
     // Get the actual field ID, not the sortable drag ID.
@@ -1219,13 +1295,25 @@ function SortableCreatedElement({
             rowId,
             pageId,
             itemId: `element-${element.id}`,
+            label: element.label || element.type || "Untitled element",
+            icon: getElementIcon(element.type),
         },
     });
 
     const style = {
         transform: CSS.Transform.toString(transform),
         transition,
-        opacity: isDragging ? 0.5 : 1,
+
+        background: isDragging ? "#FFFFFF" : "transparent",
+        boxShadow: isDragging
+            ? "0 5px 15px rgba(0, 0, 0, 0.14)"
+            : "none",
+
+        border: isDragging ? "1px solid #E5E7EB" : "1px solid transparent",
+        borderRadius: "8px",
+
+        position: "relative",
+        zIndex: isDragging ? 10 : "auto",
     };
 
     return (

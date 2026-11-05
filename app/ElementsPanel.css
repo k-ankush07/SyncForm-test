@@ -691,3 +691,41 @@
 .element-tree__row-heading:hover {
     cursor: pointer;
 }
+
+/* ======================================
+   DRAG OVERLAY CARD
+====================================== */
+
+.element-tree__drag-overlay {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    width: 100%;
+    min-height: 42px;
+    padding: 10px 12px;
+
+    background: #ffffff;
+
+    border: 1px solid #e1e3e5;
+    border-radius: 9px;
+
+    box-shadow:
+        0 8px 20px rgba(0, 0, 0, 0.12),
+        0 2px 5px rgba(0, 0, 0, 0.06);
+
+    cursor: grabbing;
+
+    box-sizing: border-box;
+}
+
+.element-tree__drag-overlay .element-tree__field-icon {
+    display: flex;
+    align-items: center;
+}
+
+.element-tree__drag-overlay .element-tree__field-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: #202223;
+}
