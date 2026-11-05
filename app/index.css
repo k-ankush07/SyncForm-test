@@ -1833,3 +1833,21 @@
 .preview-insert-button:hover {
   opacity: 1;
 }
+
+/* //default heder footer gloabal */
+.footer-color-setting {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.footer-color-setting input[type="color"] {
+  width: 42px;
+  height: 38px;
+  padding: 3px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+  flex-shrink: 0;
+}

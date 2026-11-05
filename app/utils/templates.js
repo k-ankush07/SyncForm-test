@@ -1,6 +1,6 @@
 export  const templates = [
   // 1. Contact Form
- {
+{
   id: 1,
   title: "Contact form",
   description: "Basic contact form",
@@ -15,18 +15,6 @@ export  const templates = [
       id: 1,
       label: "Page 1",
       open: true,
-
-      // Form Header
-      header: {
-        id: 100,
-        type: "form_header",
-        showHeader: true,
-        title: "Contact us",
-        headingTag: "h2",
-        alignment: "center",
-        description: "Leave your message and we'll get back to you shortly.",
-        visible: true,
-      },
 
       // Form Fields
       rows: [
@@ -51,25 +39,7 @@ export  const templates = [
         },
       ],
 
-      // Form Footer
-      footer: {
-        id: 104,
-        type: "form_footer",
-        text: "",
-        showDescriptionAtBottom: true,
-        previousText: "Previous",
-        nextText: "Next",
-        submitText: "Send message",
-        showResetButton: false,
-        resetButtonText: "Reset",
-        fullWidthButton: false,
-        visible: true,
-      },
-
-      submitButton: {
-        label: "Send message",
-        enabled: true,
-      },
+     
     },
   ],
 },

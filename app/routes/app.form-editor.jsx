@@ -425,47 +425,90 @@ export default function FormEditor() {
   // These belong to the whole form, not individual pages.
   // =========================================
 
+  // Default Header settings.
   const defaultHeader = {
     id: 100,
     type: "form_header",
     label: "form_header",
+
     title: "Contact us",
     description: "Leave your message and we'll get back to you shortly.",
+
     showHeader: true,
     headingTag: "h2",
     alignment: "left",
+
     visible: true,
   };
 
+  // Default Footer settings.
   const defaultFooter = {
     id: 104,
     type: "form_footer",
     label: "form_footer",
+
+    // Footer content
+    text: "",
     content: "",
+    bottomDescription: "",
+
+    // Navigation buttons
+    showPreviousButton: false,
+    showNextButton: false,
     previousText: "Previous",
     nextText: "Next",
+
+    // Submit button
     submitText: "Send message",
-    resetButtonText: "Reset",
+
+    // Reset button
     showResetButton: false,
+    resetButtonText: "Reset",
+
+    // Footer description
     showDescriptionAtBottom: true,
-    fullWidthButton: false,
+
+    // Submit button appearance
+    fullWidthButton: true,
+    buttonBackgroundColor: "#2E4E49",
+    buttonTextColor: "#ffffff",
     buttonAlignment: "left",
+
     visible: true,
   };
 
-  // Read the existing header/footer from the template, if available.
-  // Otherwise, use the default objects above.
-  const [header, setHeader] = useState(
-    () =>
-      selectedTemplate?.pages?.find((page) => page.header)?.header ??
-      defaultHeader
-  );
+  // Find existing Header and Footer from the selected template.
+  // Templates without Header/Footer will use the defaults.
+  const templateHeader = selectedTemplate?.pages?.find(
+    (page) => page.header
+  )?.header;
 
-  const [footer, setFooter] = useState(
-    () =>
-      selectedTemplate?.pages?.find((page) => page.footer)?.footer ??
-      defaultFooter
-  );
+  const templateFooter = selectedTemplate?.pages?.find(
+    (page) => page.footer
+  )?.footer;
+
+  // Initialize shared Header state.
+  // Template settings override defaults, while missing properties
+  // are filled in from defaultHeader.
+  const [header, setHeader] = useState(() => ({
+    ...defaultHeader,
+    ...(templateHeader ?? {}),
+  }));
+
+  // Initialize shared Footer state.
+  // Existing template settings are preserved.
+  // Missing properties receive the default values.
+  const [footer, setFooter] = useState(() => ({
+    ...defaultFooter,
+    ...(templateFooter ?? {}),
+
+    // Ensure these appearance defaults exist on older templates.
+    fullWidthButton: templateFooter?.fullWidthButton ?? true,
+    buttonBackgroundColor:
+      templateFooter?.buttonBackgroundColor ?? "#2E4E49",
+    buttonTextColor:
+      templateFooter?.buttonTextColor ?? "#ffffff",
+  }));
 
   // Keep your existing pages state.
   // Remove page-level header/footer because they are now shared.

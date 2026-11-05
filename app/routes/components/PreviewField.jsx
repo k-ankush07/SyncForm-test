@@ -164,15 +164,15 @@ export default function PreviewField({ element, field }) {
   };
 
   const sanitizeHTML = (html) => {
-if (typeof window === "undefined") {
-  return html;
-}
+    if (typeof window === "undefined") {
+      return html;
+    }
 
-const purifier = createDOMPurify(window);
+    const purifier = createDOMPurify(window);
 
-return purifier.sanitize(html);
-};
-//cases to render duff inputs
+    return purifier.sanitize(html);
+  };
+  //cases to render duff inputs
   switch (type) {
     case "email":
       return (
@@ -909,66 +909,70 @@ return purifier.sanitize(html);
         </BlockStack>
       );
 
-case "form_header": {
-  const headingTag = normalizedElement.headingTag || "h2";
+    case "form_header": {
+      const headingTag = normalizedElement.headingTag || "h2";
 
-  const headingVariants = {
-    h1: "heading2xl",
-    h2: "headingXl",
-    h3: "headingLg",
-    h4: "headingMd",
-    h5: "headingSm",
-    h6: "headingXs",
-  };
+      const headingVariants = {
+        h1: "heading2xl",
+        h2: "headingXl",
+        h3: "headingLg",
+        h4: "headingMd",
+        h5: "headingSm",
+        h6: "headingXs",
+      };
 
-  return (
-    <div
-      style={{
-        textAlign: normalizedElement.alignment || "center",
-        width: "100%",
-      }}
-    >
-      {normalizedElement.showHeader !== false && (
-        <>
-          <Text
-            as={headingTag}
-            variant={headingVariants[headingTag] || "headingXl"}
-          >
-            {normalizedElement.title || "Contact us"}
-          </Text>
+      return (
+        <div
+          style={{
+            textAlign: normalizedElement.alignment || "center",
+            width: "100%",
+          }}
+        >
+          {normalizedElement.showHeader !== false && (
+            <>
+              <Text
+                as={headingTag}
+                variant={headingVariants[headingTag] || "headingXl"}
+              >
+                {normalizedElement.title || "Contact us"}
+              </Text>
 
-          {normalizedElement.description && (
-            <div
-              className="rich-text-preview"
-              dangerouslySetInnerHTML={{
-                __html:sanitizeHTML(
-                  normalizedElement.description
-                ),
-              }}
-            />
+              {normalizedElement.description && (
+                <div
+                  className="rich-text-preview"
+                  dangerouslySetInnerHTML={{
+                    __html: sanitizeHTML(
+                      normalizedElement.description
+                    ),
+                  }}
+                />
+              )}
+            </>
           )}
-        </>
-      )}
-    </div>
-  );
-}
+        </div>
+      );
+    }
 
-   case "form_footer":
+
+case "form_footer":
   return (
     <BlockStack gap="300">
+      {/* Footer text */}
       {normalizedElement.text && (
         <Text as="p">{normalizedElement.text}</Text>
       )}
 
+      {/* Rich text content */}
       {normalizedElement.content && (
         <div
           className="rich-text-preview"
           dangerouslySetInnerHTML={{
-            __html:sanitizeHTML(normalizedElement.content),
+            __html: sanitizeHTML(normalizedElement.content),
           }}
         />
       )}
 
+      {/* Description at the bottom */}
       {normalizedElement.showDescriptionAtBottom &&
         normalizedElement.bottomDescription && (
           <Text as="p" variant="bodySm" tone="subdued">
@@ -976,30 +980,86 @@ case "form_header": {
           </Text>
         )}
 
-      <InlineStack
-        align="space-between"
-        blockAlign="center"
-        gap="200"
+      {/* Footer buttons */}
+      <div
+        style={{
+          display: "flex",
+          flexDirection: normalizedElement.fullWidthButton
+            ? "column"
+            : "row",
+          alignItems: normalizedElement.fullWidthButton
+            ? "stretch"
+            : "center",
+          justifyContent: normalizedElement.fullWidthButton
+            ? "flex-start"
+            : normalizedElement.buttonAlignment === "center"
+              ? "center"
+              : normalizedElement.buttonAlignment === "right"
+                ? "flex-end"
+                : "flex-start",
+          flexWrap: "wrap",
+          gap: "8px",
+          width: "100%",
+        }}
       >
+        {/* Previous button */}
         {normalizedElement.showPreviousButton && (
-          <Button>{normalizedElement.previousText || "Previous"}</Button>
+          <div
+            style={{
+              width: normalizedElement.fullWidthButton ? "100%" : "auto",
+            }}
+          >
+            <Button fullWidth={Boolean(normalizedElement.fullWidthButton)}>
+              {normalizedElement.previousText || "Previous"}
+            </Button>
+          </div>
         )}
 
+        {/* Next button */}
         {normalizedElement.showNextButton && (
-          <Button>{normalizedElement.nextText || "Next"}</Button>
+          <div
+            style={{
+              width: normalizedElement.fullWidthButton ? "100%" : "auto",
+            }}
+          >
+            <Button fullWidth={Boolean(normalizedElement.fullWidthButton)}>
+              {normalizedElement.nextText || "Next"}
+            </Button>
+          </div>
         )}
 
+        {/* Reset button */}
         {normalizedElement.showResetButton && (
-          <Button>{normalizedElement.resetButtonText || "Reset"}</Button>
+          <div
+            style={{
+              width: normalizedElement.fullWidthButton ? "100%" : "auto",
+            }}
+          >
+            <Button fullWidth={Boolean(normalizedElement.fullWidthButton)}>
+              {normalizedElement.resetButtonText || "Reset"}
+            </Button>
+          </div>
         )}
 
-        <Button
-          variant="primary"
-          fullWidth={Boolean(normalizedElement.fullWidthButton)}
+        {/* Submit button */}
+        <button
+          type="button"
+          style={{
+            width: normalizedElement.fullWidthButton ? "100%" : "auto",
+            backgroundColor:
+              normalizedElement.buttonBackgroundColor || "#303030",
+            color: normalizedElement.buttonTextColor || "#ffffff",
+            border: "none",
+            borderRadius: "6px",
+            padding: "12px 20px",
+            fontSize: "14px",
+            fontWeight: 600,
+            cursor: "pointer",
+          }}
         >
           {normalizedElement.submitText || "Submit"}
-        </Button>
-      </InlineStack>
+        </button>
+      </div>
     </BlockStack>
   );
 

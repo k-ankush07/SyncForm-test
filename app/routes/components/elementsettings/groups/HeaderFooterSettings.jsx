@@ -127,146 +127,200 @@ export default function HeaderFooterSettings({ element, onChange }) {
        FOOTER SETTINGS
     ========================================= */
 
+    return (
+        <BlockStack gap="400">
 
+            {/* FOOTER DESCRIPTION */}
 
-return (
-    <BlockStack gap="400">
-
-        {/* FOOTER DESCRIPTION - ONLY ONE RICH TEXT EDITOR */}
-
-        <BlockStack gap="200">
-            <Text variant="bodyMd" as="p">
-                Footer description
-            </Text>
-
-            <RichTextEditor
-                value={element.content || ""}
-                onChange={(value) =>
-                    update("content", value)
-                }
-            />
-        </BlockStack>
-
-        <Divider />
-
-        {/* MOVE DESCRIPTION TO BOTTOM */}
-
-        <Checkbox
-            label="Show description at bottom"
-            checked={Boolean(element.showDescriptionAtBottom)}
-            onChange={(value) =>
-                update("showDescriptionAtBottom", value)
-            }
-        />
-
-        <Divider />
-
-        {/* PREVIOUS BUTTON TEXT */}
-
-        <TextField
-            label="Previous button text"
-            value={element.previousText || ""}
-            onChange={(value) =>
-                update("previousText", value)
-            }
-            autoComplete="off"
-            placeholder="Previous"
-        />
-
-        {/* NEXT BUTTON TEXT */}
-
-        <TextField
-            label="Next button text"
-            value={element.nextText || ""}
-            onChange={(value) =>
-                update("nextText", value)
-            }
-            autoComplete="off"
-            placeholder="Next"
-        />
-
-        <Divider />
-
-        {/* SUBMIT BUTTON TEXT */}
-
-        <TextField
-            label="Submit button text"
-            value={element.submitText || ""}
-            onChange={(value) =>
-                update("submitText", value)
-            }
-            autoComplete="off"
-            placeholder="Submit"
-        />
-
-        {/* RESET BUTTON */}
-
-        <Checkbox
-            label="Show Reset button"
-            checked={Boolean(element.showResetButton)}
-            onChange={(value) =>
-                update("showResetButton", value)
-            }
-        />
-
-        {element.showResetButton && (
-            <TextField
-                label="Reset button text"
-                value={element.resetButtonText || "Reset"}
-                onChange={(value) =>
-                    update("resetButtonText", value)
-                }
-                autoComplete="off"
-            />
-        )}
-
-        <Divider />
-
-        {/* FULL WIDTH FOOTER BUTTON */}
-
-        <Checkbox
-            label="Full width footer button"
-            checked={Boolean(element.fullWidthButton)}
-            onChange={(value) =>
-                update("fullWidthButton", value)
-            }
-        />
-
-        {/* BUTTON ALIGNMENT */}
-
-        {!element.fullWidthButton && (
             <BlockStack gap="200">
-                <Text variant="bodyMd">
-                    Footer button alignment
+                <Text variant="bodyMd" as="p">
+                    Footer description
                 </Text>
 
-                <div className="column-width-selector">
-                    {[
-                        { label: "Left", value: "left" },
-                        { label: "Center", value: "center" },
-                        { label: "Right", value: "right" },
-                    ].map((alignment) => (
-                        <button
-                            key={alignment.value}
-                            type="button"
-                            className={`column-width-selector__option ${
-                                (element.buttonAlignment || "left") === alignment.value
-                                    ? "is-selected"
-                                    : ""
-                            }`}
-                            onClick={() =>
-                                update("buttonAlignment", alignment.value)
-                            }
-                        >
-                            {alignment.label}
-                        </button>
-                    ))}
+                <RichTextEditor
+                    value={element.content || ""}
+                    onChange={(value) =>
+                        update("content", value)
+                    }
+                />
+            </BlockStack>
+
+            <Divider />
+
+            {/* MOVE DESCRIPTION TO BOTTOM */}
+
+            <Checkbox
+                label="Show description at bottom"
+                checked={Boolean(element.showDescriptionAtBottom)}
+                onChange={(value) =>
+                    update("showDescriptionAtBottom", value)
+                }
+            />
+
+            <Divider />
+
+            {/* PREVIOUS BUTTON TEXT */}
+
+            <TextField
+                label="Previous button text"
+                value={element.previousText || ""}
+                onChange={(value) =>
+                    update("previousText", value)
+                }
+                autoComplete="off"
+                placeholder="Previous"
+            />
+
+            {/* NEXT BUTTON TEXT */}
+
+            <TextField
+                label="Next button text"
+                value={element.nextText || ""}
+                onChange={(value) =>
+                    update("nextText", value)
+                }
+                autoComplete="off"
+                placeholder="Next"
+            />
+
+            <Divider />
+
+            {/* SUBMIT BUTTON TEXT */}
+
+            <TextField
+                label="Submit button text"
+                value={element.submitText || ""}
+                onChange={(value) =>
+                    update("submitText", value)
+                }
+                autoComplete="off"
+                placeholder="Submit"
+            />
+
+            {/* RESET BUTTON */}
+
+            <Checkbox
+                label="Show Reset button"
+                checked={Boolean(element.showResetButton)}
+                onChange={(value) =>
+                    update("showResetButton", value)
+                }
+            />
+
+            {element.showResetButton && (
+                <TextField
+                    label="Reset button text"
+                    value={element.resetButtonText || "Reset"}
+                    onChange={(value) =>
+                        update("resetButtonText", value)
+                    }
+                    autoComplete="off"
+                />
+            )}
+
+            <Divider />
+
+            {/* FULL WIDTH FOOTER BUTTON */}
+
+            <Checkbox
+                label="Full width footer button"
+                checked={element.fullWidthButton ?? true}
+                onChange={(value) =>
+                    update("fullWidthButton", value)
+                }
+            />
+
+            {/* BUTTON ALIGNMENT */}
+
+            {!element.fullWidthButton && (
+                <BlockStack gap="200">
+                    <Text variant="bodyMd">
+                        Footer button alignment
+                    </Text>
+
+                    <div className="column-width-selector">
+                        {[
+                            { label: "Left", value: "left" },
+                            { label: "Center", value: "center" },
+                            { label: "Right", value: "right" },
+                        ].map((alignment) => (
+                            <button
+                                key={alignment.value}
+                                type="button"
+                                className={`column-width-selector__option ${
+                                    (element.buttonAlignment || "left") === alignment.value
+                                        ? "is-selected"
+                                        : ""
+                                }`}
+                                onClick={() =>
+                                    update("buttonAlignment", alignment.value)
+                                }
+                            >
+                                {alignment.label}
+                            </button>
+                        ))}
+                    </div>
+                </BlockStack>
+            )}
+
+            <Divider />
+
+            {/* SUBMIT BUTTON BACKGROUND COLOR */}
+
+            <BlockStack gap="200">
+                <Text variant="bodyMd">
+                    Submit button background color
+                </Text>
+
+                <div className="footer-color-setting">
+                    <input
+                        type="color"
+                        value={element.buttonBackgroundColor || "#ff0b0b"}
+                        onChange={(event) =>
+                            update("buttonBackgroundColor", event.target.value)
+                        }
+                    />
+
+                    <TextField
+                        label="Background color"
+                        labelHidden
+                        value={element.buttonBackgroundColor || "#ff0b0b"}
+                        onChange={(value) =>
+                            update("buttonBackgroundColor", value)
+                        }
+                        autoComplete="off"
+                    />
                 </div>
             </BlockStack>
-        )}
 
-    </BlockStack>
-);
+            {/* SUBMIT BUTTON TEXT COLOR */}
 
+            <BlockStack gap="200">
+                <Text variant="bodyMd">
+                    Submit button text color
+                </Text>
 
+                <div className="footer-color-setting">
+                    <input
+                        type="color"
+                        value={element.buttonTextColor || "#ffffff"}
+                        onChange={(event) =>
+                            update("buttonTextColor", event.target.value)
+                        }
+                    />
+
+                    <TextField
+                        label="Text color"
+                        labelHidden
+                        value={element.buttonTextColor || "#ffffff"}
+                        onChange={(value) =>
+                            update("buttonTextColor", value)
+                        }
+                        autoComplete="off"
+                    />
+                </div>
+            </BlockStack>
+
+        </BlockStack>
+    );
 }
