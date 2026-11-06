@@ -136,30 +136,22 @@ function DraggablePreviewElement({
   // =========================================
 
   const handlePreviewPointerDown = (event) => {
-      const target = event.target;
+    const target = event.target;
 
-      console.log("PREVIEW POINTER DOWN:", target);
-      console.log(
-        "COLOR ACTIVATOR:",
-        !!target.closest(".color-input-activator")
-      );
+    // Ignore the actual popup.
+    if (target.closest(".Polaris-Popover")) {
+      return;
+    }
 
-      if (target.closest(".preview-drop-zone")) {
-        console.log("BLOCKED: DROP ZONE");
-        return;
-      }
-
+    // Color input is allowed to initiate dragging.
     const isColorInput = target.closest(".color-input-activator");
 
     if (
       !isColorInput &&
       target.closest(
         [
-          ".Polaris-Popover",
-          ".Polaris-ColorPicker",
-          ".Polaris-TextField",
-          ".Polaris-TextField__Input",
-          "input",
+          ".preview-drop-zone",
+          "input:not([readonly])",
           "textarea",
           "select",
           "button",
@@ -171,14 +163,10 @@ function DraggablePreviewElement({
       return;
     }
 
+    // Start DnD Kit pointer sensor.
     listeners?.onPointerDown?.(event);
-
-      console.log("SENDING POINTER DOWN TO DND-KIT");
-      console.log("DND LISTENER:", listeners?.onPointerDown);
-
-      listeners?.onPointerDown?.(event);
   };
-  
+
   const columnWidth = Math.min(
     100,
     Math.max(1, Number(element.columnWidth) || 100)
@@ -202,7 +190,7 @@ function DraggablePreviewElement({
     <div
       ref={setNodeRef}
       {...attributes}
-        onPointerDown={handlePreviewPointerDown}
+      onPointerDown={handlePreviewPointerDown}
       style={{
         ...dragStyle,
         display: isHidden ? "none" : undefined,
