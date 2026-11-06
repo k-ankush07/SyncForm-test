@@ -1018,16 +1018,14 @@ export default function PreviewField({ element, field }) {
         </BlockStack>
       );
 
-    case "color_picker":
+case "color_picker":
   return (
     <BlockStack gap="200">
-      <div className="color-input-activator">
-        <ColorInput
-          label={hideLabel ? "" : label}
-          value={colorValue}
-          onChange={setColorValue}
-        />
-      </div>
+      <ColorInput
+        label={hideLabel ? "" : label}
+        value={colorValue}
+        onChange={setColorValue}
+      />
 
       {descriptionText}
     </BlockStack>

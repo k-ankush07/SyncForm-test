@@ -72,6 +72,13 @@ export default function ColorInput({ label, value, onChange }) {
         console.log(`Popover ${instanceId} ACTIVE:`, active);
     }, [active]);
 
+    useEffect(() => {
+  console.log("COLOR INPUT MOUNTED:", instanceId);
+
+  return () => {
+    console.log("COLOR INPUT UNMOUNTED:", instanceId);
+  };
+}, [instanceId]);
     const togglePopover = useCallback((event) => {
         event.stopPropagation();
 
@@ -80,50 +87,44 @@ export default function ColorInput({ label, value, onChange }) {
         setActive(true);
     }, [instanceId]);
 
-    const closePopover = useCallback(() => {
-        console.log("POPOVER onClose FIRED");
-        setActive(false);
-    }, []);
+  const closePopover = useCallback(() => {
+  console.log("POPOVER CLOSED");
+  console.trace("WHO TRIGGERED POPOVER CLOSE");
+
+  setActive(false);
+}, []);
 
     const hsb = rgbToHsb(hexToRgb(value));
 
-    const activator = (
+  const activator = (
+  <div
+    className="color-input-activator"
+    onClick={togglePopover}
+    style={{
+      width: "100%",
+      cursor: "pointer",
+    }}
+  >
+    <TextField
+      label={label}
+      value={value || "#563D7C"}
+      autoComplete="off"
+      readOnly
+      suffix={
         <div
-          className="color-input-activator"
-           // onPointerDown={(event) => event.stopPropagation()}
-            onMouseDown={(event) => {
-                event.stopPropagation();
-                console.log("COLOR INPUT MOUSEDOWN");
-                setActive(true);
-            }}
-            onClick={(event) => {
-                event.stopPropagation();
-            }}
-            style={{
-                width: "100%",
-                cursor: "pointer",
-            }}
-        >
-            <TextField
-                label={label}
-                value={value || "#563D7C"}
-                autoComplete="off"
-                readOnly
-                suffix={
-                    <div
-                        className="color-suffix-box"
-                        style={{
-                            backgroundColor: value || "#563D7C",
-                            width: "24px",
-                            height: "24px",
-                            borderRadius: "4px",
-                            border: "1px solid #8c9196",
-                        }}
-                    />
-                }
-            />
-        </div>
-    );
+          className="color-suffix-box"
+          style={{
+            backgroundColor: value || "#563D7C",
+            width: "24px",
+            height: "24px",
+            borderRadius: "4px",
+            border: "1px solid #8c9196",
+          }}
+        />
+      }
+    />
+  </div>
+);
     return (
         <Popover
             active={active}

@@ -135,40 +135,50 @@ function DraggablePreviewElement({
   // HANDLE DRAG FROM PREVIEW FIELD AND TOOLBAR
   // =========================================
 
- const handlePreviewPointerDown = (event) => {
-  const target = event.target;
+  const handlePreviewPointerDown = (event) => {
+      const target = event.target;
 
+      console.log("PREVIEW POINTER DOWN:", target);
+      console.log(
+        "COLOR ACTIVATOR:",
+        !!target.closest(".color-input-activator")
+      );
+
+      if (target.closest(".preview-drop-zone")) {
+        console.log("BLOCKED: DROP ZONE");
+        return;
+      }
+
+    const isColorInput = target.closest(".color-input-activator");
+
+    if (
+      !isColorInput &&
+      target.closest(
+        [
+          ".Polaris-Popover",
+          ".Polaris-ColorPicker",
+          ".Polaris-TextField",
+          ".Polaris-TextField__Input",
+          "input",
+          "textarea",
+          "select",
+          "button",
+          "[role='dialog']",
+          "[contenteditable='true']",
+        ].join(",")
+      )
+    ) {
+      return;
+    }
+
+    listeners?.onPointerDown?.(event);
+
+      console.log("SENDING POINTER DOWN TO DND-KIT");
+      console.log("DND LISTENER:", listeners?.onPointerDown);
+
+      listeners?.onPointerDown?.(event);
+  };
   
-
-  if (target.closest(".preview-drop-zone")) {
-    console.log("BLOCKED: DROP ZONE");
-    return;
-  }
-
-const isColorInput = target.closest(".color-input-activator");
-
-if (
-  !isColorInput &&
-  target.closest(
-    [
-      ".Polaris-Popover",
-      ".Polaris-ColorPicker",
-      ".Polaris-TextField",
-      ".Polaris-TextField__Input",
-      "input",
-      "textarea",
-      "select",
-      "button",
-      "[role='dialog']",
-      "[contenteditable='true']",
-    ].join(",")
-  )
-) {
-  return;
-}
-
-listeners?.onPointerDown?.(event);
-};
   const columnWidth = Math.min(
     100,
     Math.max(1, Number(element.columnWidth) || 100)
@@ -190,17 +200,13 @@ listeners?.onPointerDown?.(event);
 
   return (
     <div
-      ref={(node) => {
-        setNodeRef(node);
-        setActivatorNodeRef(node);
-      }}
+      ref={setNodeRef}
       {...attributes}
-      onPointerDown={handlePreviewPointerDown}
-      onKeyDown={listeners?.onKeyDown}
+        onPointerDown={handlePreviewPointerDown}
       style={{
         ...dragStyle,
         display: isHidden ? "none" : undefined,
-        cursor: isDragging ? "grabbing" : "grab",
+        cursor: isDragging ? "grabbing" : "default",
       }}
       className={[
         "preview-element",
@@ -265,6 +271,8 @@ listeners?.onPointerDown?.(event);
         >
           {/* Drag using toolbar */}
           <button
+            ref={setActivatorNodeRef}
+            {...listeners}
             type="button"
             title="Drag field"
             aria-label="Drag field"
