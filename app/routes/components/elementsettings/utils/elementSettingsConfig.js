@@ -1,8 +1,8 @@
 // // return the settings accroding to field selected like if email then that settings or checkbox then acc to that
-// // i have creted diffrent settings for each elemnts that are not common the common setting include in common type but unique one for thier 
-// // specific type that why this copmnte exist 
+// // i have creted diffrent settings for each elemnts that are not common the common setting include in common type but unique one for thier
+// // specific type that why this copmnte exist
 // // when user click on any elemnt type it return the setting type othewise only common
-// // in case of button i want to show btn setting then this is used to retur the btnsetting.jsx to elemntsettig page 
+// // in case of button i want to show btn setting then this is used to retur the btnsetting.jsx to elemntsettig page
 
 const CONTACT_TYPES = [
   "email",
@@ -26,9 +26,7 @@ const CHOICE_TYPES = [
   "checkbox",
   "checkboxes",
   "checkbox_group",
-  "switch",
   "consent",
-  
 ];
 
 const NUMBER_TYPES = ["number", "quantity"];
@@ -41,55 +39,46 @@ const DATE_TYPES = [
   "date_picker",
 ];
 
-const FILE_TYPES = ["file", "file_upload", "upload", "url"];
+const FILE_TYPES = ["file", "file_upload", "upload"];
 
-const RATING_TYPES = ["rating", "ratings", "rating_star", "rating_level"];
-
-
-
-//const CONTENT_TYPES = ["heading", "paragraph", "static_text"];
+const RATING_TYPES = ["rating", "ratings", "rating_star"];
 
 const IMAGE_CHOICE_TYPES = ["image_options", "image_dropdown"];
 
-const STATIC_TYPES = ["heading", "paragraph", "divider"];
+const STATIC_TYPES = ["heading", "paragraph", "divider", "html"];
 
-// Normalize element types
 export function normalizeElementType(type = "") {
   return String(type)
     .toLowerCase()
     .replace(/[\s-]+/g, "_");
 }
 
-// Return settings group according to selected element
 export function getElementSettingsType(type) {
   const normalizedType = normalizeElementType(type);
 
-  if (CONTACT_TYPES.includes(normalizedType)) return "contact";
-
-  if (TEXT_TYPES.includes(normalizedType)) return "text";
-
-  if (CHOICE_TYPES.includes(normalizedType)) return "choice";
-
-  if (NUMBER_TYPES.includes(normalizedType)) return "number";
-
-  if (DATE_TYPES.includes(normalizedType)) return "date";
-
-  if (FILE_TYPES.includes(normalizedType)) return "file";
-
-  if (RATING_TYPES.includes(normalizedType)) return "rating";
-    // Button gets its own settings group
-  if (normalizedType === "button") return "button";
-
-  //if (CONTENT_TYPES.includes(normalizedType)) return "content";
-
+  // Special groups must be checked before general groups.
   if (IMAGE_CHOICE_TYPES.includes(normalizedType)) return "imageChoice";
-
-  if (normalizedType === "url") return "url";
-  if (STATIC_TYPES.includes(normalizedType)) return "static";
-
-  if (normalizedType === "range" || normalizedType === "range_slider") {
+  if (normalizedType === "switch") return "switch";
+  if (["color_picker", "color_swatch"].includes(normalizedType)) return "color";
+  if (normalizedType === "rating_level") return "ratingLevel";
+  if (normalizedType === "range" || normalizedType === "range_slider")
     return "range";
-  }
+  if (normalizedType === "product") return "product";
+  if (normalizedType === "matrix") return "matrix";
+  if (normalizedType === "feedback") return "feedback";
+  if (normalizedType === "hidden") return "hidden";
+  if (normalizedType === "repeater") return "repeater";
+  if (normalizedType === "signature") return "signature";
+
+  if (CONTACT_TYPES.includes(normalizedType)) return "contact";
+  if (TEXT_TYPES.includes(normalizedType)) return "text";
+  if (CHOICE_TYPES.includes(normalizedType)) return "choice";
+  if (NUMBER_TYPES.includes(normalizedType)) return "number";
+  if (DATE_TYPES.includes(normalizedType)) return "date";
+  if (FILE_TYPES.includes(normalizedType)) return "file";
+  if (RATING_TYPES.includes(normalizedType)) return "rating";
+  if (normalizedType === "button") return "button";
+  if (STATIC_TYPES.includes(normalizedType)) return "static";
 
   return "common";
 }

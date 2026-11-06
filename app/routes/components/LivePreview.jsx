@@ -52,46 +52,46 @@ function PreviewDropZone({
     },
   });
 
- return (
-  <div
-    ref={setNodeRef}
-    className={[
-      "preview-drop-zone",
-      `preview-drop-zone--${placement}`,
-      isOver ? "preview-drop-zone--active" : "",
-    ]
-      .filter(Boolean)
-      .join(" ")}
-  >
-    <span className="preview-drop-line" />
-
-    <button
-      type="button"
-      className="preview-insert-button"
-      aria-label={`Insert element ${placement}`}
-      title={`Add element ${placement}`}
-      onPointerDown={(event) => {
-        event.stopPropagation();
-      }}
-      onClick={(event) => {
-        event.stopPropagation();
-
-        onOpenElementPicker?.(
-          {
-            pageId,
-            rowId,
-            elementId,
-            collection,
-            placement,
-          },
-          event
-        );
-      }}
+  return (
+    <div
+      ref={setNodeRef}
+      className={[
+        "preview-drop-zone",
+        `preview-drop-zone--${placement}`,
+        isOver ? "preview-drop-zone--active" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
     >
-      +
-    </button>
-  </div>
-);
+      <span className="preview-drop-line" />
+
+      <button
+        type="button"
+        className="preview-insert-button"
+        aria-label={`Insert element ${placement}`}
+        title={`Add element ${placement}`}
+        onPointerDown={(event) => {
+          event.stopPropagation();
+        }}
+        onClick={(event) => {
+          event.stopPropagation();
+
+          onOpenElementPicker?.(
+            {
+              pageId,
+              rowId,
+              elementId,
+              collection,
+              placement,
+            },
+            event
+          );
+        }}
+      >
+        +
+      </button>
+    </div>
+  );
 }
 
 // Each preview element has its own drag behavior.
@@ -106,7 +106,8 @@ function DraggablePreviewElement({
   onDuplicateElement,
   onToggleElementVisibility,
   onDeleteElement,
-  onOpenElementPicker
+  onOpenElementPicker,
+  onChangeElement, // ADD THIS
 }) {
   const isSelected = element.id === selectedElementId;
   const isHidden = element.visible === false;
@@ -134,26 +135,57 @@ function DraggablePreviewElement({
   // HANDLE DRAG FROM PREVIEW FIELD AND TOOLBAR
   // =========================================
 
-  const handlePreviewPointerDown = (event) => {
-    const target = event.target;
+ const handlePreviewPointerDown = (event) => {
+  const target = event.target;
 
-    // Do not start dragging from preview drop zones.
-    if (target.closest(".preview-drop-zone")) {
-      return;
-    }
+  
 
-    // Allow dragging from anywhere inside the full preview element.
-    // This includes labels, inputs, placeholders, and empty space.
-    // The toolbar drag handle also works through this event.
-    listeners?.onPointerDown?.(event);
+  if (target.closest(".preview-drop-zone")) {
+    console.log("BLOCKED: DROP ZONE");
+    return;
+  }
+
+const isColorInput = target.closest(".color-input-activator");
+
+if (
+  !isColorInput &&
+  target.closest(
+    [
+      ".Polaris-Popover",
+      ".Polaris-ColorPicker",
+      ".Polaris-TextField",
+      ".Polaris-TextField__Input",
+      "input",
+      "textarea",
+      "select",
+      "button",
+      "[role='dialog']",
+      "[contenteditable='true']",
+    ].join(",")
+  )
+) {
+  return;
+}
+
+listeners?.onPointerDown?.(event);
+};
+  const columnWidth = Math.min(
+    100,
+    Math.max(1, Number(element.columnWidth) || 100)
+  );
+
+  const dragStyle = {
+    transform: transform
+      ? `translate3d(${transform.x}px, ${transform.y}px, 0)`
+      : undefined,
+    zIndex: isDragging ? 100 : undefined,
+    opacity: isDragging ? 0.45 : 1,
+    "--element-column-width": `${columnWidth}%`,
+    flex: `0 1 ${columnWidth}%`,
+    width: `${columnWidth}%`,
+    minWidth: 0,
+    boxSizing: "border-box",
   };
-  const dragStyle = transform
-    ? {
-      transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
-      zIndex: isDragging ? 100 : undefined,
-      opacity: isDragging ? 0.45 : 1,
-    }
-    : undefined;
 
 
   return (
@@ -224,6 +256,8 @@ function DraggablePreviewElement({
         onOpenElementPicker={onOpenElementPicker}
       />
 
+
+      {/* // toolbar */}
       {isSelected && (
         <div
           className="element-floating-toolbar"
@@ -238,6 +272,22 @@ function DraggablePreviewElement({
             data-drag-handle
           >
             <Icon source={DragHandleIcon} />
+          </button>
+
+          {/* Toggle element width */}
+          <button
+            type="button"
+            title={columnWidth === 50 ? "Set full width" : "Set half width"}
+            aria-label={columnWidth === 50 ? "Set full width" : "Set half width"}
+            className="element-toolbar-button"
+            onClick={() => {
+              onChangeElement?.({
+                ...element,
+                columnWidth: columnWidth === 50 ? 100 : 50,
+              });
+            }}
+          >
+            <Icon source={LayoutColumns3Icon} />
           </button>
 
           {/* Duplicate field */}
@@ -353,6 +403,7 @@ export default function LivePreview({
   onToggleElementVisibility,
   onDeleteElement,
   onOpenElementPicker,
+  onChangeElement, // ADD THIS
 }) {
   return (
     <div
@@ -495,6 +546,8 @@ export default function LivePreview({
                                       }
                                       onDeleteElement={onDeleteElement}
                                       onOpenElementPicker={onOpenElementPicker}
+                                      //here 
+                                      onChangeElement={onChangeElement}
                                     />
                                   )
                                 )}
@@ -523,6 +576,8 @@ export default function LivePreview({
                                 }
                                 onDeleteElement={onDeleteElement}
                                 onOpenElementPicker={onOpenElementPicker}
+                                //here
+                                onChangeElement={onChangeElement}
                               />
                             ))}
                         </BlockStack>

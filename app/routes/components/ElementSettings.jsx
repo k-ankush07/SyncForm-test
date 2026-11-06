@@ -29,6 +29,22 @@ import RatingStarSettings from "./elementsettings/groups/RatingStarSettings";
 import HeaderFooterSettings from "./elementsettings/groups/HeaderFooterSettings";
 import ButtonSettings from "./elementsettings/groups/ButtonSettings";
 import { getElementSettingsType } from "./elementsettings/utils/elementSettingsConfig";
+// all the advance settings in one file 
+
+import {
+    ImageChoiceSettings,
+    SwitchSettings,
+    ColorSettings,
+    RatingLevelSettings,
+    RangeSliderSettings,
+    ProductSettings,
+    MatrixSettings,
+    FeedbackSettings,
+    HiddenSettings,
+    RepeaterSettings,
+    SignatureSettings,
+} from "./elementsettings/groups/AdvancedElementSettings";
+
 
 
 /* =========================================
@@ -841,6 +857,18 @@ export default function ElementSettings({ element, onChange, onClose, onDelete }
         file: FileSettings,
         static: StaticTextSettings,
         rating: RatingStarSettings,
+        // New element settings
+        imageChoice: ImageChoiceSettings,
+        switch: SwitchSettings,
+        color: ColorSettings,
+        ratingLevel: RatingLevelSettings,
+        range: RangeSliderSettings,
+        product: ProductSettings,
+        matrix: MatrixSettings,
+        feedback: FeedbackSettings,
+        hidden: HiddenSettings,
+        repeater: RepeaterSettings,
+        signature: SignatureSettings,
     };
 
     const GroupComponent = settingsGroups[groupType];
@@ -950,8 +978,8 @@ export default function ElementSettings({ element, onChange, onClose, onDelete }
                                     <div
                                         key={number}
                                         className={`chooseItem ${Number(element.optionsPerLine || 1) === number
-                                                ? "active"
-                                                : ""
+                                            ? "active"
+                                            : ""
                                             }`}
                                         onClick={() =>
                                             onChange({

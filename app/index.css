@@ -1594,3 +1594,72 @@
 .target-days-option.selected span:last-child {
   font-weight: 600;
 }
+/* // new css for col width */
+
+/* =========================================
+   FINAL OVERRIDE - ELEMENT CUSTOM WIDTH
+   Add this at the VERY END of your CSS
+========================================= */
+
+/* Row container */
+.preview-row {
+  display: block !important;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  margin-bottom: 16px;
+}
+
+/* All elements stay in ONE horizontal row */
+.preview-row-grid,
+.live-preview--classic .preview-row-grid,
+.live-preview--query .preview-row-grid {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  align-items: stretch;
+  gap: 16px;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  grid-template-columns: none !important;
+  grid-auto-flow: unset !important;
+}
+
+/* Individual element width */
+.preview-row-grid > .preview-element,
+.live-preview--classic .preview-row-grid > .preview-element,
+.live-preview--query .preview-row-grid > .preview-element {
+  flex: 0 1 var(--element-column-width, 100%) !important;
+  width: var(--element-column-width, 100%) !important;
+  min-width: 0 !important;
+  max-width: 100%;
+  box-sizing: border-box;
+  grid-column: auto !important;
+}
+
+/* Allow inner form controls to shrink */
+.preview-row-grid > .preview-element .Polaris-TextField,
+.preview-row-grid > .preview-element .Polaris-Select,
+.preview-row-grid > .preview-element .Polaris-TextField__Input {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Root elements remain full width */
+.preview-root-drop-area > .Polaris-BlockStack > .preview-element {
+  width: 100%;
+  min-width: 0;
+}
+
+/* Mobile: still keep elements in one row */
+@media (max-width: 600px) {
+  .preview-row-grid,
+  .live-preview--classic .preview-row-grid,
+  .live-preview--query .preview-row-grid {
+    flex-wrap: nowrap !important;
+    gap: 8px;
+  }
+}

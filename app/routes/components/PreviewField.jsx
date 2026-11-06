@@ -1019,16 +1019,19 @@ export default function PreviewField({ element, field }) {
       );
 
     case "color_picker":
-      return (
-        <BlockStack gap="200">
-          <ColorInput
-            label={hideLabel ? "" : label}
-            value={colorValue}
-            onChange={setColorValue}
-          />
-          {descriptionText}
-        </BlockStack>
-      );
+  return (
+    <BlockStack gap="200">
+      <div className="color-input-activator">
+        <ColorInput
+          label={hideLabel ? "" : label}
+          value={colorValue}
+          onChange={setColorValue}
+        />
+      </div>
+
+      {descriptionText}
+    </BlockStack>
+  );
 
     case "form_header": {
       const headingTag = normalizedElement.headingTag || "h2";

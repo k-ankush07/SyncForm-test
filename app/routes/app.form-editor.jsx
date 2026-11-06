@@ -1613,7 +1613,7 @@ export default function FormEditor() {
               <ElementSettings
                 element={selectedElement}
                 onChange={updateSelectedElement}
-                 onDelete={() => handleDeleteElement(selectedElement.id)}
+                 onDelete={() => handleDeleteElement(selectedElement)}
                 onClose={() => setSelectedElement(null)}
               />
             ) : (
@@ -1715,6 +1715,7 @@ export default function FormEditor() {
               onToggleElementVisibility={handleToggleElementVisibility}
               onDeleteElement={handleDeleteElement}
               onOpenElementPicker={openElementPicker}
+              onChangeElement={updateSelectedElement}
             />
           </DndContext>
         </div>
