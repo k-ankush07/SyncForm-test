@@ -4,6 +4,14 @@ import { normalizeFormPages } from "../utils/normalizeFormPages.js";
 import ElementSettings from "../routes/components/ElementSettings.jsx";
 import { createElementConfig } from "../utils/elementHelpers.js";
 import ElementPickerPopover from "../routes/components/ElementPickerPopover.jsx";
+import {
+  MenuHorizontalIcon,
+  LanguageIcon,
+  DesktopIcon,
+  MobileIcon,
+  UndoIcon,
+  RedoIcon,
+} from "@shopify/polaris-icons";
 
 import {
   BlockStack,
@@ -139,6 +147,7 @@ export default function FormEditor() {
   // Show whether the element picker modal is open or not.
   const [elementPickerOpen, setElementPickerOpen] = useState(false);
   const [elementTarget, setElementTarget] = useState(null);
+  const [elementPickerColumns, setElementPickerColumns] = useState(4);
   // position 
   const [elementPickerPosition, setElementPickerPosition] = useState({
     top: 150,
@@ -156,6 +165,8 @@ export default function FormEditor() {
     // LivePreview sends an object containing insertion details.
     const isPreviewTarget =
       typeof targetOrPageId === "object" && targetOrPageId !== null;
+    //if its live priebw
+    setElementPickerColumns(isPreviewTarget ? 2 : 4);
 
     // Support both calling styles:
     //
@@ -164,6 +175,7 @@ export default function FormEditor() {
     //
     // LivePreview:
     // openElementPicker(targetObject, event)
+
 
     const target = isPreviewTarget
       ? targetOrPageId
@@ -181,7 +193,9 @@ export default function FormEditor() {
     if (event?.currentTarget) {
       const buttonRect = event.currentTarget.getBoundingClientRect();
 
-      const modalWidth = Math.min(680, window.innerWidth - 24);
+      const modalWidth = isPreviewTarget
+        ? Math.min(480, window.innerWidth - 16)
+        : Math.min(800, window.innerWidth - 16);
       const modalHeight = Math.min(430, window.innerHeight - 24);
 
       left = buttonRect.right + 8;
@@ -1705,54 +1719,92 @@ export default function FormEditor() {
         <div className="template-editor__preview">
           {/* HEADER - OUTSIDE THE CARD */}
           <div className="live-preview__toolbar">
-            <InlineStack align="space-between" blockAlign="center" gap="400">
+            {/* LEFT: Form title */}
+            <div className="live-preview__toolbar-left">
               <InlineStack blockAlign="center" gap="200">
                 <Text variant="bodyMd" fontWeight="semibold">
                   {templateTitle}
                 </Text>
 
-                <Badge>Draft</Badge>
-              </InlineStack>
+                <Badge tone="secondary">Draft</Badge>
 
-              <InlineStack blockAlign="center" gap="200">
-                <ButtonGroup>
-                  <Button>Mobile</Button>
-                  <Button variant="primary">Desktop</Button>
-                </ButtonGroup>
-
-                <Button>English</Button>
-                <Button disabled>Undo</Button>
-                <Button disabled>Redo</Button>
+                <Button
+                  variant="plain"
+                  icon={MenuHorizontalIcon}
+                  accessibilityLabel="More options"
+                />
               </InlineStack>
-            </InlineStack>
+            </div>
+
+            {/* CENTER: Language */}
+            <div className="live-preview__toolbar-center">
+              <Button
+                variant="plain"
+                disclosure="down"
+                icon={LanguageIcon}
+              >
+                English
+              </Button>
+            </div>
+
+            {/* RIGHT: Preview and history actions */}
+            <div className="live-preview__toolbar-right">
+              <ButtonGroup variant="segmented">
+                <Button
+                  icon={DesktopIcon}
+                  accessibilityLabel="Desktop preview"
+                  variant="primary"
+                />
+
+                <Button
+                  icon={MobileIcon}
+                  accessibilityLabel="Mobile preview"
+                />
+              </ButtonGroup>
+
+              <ButtonGroup>
+                <Button
+                  icon={UndoIcon}
+                  accessibilityLabel="Undo"
+                />
+
+                <Button
+                  icon={RedoIcon}
+                  accessibilityLabel="Redo"
+                  disabled
+                />
+              </ButtonGroup>
+            </div>
           </div>
+
           {/* <Card > */}
-            <DndContext
-              sensors={sensors}
-              collisionDetection={previewCollisionDetection}
-              onDragEnd={handlePreviewDragEnd}
-            >
-              <LivePreview
-                pages={pages}
-                header={header}
-                footer={footer}
-                templateTitle={templateTitle}
-                formSettings={selectedTemplate}
-                selectedElementId={selectedElement?.id}
-                onSelectElement={setSelectedElement}
-                onDuplicateElement={handleDuplicateElement}
-                onToggleElementVisibility={handleToggleElementVisibility}
-                onDeleteElement={handleDeleteElement}
-                onOpenElementPicker={openElementPicker}
-                onChangeElement={updateSelectedElement}
-              />
-            </DndContext>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={previewCollisionDetection}
+            onDragEnd={handlePreviewDragEnd}
+          >
+            <LivePreview
+              pages={pages}
+              header={header}
+              footer={footer}
+              templateTitle={templateTitle}
+              formSettings={selectedTemplate}
+              selectedElementId={selectedElement?.id}
+              onSelectElement={setSelectedElement}
+              onDuplicateElement={handleDuplicateElement}
+              onToggleElementVisibility={handleToggleElementVisibility}
+              onDeleteElement={handleDeleteElement}
+              onOpenElementPicker={openElementPicker}
+              onChangeElement={updateSelectedElement}
+            />
+          </DndContext>
           {/* </Card> */}
         </div>
 
         {/* SHARED ELEMENT PICKER */}
         <ElementPickerPopover
           open={elementPickerOpen}
+          columnsCount={elementPickerColumns}
           position={elementPickerPosition}
           onClose={() => {
             setElementPickerOpen(false);

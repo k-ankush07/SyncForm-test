@@ -47,7 +47,8 @@ import {
     FileIcon,
     FolderIcon,
     LayoutSectionIcon,
-    DuplicateIcon
+    DuplicateIcon,
+    DragHandleIcon,
 } from "@shopify/polaris-icons";
 
 
@@ -680,6 +681,8 @@ export default function ElementsPanel({
                                 addRowElement={addRowElement}
                                 addRootElement={addRootElement}
                                 openElementPicker={openElementPicker}
+                                onSelectElement={onSelectElement} // ADD THIS
+
 
                                 // Element toolbox actions from FormEditor
                                 onToggleElementVisibility={onToggleElementVisibility}
@@ -797,6 +800,8 @@ function SortablePage({
     onDuplicateElement,
     onDeleteElement,
     openElementPicker,
+    onSelectElement, // ADD THIS
+
     // NEW: Row toolbox actions
     onToggleRowVisibility,
     onDuplicateRow,
@@ -877,7 +882,9 @@ function SortablePage({
                         <Icon source={FileIcon} />
                     </span>
 
-                    <span className="element-tree__drag-icon">⠿</span>
+                    <span className="element-tree__drag-icon">
+                        <Icon source={DragHandleIcon} />
+                    </span>
                 </span>
 
                 {/* Page name */}
@@ -936,6 +943,7 @@ function SortablePage({
                                     onToggleElementVisibility={onToggleElementVisibility}
                                     onDuplicateElement={onDuplicateElement}
                                     onDeleteElement={onDeleteElement}
+                                    onSelectElement={onSelectElement}
                                     // NEW: Row toolbox actions
                                     onToggleRowVisibility={onToggleRowVisibility}
                                     onDuplicateRow={onDuplicateRow}
@@ -959,7 +967,7 @@ function SortablePage({
                                     type="rootElement"
                                     rowId={null}
                                     pageId={page.id}
-
+                                    onSelectElement={onSelectElement}
                                     // Pass toolbox handlers to root elements.
                                     onToggleElementVisibility={onToggleElementVisibility}
                                     onDuplicateElement={onDuplicateElement}
@@ -1008,6 +1016,7 @@ function SortableRow({
     onToggleElementVisibility,
     // NEW: Row toolbox actions
     onToggleRowVisibility,
+    onSelectElement, // ADD THIS
     onDuplicateRow,
     onDeleteRow,
 }) {
@@ -1092,7 +1101,9 @@ function SortableRow({
                         <Icon source={FolderIcon} />
                     </span>
 
-                    <span className="element-tree__drag-icon">⠿</span>
+                    <span className="element-tree__drag-icon">
+                        <Icon source={DragHandleIcon} />
+                    </span>
                 </span>
 
                 {/* Row label */}
@@ -1143,6 +1154,7 @@ function SortableRow({
                                 field={field}
                                 rowId={row.id}
                                 pageId={pageId}
+                                onSelectElement={onSelectElement}
                                 onToggleElementVisibility={onToggleElementVisibility}
                                 onDuplicateElement={onDuplicateElement}
                                 onDeleteElement={onDeleteElement}
@@ -1159,7 +1171,7 @@ function SortableRow({
                             type="element"
                             rowId={row.id}
                             pageId={pageId}
-
+                            onSelectElement={onSelectElement}
                             // Pass toolbox handlers to row elements.
                             onToggleElementVisibility={onToggleElementVisibility}
                             onDuplicateElement={onDuplicateElement}
@@ -1200,6 +1212,7 @@ function SortableSidebarField({
     onToggleElementVisibility,
     onDuplicateElement,
     onDeleteElement,
+    onSelectElement, // ADD THIS
 }) {
     // State to handle the hover.
     const [isHovered, setIsHovered] = useState(false);
@@ -1249,7 +1262,10 @@ function SortableSidebarField({
     return (
         <div
             ref={setNodeRef}
-            style={style}
+            style={{
+                ...style,
+                cursor: "pointer",
+            }}
             className={`element-tree__field element-tree__field--draggable ${field?.visible === false
                 ? "element-tree__field--hidden"
                 : ""
@@ -1258,6 +1274,11 @@ function SortableSidebarField({
             {...listeners}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
+            onClick={() => {
+                if (typeof field === "object" && field?.id != null) {
+                    onSelectElement?.(field);
+                }
+            }}
         >
             <span className="element-tree__field-icon">
                 <span className="element-tree__default-icon">
@@ -1274,7 +1295,9 @@ function SortableSidebarField({
                     />
                 </span>
 
-                <span className="element-tree__drag-icon">⠿</span>
+                <span className="element-tree__drag-icon">
+                    <Icon source={DragHandleIcon} />
+                </span>
             </span>
 
             <span className="element-tree__field-label">
@@ -1311,6 +1334,7 @@ function SortableCreatedElement({
     onToggleElementVisibility,
     onDuplicateElement,
     onDeleteElement,
+    onSelectElement, // ADD THIS
 }) {
     // State to handle the hover.
     const [isHovered, setIsHovered] = useState(false);
@@ -1353,13 +1377,17 @@ function SortableCreatedElement({
     return (
         <div
             ref={setNodeRef}
-            style={style}
+            style={{
+                ...style,
+                cursor: "pointer",
+            }}
             className={`element-tree__field element-tree__field--draggable ${element.visible === false
                 ? "element-tree__field--hidden"
                 : ""
                 }`}
             {...attributes}
             {...listeners}
+            onClick={() => onSelectElement?.(element)}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
         >
@@ -1368,7 +1396,9 @@ function SortableCreatedElement({
                     <Icon source={getElementIcon(element.type)} />
                 </span>
 
-                <span className="element-tree__drag-icon">⠿</span>
+                <span className="element-tree__drag-icon">
+                    <Icon source={DragHandleIcon} />
+                </span>
             </span>
 
             <span className="element-tree__field-label">

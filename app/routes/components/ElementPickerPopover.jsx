@@ -16,6 +16,7 @@ export default function ElementPickerPopover({
     position = { top: 0, left: 0 },
     onClose,
     onSelect,
+    columnsCount = 4,
 }) {
     const popoverRef = useRef(null);
 
@@ -41,20 +42,27 @@ export default function ElementPickerPopover({
     }, [search]);
 
     // Build the four columns using filtered elements.
-    const columns = useMemo(
-        () =>
-            CATEGORY_COLUMNS.map((categories) =>
-                categories
-                    .map((category) => ({
-                        category,
-                        items: filteredElements.filter(
-                            (item) => item.category === category
-                        ),
-                    }))
-                    .filter((group) => group.items.length > 0)
-            ),
-        [filteredElements]
-    );
+    const columns = useMemo(() => {
+        const groups = CATEGORY_COLUMNS.map((categories) =>
+            categories
+                .map((category) => ({
+                    category,
+                    items: filteredElements.filter(
+                        (item) => item.category === category
+                    ),
+                }))
+                .filter((group) => group.items.length > 0)
+        );
+
+        if (columnsCount === 2) {
+            return [
+                [...groups[0], ...groups[2]],
+                [...groups[1], ...groups[3]],
+            ];
+        }
+
+        return groups;
+    }, [filteredElements, columnsCount]);
 
     // Position the popover within the viewport.
     useEffect(() => {
@@ -132,7 +140,8 @@ export default function ElementPickerPopover({
         >
             <div
                 ref={popoverRef}
-                className="element-picker-popover"
+                className={`element-picker-popover element-picker-enter ${columnsCount === 2 ? "element-picker-popover--live-preview" : ""
+                    }`}
                 style={{
                     top: `${popoverPosition.top}px`,
                     left: `${popoverPosition.left}px`,
@@ -175,7 +184,13 @@ export default function ElementPickerPopover({
 
                 {/* Only the element list scrolls */}
                 <div className="element-picker-popover__scroll">
-                    <div className="element-picker-popover__columns">
+                    <div
+                        className="element-picker-popover__columns"
+                        style={{
+                            display: "grid",
+                            gridTemplateColumns: `repeat(${columns.length}, minmax(0, 1fr))`,
+                        }}
+                    >
                         {columns.map((column, columnIndex) => (
                             <div
                                 className="element-picker-column"

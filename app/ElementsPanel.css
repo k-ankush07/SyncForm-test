@@ -31,12 +31,13 @@
   display: flex;
   align-items: center;
   gap: 10px;
- background-color: #ffff;
   height: 43px;
   min-height: 43px;
- border: none;
+  width: 100%;
   padding: 0 32px;
   flex-shrink: 0;
+  border: none;
+  background: #ffffff;
 }
 
 .elements-panel__header .Polaris-Text--root {
@@ -49,7 +50,6 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-
   width: 14px;
   height: 14px;
   flex: 0 0 14px;
@@ -73,8 +73,7 @@
 .elements-panel__footer .elements-panel__header {
   height: 43px;
   min-height: 43px;
-  width: stretch;
-  background-color: #ffff;
+  background: #ffffff;
   border: none;
 }
 
@@ -85,10 +84,8 @@
 .elements-panel__section-title {
   display: flex;
   align-items: center;
-
   height: 40px;
   min-height: 40px;
-
   padding: 0 28px;
   flex-shrink: 0;
 }
@@ -107,12 +104,9 @@
 .element-tree {
   flex: 1 1 auto;
   min-height: 0;
-
   overflow-y: auto;
   overflow-x: hidden;
-
   padding: 0 8px 12px;
-
   scrollbar-width: thin;
   scrollbar-color: #c8c8c8 transparent;
 }
@@ -134,7 +128,6 @@
   appearance: none;
   -webkit-appearance: none;
   border: 0;
-  font-weight: 400;
 }
 
 /* ======================================================
@@ -144,32 +137,25 @@
 .element-tree__chevron,
 .element-tree__node-icon,
 .element-tree__row-icon,
-.element-tree__field-icon,
 .element-tree__add > svg {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-
   flex: 0 0 14px;
   width: 14px;
   height: 14px;
-
   margin: 0;
   padding: 0;
 }
 
 .element-tree__chevron > svg,
 .element-tree__node-icon > svg,
-.element-tree__row-icon > svg,
-.element-tree__field-icon > svg {
+.element-tree__row-icon > svg {
   display: block;
-
   width: 14px;
   height: 14px;
-
   max-width: 14px;
   max-height: 14px;
-
   margin: 0;
 }
 
@@ -181,22 +167,15 @@
   display: flex;
   align-items: center;
   gap: 6px;
-
   width: 100%;
   height: 36px;
   min-height: 36px;
-
   padding: 0 5px;
-
-  border-radius: 5px;
+  border-radius: 6px;
   background: transparent;
   color: #303030;
-
   text-align: left;
-}
-
-.element-tree__page:hover {
-  background: #f1f1f1;
+  transition: background-color 220ms ease-in-out;
 }
 
 /* Expand / collapse arrow */
@@ -205,11 +184,9 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-
   flex: 0 0 10px;
   width: 10px;
   height: 14px;
-
   cursor: pointer;
 }
 
@@ -223,21 +200,37 @@
 .element-tree__page-toggle {
   display: inline-flex;
   align-items: center;
-
   flex: 1;
   min-width: 0;
-
   padding: 0;
-
   background: transparent;
   color: #303030;
-
   font-size: 13px;
   line-height: 18px;
-  font-weight: 500;
-
+  font-weight: 600;
   text-align: left;
   cursor: pointer;
+}
+
+/* Page label */
+
+.element-tree__node-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Active page */
+
+.element-tree__page--active {
+  background: #f6f6f7;
+}
+
+/* Page hover */
+
+.element-tree__page:hover {
+  background: #f1f2f3;
 }
 
 /* Page drag handle */
@@ -251,38 +244,15 @@
   cursor: grabbing;
 }
 
-/* Page label */
-
-.element-tree__node-label {
-  min-width: 0;
-  overflow: hidden;
-
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* Active page */
-
-.element-tree__page--active {
-  background: #f1f1f1;
-}
-
-.element-tree__page--active:hover {
-  background: #eeeeee;
-}
-
 /* ======================================================
    PAGE CONTENT AND INDENTATION
 ====================================================== */
 
 .element-tree__page-content {
   position: relative;
-
   min-width: 0;
-
   margin-left: 28px;
   padding: 0;
-
   border-left: 1px dashed #d6d6d6;
 }
 
@@ -293,7 +263,6 @@
 .element-tree__row {
   position: relative;
   min-width: 0;
-
   margin: 0;
   padding: 0;
 }
@@ -304,32 +273,36 @@
   display: flex;
   align-items: center;
   gap: 9px;
-
   width: 100%;
   height: 32px;
   min-height: 32px;
-
   margin: 0;
   padding: 0 5px 0 25px;
-
+  border-radius: 6px;
   background: transparent;
   color: #303030;
-
   font-size: 13px;
   line-height: 18px;
+  font-weight: 600;
   text-align: left;
+  cursor: grab;
+  touch-action: none;
+  transition: background-color 220ms ease-in-out;
+}
+
+.element-tree__row-heading:active {
+  cursor: grabbing;
+}
+
+.element-tree__row-heading:hover {
+  background: #f1f2f3;
 }
 
 /* Row drag handle */
 
 .element-tree__row-drag-icon {
-  position: relative;
   cursor: grab;
   touch-action: none;
-}
-
-.element-tree__row-drag-icon:active {
-  cursor: pointer;
 }
 
 /* Row fields indentation */
@@ -337,13 +310,10 @@
 .element-tree__row-fields {
   min-width: 0;
   min-height: 35px;
-
   margin-left: 30px;
   padding-left: 16px;
-
   border-left: 1px dashed #d6d6d6;
-
-  transition: background 0.2s ease;
+  transition: background-color 0.2s ease;
 }
 
 /* Row drag-over highlight */
@@ -361,132 +331,164 @@
 .element-tree__field {
   display: flex;
   align-items: center;
-  gap: 9px;
-
+  gap: 8px;
   width: 100%;
   min-width: 0;
-
   height: 32px;
   min-height: 32px;
-
   margin: 0;
   padding: 0 5px;
-
-  border-radius: 4px;
-
+  border-radius: 7px;
   background: transparent;
   color: #303030;
-
   font-size: 13px;
   line-height: 18px;
+  transition: background-color 220ms ease-in-out;
 }
 
-.element-tree__field:hover {
-  background: #f1f1f1;
-}
-
-/* Draggable fields */
+/* Existing fields and created elements */
 
 .element-tree__field--draggable {
-  cursor: pointer;
+  cursor: grab;
   user-select: none;
   touch-action: none;
 }
 
 .element-tree__field--draggable:active {
-  cursor: pointer;
+  cursor: grabbing;
 }
 
 .element-tree__field--draggable * {
   cursor: inherit;
 }
 
+/* Smooth hover background */
+
+.element-tree__field--draggable:hover {
+  background: #f1f2f3;
+}
+
 /* Field label */
 
 .element-tree__field-label {
+  flex: 1;
   min-width: 0;
   overflow: hidden;
-
   color: #303030;
-
   font-size: 13px;
   line-height: 18px;
-  font-weight: 400;
-
+  font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+/* Keep action buttons aligned */
+
+.element-tree__field .Polaris-InlineStack {
+  flex-shrink: 0;
+}
+
+.element-tree__field button {
+  padding: 3px;
+}
+
 /* ======================================================
    ICON REPLACEMENT ON HOVER
-   Original icon changes to drag handle
+   Original icon and drag icon share the same grid cell
 ====================================================== */
+
+/* Common icon container */
 
 .element-tree__field-icon {
   position: relative;
-
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-
-  flex: 0 0 14px;
-
-  width: 14px;
-  height: 14px;
-  min-width: 14px;
-
+  display: inline-grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr;
+  place-items: center;
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
   margin: 0;
   padding: 0;
-
   color: #505050;
+}
+
+/* Both icons occupy exactly the same position */
+
+.element-tree__default-icon,
+.element-tree__drag-icon {
+  grid-area: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  transition: opacity 220ms ease-in-out;
 }
 
 /* Original icon */
 
 .element-tree__default-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-
-  width: 14px;
-  height: 14px;
+  opacity: 1;
 }
 
-/* Drag handle */
+/* Drag icon */
 
 .element-tree__drag-icon {
-  display: none;
-
-  position: absolute;
-  top: 50%;
-  left: 50%;
-
-  transform: translate(-50%, -50%);
-
-  align-items: center;
-  justify-content: center;
-
-  font-size: 17px;
-  line-height: 1;
-
+  opacity: 0;
+  pointer-events: none;
   color: #616161;
-  white-space: nowrap;
 }
 
-/* Hide original icon on hover */
+/* Normal element icon size */
+
+.element-tree__default-icon svg {
+  display: block;
+  width: 23px !important;
+  height: 23px !important;
+  min-width: 23px !important;
+  max-width: none !important;
+}
+
+/* Bigger drag icon */
+
+.element-tree__drag-icon svg {
+  display: block;
+  width: 18px !important;
+  height: 18px !important;
+  min-width: 18px !important;
+  max-width: none !important;
+}
+
+/* Page icon */
+
+.element-tree__page-icon .element-tree__default-icon svg {
+  width: 24px !important;
+  height: 24px !important;
+  min-width: 24px !important;
+}
+
+/* Row icon */
+
+.element-tree__row-drag-icon .element-tree__default-icon svg {
+  width: 23px !important;
+  height: 23px !important;
+  min-width: 23px !important;
+}
+
+/* Icon swap on hover */
 
 .element-tree__page:hover .element-tree__default-icon,
 .element-tree__row-heading:hover .element-tree__default-icon,
 .element-tree__field--draggable:hover .element-tree__default-icon {
-  display: none;
+  opacity: 0;
 }
-
-/* Show drag handle on hover */
 
 .element-tree__page:hover .element-tree__drag-icon,
 .element-tree__row-heading:hover .element-tree__drag-icon,
 .element-tree__field--draggable:hover .element-tree__drag-icon {
-  display: inline-flex;
+  opacity: 1;
 }
 
 /* ======================================================
@@ -497,27 +499,22 @@
   display: inline-flex;
   align-items: center;
   justify-content: flex-start;
-
   gap: 5px;
-
   min-height: 32px;
-
   margin: 0;
   padding: 0 4px;
-
   border-radius: 4px;
-
   background: transparent;
   color: #005bd3;
-
   font-size: 13px;
   line-height: 18px;
   font-weight: 400;
-
   text-align: left;
   white-space: nowrap;
-
   cursor: pointer;
+  transition:
+    background-color 180ms ease,
+    color 180ms ease;
 }
 
 .element-tree__add:hover {
@@ -536,13 +533,10 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-
   width: 16px;
   height: 16px;
-
   margin: 0;
   padding: 0;
-
   flex-shrink: 0;
 }
 
@@ -569,7 +563,6 @@
 .element-tree__page-content > .element-tree__add--root {
   width: calc(100% - 25px);
   min-height: 32px;
-
   margin-left: 25px;
   padding: 0 4px;
 }
@@ -581,12 +574,115 @@
 .element-tree__add--page {
   display: inline-flex;
   align-items: center;
-
   width: 100%;
   min-height: 32px;
-
   margin: 2px 0;
   padding: 0 20px;
+}
+
+/* ======================================================
+   ACTION BUTTONS
+====================================================== */
+
+.element-tree__actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.element-tree__action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: #616161;
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.element-tree__action-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.element-tree__action-btn:hover {
+  background: #f1f2f3;
+  color: #202223;
+}
+
+.element-tree__action-btn--delete {
+  color: #d72c0d;
+}
+
+.element-tree__action-btn--delete:hover {
+  background: #fff0ee;
+  color: #bf0711;
+}
+
+/* ======================================================
+   DRAG OVERLAY CARD
+====================================================== */
+
+.element-tree__drag-overlay {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 42px;
+  padding: 10px 12px;
+  background: #ffffff;
+  border: 1px solid #e1e3e5;
+  border-radius: 9px;
+  box-shadow:
+    0 8px 20px rgba(0, 0, 0, 0.12),
+    0 2px 5px rgba(0, 0, 0, 0.06);
+  cursor: grabbing;
+  box-sizing: border-box;
+}
+
+.element-tree__drag-overlay .element-tree__field-icon {
+  display: inline-grid;
+  align-items: center;
+}
+
+.element-tree__drag-overlay .element-tree__field-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #202223;
+}
+
+/* ======================================================
+   HIDDEN ELEMENTS AND ROWS
+====================================================== */
+
+.element-tree__field--hidden {
+  opacity: 0.45;
+  background-color: #f4f4f4;
+  transition:
+    opacity 200ms ease,
+    background-color 220ms ease-in-out;
+}
+
+.element-tree__field--hidden:hover {
+  background-color: #f1f2f3;
+}
+
+.element-tree__row--hidden {
+  opacity: 0.45;
+  background-color: #f4f4f4;
+  transition:
+    opacity 200ms ease,
+    background-color 220ms ease-in-out;
 }
 
 /* ======================================================
@@ -615,132 +711,43 @@
     padding-inline: 6px;
   }
 }
+/* =========================================
+   ROW HEADER - HOVER ONLY
+========================================= */
 
-.element-tree__field {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
+/* Keep the complete row container transparent */
+.element-tree__row {
+  background: transparent !important;
 }
 
-.element-tree__field-label {
-    flex: 1;
-    min-width: 0;
+/* Only highlight the row title/header */
+.element-tree__row-header {
+  background: transparent;
+  border-radius: 6px;
+  transition: background-color 180ms ease;
 }
 
-.element-tree__field .Polaris-InlineStack {
-    flex-shrink: 0;
+/* Hover only the icon + row name area */
+.element-tree__row-header:hover {
+  background-color: #f1f2f3 !important;
 }
 
-.element-tree__field button {
-    padding: 3px;
-}
-/* //fix btn on hover */
-/* Container for all three action icons */
-.element-tree__actions {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 4px;
-    margin-left: auto;
-    flex-shrink: 0;
+/* =========================================
+   ELEMENT TREE - HOVER BACKGROUND FIX
+========================================= */
+
+.element-tree__page:hover,
+
+.element-tree__field--draggable:hover,
+.element-tree__element:hover {
+  background-color: #f1f2f3 !important;
+  transition: background-color 180ms ease;
 }
 
-/* Custom action button */
-.element-tree__action-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    width: 28px;
-    height: 28px;
-    padding: 0;
-
-    border: none;
-    border-radius: 5px;
-    background: transparent;
-
-    color: #616161;
-    cursor: pointer;
-    transition: background 0.15s ease, color 0.15s ease;
-}
-
-/* Custom icon size */
-.element-tree__action-btn svg {
-    width: 16px;
-    height: 16px;
-}
-
-/* Normal hover */
-.element-tree__action-btn:hover {
-    background: #f1f2f3;
-    color: #202223;
-}
-
-/* Delete button */
-.element-tree__action-btn--delete {
-    color: #d72c0d;
-}
-
-.element-tree__action-btn--delete:hover {
-    background: #fff0ee;
-    color: #bf0711;
-}
-.element-tree__row-heading {
-    cursor: pointer;
-    touch-action: none;
-}
-
-.element-tree__row-heading:hover {
-    cursor: pointer;
-}
-
-/* ======================================
-   DRAG OVERLAY CARD
-====================================== */
-
-.element-tree__drag-overlay {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-
-    width: 100%;
-    min-height: 42px;
-    padding: 10px 12px;
-
-    background: #ffffff;
-
-    border: 1px solid #e1e3e5;
-    border-radius: 9px;
-
-    box-shadow:
-        0 8px 20px rgba(0, 0, 0, 0.12),
-        0 2px 5px rgba(0, 0, 0, 0.06);
-
-    cursor: grabbing;
-
-    box-sizing: border-box;
-}
-
-.element-tree__drag-overlay .element-tree__field-icon {
-    display: flex;
-    align-items: center;
-}
-
-.element-tree__drag-overlay .element-tree__field-label {
-    font-size: 13px;
-    font-weight: 500;
-    color: #202223;
-}
-/* Hidden element appearance */
-.element-tree__field--hidden {
-    opacity: 0.45;
-    background-color: #f4f4f4;
-    transition: opacity 0.2s ease, background-color 0.2s ease;
-}
-/* //rows */
-.element-tree__row--hidden {
-    opacity: 0.45;
-    background-color: #f4f4f4;
-    transition: opacity 0.2s ease, background-color 0.2s ease;
+/* Keep the hover background on the full clickable/draggable item */
+.element-tree__page,
+.element-tree__row,
+.element-tree__field--draggable,
+.element-tree__element {
+  transition: background-color 180ms ease;
 }
