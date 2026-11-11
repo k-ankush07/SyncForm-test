@@ -93,6 +93,56 @@ function PreviewDropZone({
     </div>
   );
 }
+// insert between rows
+function PreviewRowInsert({
+  pageId,
+  rowId,
+  placement,
+  onOpenElementPicker,
+}) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: `preview-row-insert-${pageId}-${rowId}-${placement}`,
+    data: {
+      type: "previewRowInsert",
+      pageId,
+      targetRowId: rowId,
+      placement,
+    },
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`preview-row-insert ${isOver ? "preview-row-insert--active" : ""
+        }`}
+    >
+      <span className="preview-row-insert__line" />
+
+      <button
+        type="button"
+        className="preview-insert-button"
+        title="Add element between rows"
+        aria-label="Add element between rows"
+        onPointerDown={(event) => event.stopPropagation()}
+        onClick={(event) => {
+          event.stopPropagation();
+
+          onOpenElementPicker?.(
+            {
+              pageId,
+              rowId,
+              placement,
+              collection: "rows",
+            },
+            event
+          );
+        }}
+      >
+        +
+      </button>
+    </div>
+  );
+}
 
 // Each preview element has its own drag behavior.
 
@@ -479,7 +529,7 @@ export default function LivePreview({
                     ========================================= */}
 
                     <PreviewRootDropArea pageId={page.id}>
-                      <BlockStack gap="400">
+                      <BlockStack gap="">
 
                         {/* Render rows only when they contain visible elements. */}
                         {(page.rows ?? [])
@@ -515,19 +565,27 @@ export default function LivePreview({
                           // This removes the empty row and its spacing.
                           .filter(({ rowItems }) => rowItems.length > 0)
 
-                          .map(({ row, rowItems }) => (
-                            <div
-                              key={row.id}
-                              className="preview-row"
-                            >
-                              <div
-                                className="preview-row-grid"
-                                style={{
-                                  "--preview-column-count": rowItems.length,
-                                }}
-                              >
-                                {rowItems.map(
-                                  ({ element, collection }) => (
+
+                          .map(({ row, rowItems }, index, allRows) => (
+                            <React.Fragment key={row.id}>
+
+                              {/* Add element before this row */}
+                              <PreviewRowInsert
+                                pageId={page.id}
+                                rowId={row.id}
+                                placement="before"
+                                onOpenElementPicker={onOpenElementPicker}
+                              />
+
+                              {/* Existing row */}
+                              <div className="preview-row">
+                                <div
+                                  className="preview-row-grid"
+                                  style={{
+                                    "--preview-column-count": rowItems.length,
+                                  }}
+                                >
+                                  {rowItems.map(({ element, collection }) => (
                                     <DraggablePreviewElement
                                       key={`${collection}-${element.id}`}
                                       element={element}
@@ -537,19 +595,28 @@ export default function LivePreview({
                                       selectedElementId={selectedElementId}
                                       onSelectElement={onSelectElement}
                                       onDuplicateElement={onDuplicateElement}
-                                      onToggleElementVisibility={
-                                        onToggleElementVisibility
-                                      }
+                                      onToggleElementVisibility={onToggleElementVisibility}
                                       onDeleteElement={onDeleteElement}
                                       onOpenElementPicker={onOpenElementPicker}
-                                      //here 
                                       onChangeElement={onChangeElement}
                                     />
-                                  )
-                                )}
+                                  ))}
+                                </div>
                               </div>
-                            </div>
+
+                              {/* Add element after the last row */}
+                              {index === allRows.length - 1 && (
+                                <PreviewRowInsert
+                                  pageId={page.id}
+                                  rowId={row.id}
+                                  placement="after"
+                                  onOpenElementPicker={onOpenElementPicker}
+                                />
+                              )}
+
+                            </React.Fragment>
                           ))}
+
 
                         {/* Root elements remain full width. */}
                         <BlockStack gap="300">

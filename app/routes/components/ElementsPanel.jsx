@@ -780,6 +780,36 @@ const getDragItemId = (item, index) => {
         : `field-index-${index}`;
 };
 
+///insert btw rows
+function SidebarSectionInsert({
+    pageId,
+    insertIndex,
+    openElementPicker,
+}) {
+    return (
+        <div className="element-tree__section-insert">
+            <span className="element-tree__section-insert-line" />
+
+            <button
+                type="button"
+                className="element-tree__section-insert-button"
+                title="Add element here"
+                aria-label="Add element here"
+                onPointerDown={(event) => event.stopPropagation()}
+                onClick={(event) => {
+                    event.stopPropagation();
+
+                    openElementPicker(pageId, null, event, {
+                        type: "rootElement",
+                        insertIndex,
+                    });
+                }}
+            >
+                +
+            </button>
+        </div>
+    );
+}
 // ======================================================
 // COMPONENT: SORTABLE PAGE
 // Makes the page draggable using its drag handle.
@@ -930,6 +960,12 @@ function SortablePage({
                             )}
                             strategy={verticalListSortingStrategy}
                         >
+                            {/* ABOVE ROW 1 */}
+                            <SidebarSectionInsert
+                                pageId={page.id}
+                                insertIndex={0}
+                                openElementPicker={openElementPicker}
+                            />
                             {(page.rows || []).map((row) => (
                                 <SortableRow
                                     key={row.id}
@@ -951,6 +987,15 @@ function SortablePage({
                                 />
                             ))}
                         </SortableContext>
+
+                        {/* DIVIDER BETWEEN LAST ROW AND ROOT ELEMENTS */}
+
+                        {(page.rows || []).length > 0 && (
+                            <SidebarSectionInsert
+                                pageId={page.id}
+                                openElementPicker={openElementPicker}
+                            />
+                        )}
 
                         {/* ROOT ELEMENTS LIST */}
 

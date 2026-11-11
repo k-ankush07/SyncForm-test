@@ -973,7 +973,7 @@
 /* Rows */
 .live-preview--classic .preview-row,
 .live-preview--query .preview-row {
-  margin: 0 0 16px;
+  margin: 0 0 0px;
 }
 
 .live-preview--classic .preview-row-grid,
@@ -1674,7 +1674,7 @@
   flex-direction: row !important;
   flex-wrap: nowrap !important;
   align-items: stretch;
-  gap: 16px;
+  gap: 1px;
   width: 100%;
   min-width: 0;
   box-sizing: border-box;
@@ -1872,3 +1872,77 @@
   opacity: 0.45;
 }
 /* //smooth toolbox */
+
+/* //root-add modal */
+/* =========================================
+   ROW INSERT — HOVER BEHAVIOR
+========================================= */
+
+.preview-row-insert {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 12px;
+  margin: 0;
+  z-index: 10;
+  cursor: pointer;
+}
+
+/* Hidden line by default */
+.preview-row-insert__line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #2c6ecb;
+  height:4px;
+  opacity: 0;
+  transition: opacity 0.18s ease;
+}
+
+/* Hidden plus by default */
+.preview-row-insert .preview-insert-button {
+  position: relative;
+  z-index: 2;
+  left: 0px;
+  top: 0px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid #2c6ecb;
+  border-radius: 50%;
+  background: #ffffff;
+  color: #2c6ecb;
+  font-size: 17px;
+
+  cursor: pointer;
+  opacity: 0;
+  transform: scale(0.85);
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease,
+    background 0.18s ease;
+}
+
+/* Show line and plus when hovering between rows */
+.preview-row-insert:hover .preview-row-insert__line,
+.preview-row-insert--active .preview-row-insert__line {
+  opacity: 1;
+}
+
+.preview-row-insert:hover .preview-insert-button,
+.preview-row-insert--active .preview-insert-button {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Plus hover */
+.preview-row-insert .preview-insert-button:hover {
+  background: #2c6ecb;
+  color: #ffffff;
+}

@@ -160,33 +160,27 @@ export default function FormEditor() {
   // or from LivePreview.
   // =========================================
 
-  const openElementPicker = (targetOrPageId, rowIdOrEvent = null, maybeEvent) => {
-    // Check whether the call came from LivePreview.
-    // LivePreview sends an object containing insertion details.
+  const openElementPicker = (
+    targetOrPageId,
+    rowIdOrEvent = null,
+    maybeEvent,
+    extraTarget = {}
+  ) => {
     const isPreviewTarget =
       typeof targetOrPageId === "object" && targetOrPageId !== null;
-    //if its live priebw
+
     setElementPickerColumns(isPreviewTarget ? 2 : 4);
-
-    // Support both calling styles:
-    //
-    // ElementsPanel:
-    // openElementPicker(pageId, rowId, event)
-    //
-    // LivePreview:
-    // openElementPicker(targetObject, event)
-
 
     const target = isPreviewTarget
       ? targetOrPageId
       : {
         pageId: targetOrPageId,
         rowId: rowIdOrEvent ?? null,
+        ...extraTarget,
       };
 
     const event = isPreviewTarget ? rowIdOrEvent : maybeEvent;
 
-    // Default position when the function is called without a button event.
     let top = 150;
     let left = 490;
 
@@ -196,12 +190,11 @@ export default function FormEditor() {
       const modalWidth = isPreviewTarget
         ? Math.min(480, window.innerWidth - 16)
         : Math.min(800, window.innerWidth - 16);
+
       const modalHeight = Math.min(430, window.innerHeight - 24);
 
       left = buttonRect.right + 8;
 
-      // If there is not enough room on the right,
-      // show the picker on the left.
       if (left + modalWidth > window.innerWidth - 12) {
         left = buttonRect.left - modalWidth - 8;
       }
@@ -246,7 +239,50 @@ export default function FormEditor() {
           elementId,
           collection,
           placement,
+          insertIndex,
         } = elementTarget;
+
+
+        // =========================================
+        // CASE 0: INSERT A NEW ROW BETWEEN ROWS
+        // Used by the plus button in LivePreview.
+        // =========================================
+
+        if (
+          collection === "rows" &&
+          rowId != null &&
+          (placement === "before" || placement === "after")
+        ) {
+          const rows = [...(page.rows || [])];
+
+          const targetIndex = rows.findIndex(
+            (row) => row.id === rowId
+          );
+
+          if (targetIndex === -1) return page;
+
+          // Create a new row containing the selected element.
+          const newRow = {
+            id: crypto.randomUUID(),
+            fields: [],
+            elements: [newElement],
+          };
+
+          // Insert before or after the target row.
+          rows.splice(
+            placement === "before"
+              ? targetIndex
+              : targetIndex + 1,
+            0,
+            newRow
+          );
+
+          return {
+            ...page,
+            rows,
+          };
+        }
+
 
         // =========================================
         // CASE 1: PREVIEW INSERTION INTO A ROW
@@ -375,8 +411,31 @@ export default function FormEditor() {
             ),
           };
         }
+        // =========================================
+        // CASE 5: SIDEBAR INSERTION AT A SPECIFIC POSITION
+        // =========================================
 
-        // Add directly to the page when no row is selected.
+        if (rowId == null && Number.isInteger(insertIndex)) {
+          const rootElements = [...(page.rootElements || [])];
+
+          const safeIndex = Math.max(
+            0,
+            Math.min(insertIndex, rootElements.length)
+          );
+
+          rootElements.splice(safeIndex, 0, newElement);
+
+          return {
+            ...page,
+            rootElements,
+          };
+        }
+
+        // =========================================
+        // CASE 6: NORMAL SIDEBAR ADD ELEMENT
+        // Keep existing append behavior.
+        // =========================================
+
         return {
           ...page,
           rootElements: [
