@@ -406,7 +406,7 @@ export default function LivePreview({
       className={`live-preview live-preview--${formSettings.theme || "classic"
         }`}
     >
-      <Box background="bg-surface" padding="300">
+      {/* <Box background="bg-surface" padding="300">
         <InlineStack
           align="space-between"
           blockAlign="center"
@@ -433,7 +433,7 @@ export default function LivePreview({
         </InlineStack>
       </Box>
 
-      <Divider />
+      <Divider /> */}
 
       <div className="live-preview__body">
         <div className="live-preview__form">

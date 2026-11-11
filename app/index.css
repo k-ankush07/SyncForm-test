@@ -862,6 +862,7 @@
   font-family: Arial, Helvetica, sans-serif;
   font-size: 14px;
   box-sizing: border-box;
+  margin: 18px;
 }
 
 .live-preview--classic *,
@@ -1662,4 +1663,63 @@
     flex-wrap: nowrap !important;
     gap: 8px;
   }
+}
+/* =========================================
+   PREVIEW WORKSPACE ONLY
+   Keep Contact form / Draft header outside
+========================================= */
+
+.template-editor__preview {
+  background: #f1f2f4 !important;
+  box-sizing: border-box !important;
+  overflow: auto !important;
+}
+
+/* Outer preview card */
+.template-editor__preview > .Polaris-Card {
+  width: 100% !important;
+  padding: 24px !important;
+  background: #ffffff !important;
+  border: 1px solid #e3e3e3 !important;
+  border-radius: 12px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
+  box-sizing: border-box !important;
+}
+
+/* Inner default page */
+.template-editor__preview .live-preview__body {
+  padding: 24px !important;
+  /* background: #f6f6f7 !important; */
+  border: 1px solid #e3e3e3 !important;
+  border-radius: 8px !important;
+  box-shadow: none !important;
+  box-sizing: border-box !important;
+}
+
+/* Form content page */
+.template-editor__preview .live-preview__form {
+  width: 100% !important;
+  max-width: 600px !important;
+  min-height: 500px !important;
+  height: auto !important;
+  margin: 0 auto !important;
+  padding: 32px !important;
+  background: #ffffff !important;
+  border: 1px solid #e3e3e3 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05) !important;
+  overflow: visible !important;
+  box-sizing: border-box !important;
+}
+/* //defult */
+.live-preview__toolbar {
+  background: #ffffff !important;
+  color: #202223 !important;
+  padding: 16px 20px !important;
+  border-radius: 8px !important;
+  box-sizing: border-box !important;
+}
+
+.live-preview__toolbar * {
+  color: #202223;
 }

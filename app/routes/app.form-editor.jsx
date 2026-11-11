@@ -13,6 +13,10 @@ import {
   Text,
   Icon,
   Tooltip,
+  InlineStack,
+  Badge,
+  ButtonGroup,
+  Card,
 } from "@shopify/polaris";
 
 import {
@@ -1613,7 +1617,7 @@ export default function FormEditor() {
               <ElementSettings
                 element={selectedElement}
                 onChange={updateSelectedElement}
-                 onDelete={() => handleDeleteElement(selectedElement)}
+                onDelete={() => handleDeleteElement(selectedElement)}
                 onClose={() => setSelectedElement(null)}
               />
             ) : (
@@ -1697,27 +1701,53 @@ export default function FormEditor() {
         </div>
 
         {/* Live preview */}
+
         <div className="template-editor__preview">
-          <DndContext
-            sensors={sensors}
-            collisionDetection={previewCollisionDetection}
-            onDragEnd={handlePreviewDragEnd}
-          >
-            <LivePreview
-              pages={pages}
-              header={header}
-              footer={footer}
-              templateTitle={templateTitle}
-              formSettings={selectedTemplate}
-              selectedElementId={selectedElement?.id}
-              onSelectElement={setSelectedElement}
-              onDuplicateElement={handleDuplicateElement}
-              onToggleElementVisibility={handleToggleElementVisibility}
-              onDeleteElement={handleDeleteElement}
-              onOpenElementPicker={openElementPicker}
-              onChangeElement={updateSelectedElement}
-            />
-          </DndContext>
+          {/* HEADER - OUTSIDE THE CARD */}
+          <div className="live-preview__toolbar">
+            <InlineStack align="space-between" blockAlign="center" gap="400">
+              <InlineStack blockAlign="center" gap="200">
+                <Text variant="bodyMd" fontWeight="semibold">
+                  {templateTitle}
+                </Text>
+
+                <Badge>Draft</Badge>
+              </InlineStack>
+
+              <InlineStack blockAlign="center" gap="200">
+                <ButtonGroup>
+                  <Button>Mobile</Button>
+                  <Button variant="primary">Desktop</Button>
+                </ButtonGroup>
+
+                <Button>English</Button>
+                <Button disabled>Undo</Button>
+                <Button disabled>Redo</Button>
+              </InlineStack>
+            </InlineStack>
+          </div>
+          {/* <Card > */}
+            <DndContext
+              sensors={sensors}
+              collisionDetection={previewCollisionDetection}
+              onDragEnd={handlePreviewDragEnd}
+            >
+              <LivePreview
+                pages={pages}
+                header={header}
+                footer={footer}
+                templateTitle={templateTitle}
+                formSettings={selectedTemplate}
+                selectedElementId={selectedElement?.id}
+                onSelectElement={setSelectedElement}
+                onDuplicateElement={handleDuplicateElement}
+                onToggleElementVisibility={handleToggleElementVisibility}
+                onDeleteElement={handleDeleteElement}
+                onOpenElementPicker={openElementPicker}
+                onChangeElement={updateSelectedElement}
+              />
+            </DndContext>
+          {/* </Card> */}
         </div>
 
         {/* SHARED ELEMENT PICKER */}
