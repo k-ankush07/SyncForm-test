@@ -43,6 +43,7 @@ import {
     HiddenSettings,
     RepeaterSettings,
     SignatureSettings,
+    CustomHtmlSettings,
 } from "./elementsettings/groups/AdvancedElementSettings";
 
 import {
@@ -999,7 +1000,10 @@ function LayoutSettings({ element, onChange, onDelete }) {
    ELEMENT SETTINGS CONTROLLER
 ========================================= */
 
-export default function ElementSettings({ element, onChange, onClose, onDelete }) {
+export default function ElementSettings({ element, onChange, onClose, onDelete, products,
+    productsLoading, hasMoreProducts = false,
+    productsLoadingMore = false,
+    onLoadMoreProducts, }) {
 
     const [activeSection, setActiveSection] = useState("main");
 
@@ -1059,6 +1063,7 @@ export default function ElementSettings({ element, onChange, onClose, onDelete }
         hidden: HiddenSettings,
         repeater: RepeaterSettings,
         signature: SignatureSettings,
+         customHtml: CustomHtmlSettings,   
     };
 
     const GroupComponent = settingsGroups[groupType];
@@ -1151,6 +1156,11 @@ export default function ElementSettings({ element, onChange, onClose, onDelete }
                         <GroupComponent
                             element={element}
                             onChange={onChange}
+                            products={products}
+                            productsLoading={productsLoading}
+                            hasMoreProducts={hasMoreProducts}
+                            productsLoadingMore={productsLoadingMore}
+                            onLoadMoreProducts={onLoadMoreProducts}
                             onOpenRatingIcon={() =>
                                 setActiveSection("ratingIcon")
                             }

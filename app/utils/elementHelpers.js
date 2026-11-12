@@ -44,6 +44,37 @@ export function createElementConfig(item) {
     },
   ];
 
+  // Default products for Product element
+const defaultProducts = [
+  {
+    id: crypto.randomUUID(),
+    title: "Coffee Mug",
+    price: "499",
+    image: "",
+    description: "",
+  },
+  {
+    id: crypto.randomUUID(),
+    title: "Water Bottle",
+    price: "799",
+    image: "",
+    description: "",
+  },
+  {
+    id: crypto.randomUUID(),
+    title: "Headphones",
+    price: "1499",
+    image: "",
+    description: "",
+  },
+];
+const products =
+  type === "product"
+    ? Array.isArray(item.products) && item.products.length > 0
+      ? item.products
+      : structuredClone(defaultProducts)
+    : item.products || [];
+
   // Use existing options if provided.
   // Otherwise, create two default options for choice elements.
   const sourceOptions =
@@ -83,6 +114,7 @@ export function createElementConfig(item) {
     }),
 
     options,
+    products,
     otherOption: false,
     optionsPerLine: 1,
 

@@ -149,8 +149,8 @@ function PreviewRowInsert({
 function DraggablePreviewElement({
   element,
   pageId,
-   pages, // ADD THIS
-    activePageId, // ADD
+  pages, // ADD THIS
+  activePageId, // ADD
   rowId,
   collection,
   selectedElementId,
@@ -160,6 +160,8 @@ function DraggablePreviewElement({
   onDeleteElement,
   onOpenElementPicker,
   onChangeElement, // ADD THIS
+  products = [],
+  productsLoading = false,
 }) {
   const isSelected = element.id === selectedElementId;
   const isHidden = element.visible === false;
@@ -373,17 +375,20 @@ function DraggablePreviewElement({
         </div>
       )}
 
-      <PreviewField element={element} pages={pages} />
+      <PreviewField element={element} pages={pages} products={products}
+        productsLoading={productsLoading} />
     </div>
   );
 
 }
 function FixedPreviewElement({
   element,
-   pages = [],
-     activePageId,
+  pages = [],
+  activePageId,
   selectedElementId,
   onSelectElement,
+  products = [],
+  productsLoading = false,
 }) {
   if (!element) return null;
 
@@ -414,7 +419,8 @@ function FixedPreviewElement({
         marginBottom: isHeader || isFooter ? "30px" : undefined,
       }}
     >
-      <PreviewField element={element} pages={pages}  activePageId={activePageId} />
+      <PreviewField element={element} pages={pages} activePageId={activePageId} products={products}
+        productsLoading={productsLoading} />
     </div>
   );
 }
@@ -444,7 +450,7 @@ function PreviewRootDropArea({ pageId, children }) {
 export default function LivePreview({
   pages = [],
   templateTitle = "Untitled form",
-   activePageId,
+  activePageId,
   header,
   footer,
   formSettings = {},
@@ -455,6 +461,9 @@ export default function LivePreview({
   onDeleteElement,
   onOpenElementPicker,
   onChangeElement, // ADD THIS
+  products = [],
+  productsLoading = false,
+  
 }) {
   return (
     <div
@@ -506,10 +515,12 @@ export default function LivePreview({
               {header && header.visible !== false && (
                 <FixedPreviewElement
                   element={header}
-                   activePageId={activePageId}
+                  activePageId={activePageId}
                   pages={pages}
                   selectedElementId={selectedElementId}
                   onSelectElement={onSelectElement}
+                  products={products}
+                  productsLoading={productsLoading}
                 />
               )}
 
@@ -597,8 +608,8 @@ export default function LivePreview({
                                       key={`${collection}-${element.id}`}
                                       element={element}
                                       pageId={page.id}
-                                       pages={pages} // ADD THIS
-                                        activePageId={activePageId}
+                                      pages={pages} // ADD THIS
+                                      activePageId={activePageId}
                                       rowId={row.id}
                                       collection={collection}
                                       selectedElementId={selectedElementId}
@@ -608,6 +619,8 @@ export default function LivePreview({
                                       onDeleteElement={onDeleteElement}
                                       onOpenElementPicker={onOpenElementPicker}
                                       onChangeElement={onChangeElement}
+                                      products={products}
+                                      productsLoading={productsLoading}
                                     />
                                   ))}
                                 </div>
@@ -637,8 +650,8 @@ export default function LivePreview({
                               <DraggablePreviewElement
                                 key={element.id}
                                 element={element}
-                                 pages={pages} // ADD THIS
-                                  activePageId={activePageId}
+                                pages={pages} // ADD THIS
+                                activePageId={activePageId}
                                 pageId={page.id}
                                 rowId={null}
                                 collection="rootElements"
@@ -652,6 +665,8 @@ export default function LivePreview({
                                 onOpenElementPicker={onOpenElementPicker}
                                 //here
                                 onChangeElement={onChangeElement}
+                                products={products}
+                                productsLoading={productsLoading}
                               />
                             ))}
                         </BlockStack>
@@ -684,7 +699,7 @@ export default function LivePreview({
               {footer && footer.visible !== false && (
                 <FixedPreviewElement
                   element={footer}
-                   activePageId={activePageId}
+                  activePageId={activePageId}
                   selectedElementId={selectedElementId}
                   onSelectElement={onSelectElement}
                 />

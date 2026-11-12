@@ -1,5 +1,6 @@
 
 import React, { useEffect, useState } from "react";
+
 import * as PolarisIcons from "@shopify/polaris-icons";
 import { Icon } from "@shopify/polaris";
 import createDOMPurify from "dompurify";
@@ -21,7 +22,8 @@ import {
 import { countries } from "../components/elementsettings/utils/countries.js";
 import FormProgressIndicator from './RichTextEditor/FormProgressIndicator';
 
-export default function PreviewField({ element, field, pages = [],   activePageId = null, }) {
+export default function PreviewField({ element, field, pages = [], activePageId = null, products = [],
+  productsLoading = false, }) {
   const currentElement = element ?? field;
   // console.log("PreviewField received:", currentElement);
   // console.log("PreviewField type:", currentElement?.type);
@@ -102,6 +104,9 @@ export default function PreviewField({ element, field, pages = [],   activePageI
 
   const rawOptions = normalizedElement.options || [];
 
+
+
+
   //for date and time
   const [dateValue, setDateValue] = useState(
     normalizedElement.defaultDate || ""
@@ -177,6 +182,9 @@ export default function PreviewField({ element, field, pages = [],   activePageI
 
     return purifier.sanitize(html);
   };
+
+
+
   //cases to render duff inputs
   switch (type) {
     case "email":
@@ -596,7 +604,6 @@ export default function PreviewField({ element, field, pages = [],   activePageI
     }
 
     case "paragraph":
-    case "html":
       return (
         <BlockStack gap="200">
           <div
@@ -610,6 +617,35 @@ export default function PreviewField({ element, field, pages = [],   activePageI
           {descriptionText}
         </BlockStack>
       );
+    case "html":
+      return (
+        <BlockStack gap="200">
+          {!hideLabel && fieldLabelWithIcon}
+          {normalizedElement.customCode?.trim() ? (
+            <div
+              className="rich-text-preview"
+              dangerouslySetInnerHTML={{
+                __html: sanitizeHTML(normalizedElement.customCode),
+              }}
+            />
+          ) : (
+            <div
+              style={{
+                border: "1px dashed #8c9196",
+                borderRadius: "8px",
+                padding: "16px",
+                textAlign: "center",
+              }}
+            >
+              <Text as="p" variant="bodySm" tone="subdued">
+                Custom HTML (add code in settings)
+              </Text>
+            </div>
+          )}
+          {descriptionText}
+        </BlockStack>
+      );
+
     // i use custom css here to style the divder preview
     case "divider":
       return (
@@ -1093,7 +1129,7 @@ export default function PreviewField({ element, field, pages = [],   activePageI
           )}
           <FormProgressIndicator
             pages={pages}
-             activePageId={activePageId}
+            activePageId={activePageId}
           />
         </div>
       );
@@ -1427,40 +1463,196 @@ export default function PreviewField({ element, field, pages = [],   activePageI
         </BlockStack>
       );
     }
-    case "product":
+
+    case "product": {
+      // Products received from LivePreview props
+      const selectedProductIds = Array.isArray(
+        normalizedElement.selectedProductIds
+      )
+        ? normalizedElement.selectedProductIds
+        : [];
+
+      // Only display products selected in Product Settings
+      const selectedProducts = products.filter((product) =>
+        selectedProductIds.includes(product.id)
+      );
+
+      const isList = normalizedElement.productLayout === "list";
+      const showSearch = normalizedElement.showSearchBar !== false;
+
+      // Apply search only when the search bar is enabled
+      const filteredProducts = showSearch
+        ? selectedProducts.filter((product) =>
+          (product.title || "")
+            .toLowerCase()
+            .includes((value || "").toLowerCase())
+        )
+        : selectedProducts;
+
       return (
-        <BlockStack gap="200">
-          <TextField
-            {...commonTextFieldProps}
-            placeholder={placeholder || "Search products"}
-            prefix={<Icon source={PolarisIcons.SearchIcon} />}
-            value={value}
-            onChange={setValue}
-            readOnly
-          />
-          <div style={{ display: "flex", gap: "8px" }}>
-            {[1, 2, 3].map((n) => (
-              <div
-                key={n}
-                style={{
-                  flex: 1,
-                  height: "56px",
-                  borderRadius: "8px",
-                  background: "#eeeeee",
-                  border: "1px dashed #8c9196",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: "12px",
-                  color: "#6D7175",
-                }}
-              >
-                Product {n}
-              </div>
-            ))}
-          </div>
+        <BlockStack gap="300">
+          {fieldLabelWithIcon}
+
+          {/* SEARCH BAR */}
+          {showSearch && (
+            <TextField
+              placeholder={
+                normalizedElement.placeholder || "Search products"
+              }
+              prefix={<Icon source={PolarisIcons.SearchIcon} />}
+              value={value}
+              onChange={setValue}
+              autoComplete="off"
+            />
+          )}
+
+          {/* LOADING */}
+          {productsLoading && (
+            <Text as="p" tone="subdued" variant="bodySm">
+              Loading Shopify products...
+            </Text>
+          )}
+
+          {/* PRODUCT DISPLAY */}
+          {!productsLoading && (
+            <>
+              {selectedProductIds.length === 0 ? (
+                <Text as="p" tone="subdued" variant="bodySm">
+                  No products selected. Select products in Product Settings.
+                </Text>
+              ) : filteredProducts.length === 0 ? (
+                <Text as="p" tone="subdued" variant="bodySm">
+                  No matching products found.
+                </Text>
+              ) : (
+                <div
+                  style={{
+                    display: isList ? "flex" : "grid",
+                    flexDirection: isList ? "column" : undefined,
+                    gridTemplateColumns: isList
+                      ? undefined
+                      : "repeat(3, minmax(0, 1fr))",
+                    gap: "12px",
+                    width: "100%",
+                  }}
+                >
+                  {filteredProducts.map((product) => {
+                    const isSelected = selected.includes(product.id);
+
+                    return (
+                      <div
+                        key={product.id}
+                        onClick={() => {
+                          if (normalizedElement.allowMultiple) {
+                            setSelected((prev) =>
+                              isSelected
+                                ? prev.filter((id) => id !== product.id)
+                                : [...prev, product.id]
+                            );
+                          } else {
+                            setSelected(isSelected ? [] : [product.id]);
+                          }
+                        }}
+                        style={{
+                          display: isList ? "flex" : "block",
+                          flexDirection: isList ? "row" : undefined,
+                          alignItems: isList ? "center" : undefined,
+                          gap: "12px",
+                          border: isSelected
+                            ? "2px solid #008060"
+                            : "1px solid #e1e3e5",
+                          borderRadius: "8px",
+                          overflow: "hidden",
+                          cursor: "pointer",
+                          background: "#fff",
+                          padding: isList ? "8px" : "0",
+                          minWidth: 0,
+                        }}
+                      >
+                        {/* PRODUCT IMAGE */}
+                        {normalizedElement.showProductImage !== false && (
+                          <div
+                            style={{
+                              width: isList ? "90px" : "100%",
+                              minWidth: isList ? "90px" : undefined,
+                              height: isList ? "90px" : "110px",
+                              background: "#f4f5f6",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              overflow: "hidden",
+                            }}
+                          >
+                            {product.image ? (
+                              <img
+                                src={product.image}
+                                alt={product.imageAlt || product.title}
+                                style={{
+                                  width: "100%",
+                                  height: "100%",
+                                  objectFit: "cover",
+                                }}
+                              />
+                            ) : (
+                              <Icon
+                                source={PolarisIcons.ImageIcon}
+                                tone="subdued"
+                              />
+                            )}
+                          </div>
+                        )}
+
+                        {/* PRODUCT DETAILS */}
+                        <div
+                          style={{
+                            padding: isList ? "4px" : "10px",
+                            flex: 1,
+                            minWidth: 0,
+                          }}
+                        >
+                          <Text
+                            as="p"
+                            variant="bodyMd"
+                            fontWeight="medium"
+                          >
+                            {product.title}
+                          </Text>
+
+                          {product.description && (
+                            <Text
+                              as="p"
+                              variant="bodySm"
+                              tone="subdued"
+                            >
+                              {product.description.trim().split(/\s+/).slice(0, 10).join(" ")}
+                              {product.description.trim().split(/\s+/).length > 10 ? "..." : ""}
+                            </Text>
+                          )}
+
+                          {/* PRODUCT PRICE */}
+                          {normalizedElement.showProductPrice !== false && (
+                            <Text
+                              as="p"
+                              variant="bodyMd"
+                              fontWeight="semibold"
+                            >
+                              {product.price}
+                            </Text>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </>
+          )}
+
+          {descriptionText}
         </BlockStack>
       );
+    }
+
     default:
       return (
         <TextField

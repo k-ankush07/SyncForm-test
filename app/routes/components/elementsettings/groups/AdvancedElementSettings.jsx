@@ -1,5 +1,6 @@
 
-import React from "react";
+
+import React, { useState } from "react";
 import {
   BlockStack,
   InlineStack,
@@ -12,6 +13,7 @@ import {
 } from "@shopify/polaris";
 import ColorPickerField from "../../RichTextEditor/ColorPickerField";
 
+
 // Shared update helper
 function updateElement(element, onChange, key, value) {
   onChange({ ...element, [key]: value });
@@ -23,12 +25,12 @@ function normalizeOptions(options = []) {
     typeof option === "string"
       ? { id: `option-${index}`, label: option, value: option, image: "" }
       : {
-          ...option,
-          id: option.id || `option-${index}`,
-          label: option.label || "",
-          value: option.value || "",
-          image: option.image || "",
-        }
+        ...option,
+        id: option.id || `option-${index}`,
+        label: option.label || "",
+        value: option.value || "",
+        image: option.image || "",
+      }
   );
 }
 
@@ -353,41 +355,280 @@ export function RangeSliderSettings({ element, onChange }) {
 }
 
 // PRODUCT
-export function ProductSettings({ element, onChange }) {
+
+export function ProductSettings({
+  element,
+  onChange,
+  products = [],
+  productsLoading = false,
+  hasMoreProducts = false,
+  productsLoadingMore = false,
+  onLoadMoreProducts,
+}) {
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const update = (key, value) =>
+    updateElement(element, onChange, key, value);
+
+  // Selected Shopify product IDs
+  const selectedProductIds = Array.isArray(element.selectedProductIds)
+    ? element.selectedProductIds
+    : [];
+
+  // Search loaded Shopify products
+  const filteredProducts = products.filter((product) =>
+    product.title
+      ?.toLowerCase()
+      .includes(searchQuery.toLowerCase())
+  );
+
+  // Select or deselect a product
+  const toggleProduct = (productId, checked) => {
+    let nextSelectedIds;
+
+    if (checked) {
+      if (element.allowMultiple) {
+        nextSelectedIds = [
+          ...new Set([...selectedProductIds, productId]),
+        ];
+      } else {
+        nextSelectedIds = [productId];
+      }
+    } else {
+      nextSelectedIds = selectedProductIds.filter(
+        (id) => id !== productId
+      );
+    }
+
+    update("selectedProductIds", nextSelectedIds);
+  };
+
+  // Update multiple-selection setting without overwriting another update
+  const handleMultipleChange = (value) => {
+    onChange({
+      ...element,
+      allowMultiple: value,
+      selectedProductIds:
+        !value && selectedProductIds.length > 1
+          ? [selectedProductIds[0]]
+          : selectedProductIds,
+    });
+  };
+
   return (
-    <BlockStack gap="300">
+    <BlockStack gap="400">
+
+      {/* GENERAL SETTINGS */}
+      <Text as="h3" variant="headingSm">
+        General settings
+      </Text>
+
       <TextField
         label="Search placeholder"
         value={element.placeholder || "Search products"}
-        onChange={(value) =>
-          updateElement(element, onChange, "placeholder", value)
-        }
+        onChange={(value) => update("placeholder", value)}
         autoComplete="off"
       />
 
       <Checkbox
         label="Allow multiple products"
         checked={Boolean(element.allowMultiple)}
-        onChange={(value) =>
-          updateElement(element, onChange, "allowMultiple", value)
-        }
+        onChange={handleMultipleChange}
+      />
+
+      <Divider />
+
+      {/* SHOPIFY PRODUCTS */}
+      <BlockStack gap="300">
+        <InlineStack align="space-between" blockAlign="center">
+          <Text as="h3" variant="headingSm">
+            Shopify products
+          </Text>
+
+          <Text as="span" tone="subdued" variant="bodySm">
+            {selectedProductIds.length} selected
+          </Text>
+        </InlineStack>
+
+        <TextField
+          label="Search products"
+          labelHidden
+          placeholder="Search Shopify products..."
+          value={searchQuery}
+          onChange={setSearchQuery}
+          autoComplete="off"
+          clearButton
+          onClearButtonClick={() => setSearchQuery("")}
+        />
+
+        {productsLoading ? (
+          <Text as="p" tone="subdued">
+            Loading Shopify products...
+          </Text>
+        ) : (
+          <>
+            {/* PRODUCT LIST - SCROLLING DOES NOT FETCH */}
+            <div
+              style={{
+                maxHeight: "360px",
+                overflowY: "auto",
+                padding: "4px",
+              }}
+            >
+              <BlockStack gap="200">
+                {filteredProducts.map((product) => {
+                  const selected = selectedProductIds.includes(
+                    product.id
+                  );
+
+                  return (
+                    <div
+                      key={product.id}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "12px",
+                        padding: "10px",
+                        border: selected
+                          ? "1px solid #008060"
+                          : "1px solid #e1e3e5",
+                        borderRadius: "8px",
+                        background: selected ? "#f1f8f5" : "#fff",
+                      }}
+                    >
+                      <Checkbox
+                        label=""
+                        labelHidden
+                        checked={selected}
+                        onChange={(checked) =>
+                          toggleProduct(product.id, checked)
+                        }
+                      />
+
+                      {product.image ? (
+                        <img
+                          src={product.image}
+                          alt={product.imageAlt || product.title}
+                          style={{
+                            width: "52px",
+                            height: "52px",
+                            objectFit: "cover",
+                            borderRadius: "6px",
+                          }}
+                        />
+                      ) : (
+                        <div
+                          style={{
+                            width: "52px",
+                            height: "52px",
+                            background: "#f1f2f3",
+                            borderRadius: "6px",
+                          }}
+                        />
+                      )}
+
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <Text
+                          as="p"
+                          variant="bodyMd"
+                          fontWeight="medium"
+                          truncate
+                        >
+                          {product.title}
+                        </Text>
+
+                        <Text
+                          as="p"
+                          variant="bodySm"
+                          tone="subdued"
+                        >
+                          {product.price || "No price"}
+                        </Text>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {filteredProducts.length === 0 && (
+                  <Text as="p" tone="subdued">
+                    {products.length === 0
+                      ? "No Shopify products found."
+                      : "No products match your search."}
+                  </Text>
+                )}
+              </BlockStack>
+            </div>
+
+            {/* LOADING MORE INDICATOR */}
+            {productsLoadingMore && (
+              <Text as="p" tone="subdued" textAlign="center">
+                Loading more products...
+              </Text>
+            )}
+
+            {/* LOAD MORE BUTTON - MANUAL CLICK ONLY */}
+            {hasMoreProducts && (
+              <Button
+                fullWidth
+                onClick={onLoadMoreProducts}
+                loading={productsLoadingMore}
+                disabled={productsLoadingMore || !onLoadMoreProducts}
+              >
+                Load more products
+              </Button>
+            )}
+
+            {!hasMoreProducts && products.length > 0 && (
+              <Text as="p" tone="subdued" textAlign="center">
+                You have reached the end of your products.
+              </Text>
+            )}
+          </>
+        )}
+      </BlockStack>
+
+      <Divider />
+
+      {/* PRODUCT LAYOUT */}
+      <Text as="h3" variant="headingSm">
+        Product layout
+      </Text>
+
+      <Select
+        label="Product layout"
+        options={[
+          { label: "Grid", value: "grid" },
+          { label: "List", value: "list" },
+        ]}
+        value={element.productLayout || "grid"}
+        onChange={(value) => update("productLayout", value)}
+      />
+
+      <Divider />
+
+      {/* DISPLAY SETTINGS */}
+      <Text as="h3" variant="headingSm">
+        Display settings
+      </Text>
+
+      <Checkbox
+        label="Show search bar"
+        checked={element.showSearchBar !== false}
+        onChange={(value) => update("showSearchBar", value)}
       />
 
       <Checkbox
         label="Show product image"
         checked={element.showProductImage !== false}
-        onChange={(value) =>
-          updateElement(element, onChange, "showProductImage", value)
-        }
+        onChange={(value) => update("showProductImage", value)}
       />
 
       <Checkbox
         label="Show product price"
         checked={element.showProductPrice !== false}
-        onChange={(value) =>
-          updateElement(element, onChange, "showProductPrice", value)
-        }
+        onChange={(value) => update("showProductPrice", value)}
       />
+
     </BlockStack>
   );
 }
@@ -585,6 +826,119 @@ export function SignatureSettings({ element, onChange }) {
         checked={element.allowClear !== false}
         onChange={(value) => update("allowClear", value)}
       />
+    </BlockStack>
+  );
+}
+
+// CUSTOM HTML
+const MAX_CODE_LENGTH = 65535;
+
+export function CustomHtmlSettings({ element, onChange, onDelete }) {
+  const [dark, setDark] = useState(true);
+  const gutterRef = useRef(null);
+
+  const code = element.customCode || "";
+  const lineCount = Math.max(1, code.split("\n").length);
+
+  const theme = dark
+    ? { bg: "#1e1e1e", text: "#d4d4d4", gutter: "#858585", border: "#1e1e1e" }
+    : { bg: "#ffffff", text: "#1f2328", gutter: "#8c9196", border: "#e1e3e5" };
+
+  const setCode = (value) =>
+    updateElement(element, onChange, "customCode", value.slice(0, MAX_CODE_LENGTH));
+
+  // Keep line numbers aligned with the textarea scroll
+  const syncScroll = (e) => {
+    if (gutterRef.current) gutterRef.current.scrollTop = e.target.scrollTop;
+  };
+
+  // Tab inserts two spaces instead of leaving the field
+  const handleKeyDown = (e) => {
+    if (e.key !== "Tab") return;
+    e.preventDefault();
+    const { selectionStart, selectionEnd, value } = e.target;
+    const next = value.slice(0, selectionStart) + "  " + value.slice(selectionEnd);
+    setCode(next);
+    requestAnimationFrame(() => {
+      e.target.selectionStart = e.target.selectionEnd = selectionStart + 2;
+    });
+  };
+
+  const sharedTextStyle = {
+    fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+    fontSize: "12px",
+    lineHeight: "20px",
+  };
+
+  return (
+    <BlockStack gap="300">
+      <InlineStack align="end" gap="100">
+        <Button pressed={dark} onClick={() => setDark(true)}>🌙</Button>
+        <Button pressed={!dark} onClick={() => setDark(false)}>☀️</Button>
+      </InlineStack>
+
+      <div
+        style={{
+          display: "flex",
+          height: "320px",
+          background: theme.bg,
+          border: `1px solid ${theme.border}`,
+          borderRadius: "10px",
+          overflow: "hidden",
+        }}
+      >
+        {/* Line numbers */}
+        <div
+          ref={gutterRef}
+          aria-hidden
+          style={{
+            ...sharedTextStyle,
+            padding: "10px 8px",
+            textAlign: "right",
+            color: theme.gutter,
+            userSelect: "none",
+            overflow: "hidden",
+            minWidth: "36px",
+          }}
+        >
+          {Array.from({ length: lineCount }, (_, i) => (
+            <div key={i}>{i + 1}</div>
+          ))}
+        </div>
+
+        {/* Editor */}
+        <textarea
+          value={code}
+          onChange={(e) => setCode(e.target.value)}
+          onScroll={syncScroll}
+          onKeyDown={handleKeyDown}
+          placeholder="Add the custom code"
+          spellCheck={false}
+          wrap="off"
+          style={{
+            ...sharedTextStyle,
+            flex: 1,
+            padding: "10px 8px",
+            border: "none",
+            outline: "none",
+            resize: "none",
+            background: "transparent",
+            color: theme.text,
+            whiteSpace: "pre",
+            overflow: "auto",
+          }}
+        />
+      </div>
+
+      <Text as="p" variant="bodySm" tone="subdued">
+        {code.length} / {MAX_CODE_LENGTH}
+      </Text>
+
+      {onDelete && (
+        <Button fullWidth tone="critical" onClick={onDelete}>
+          Delete
+        </Button>
+      )}
     </BlockStack>
   );
 }

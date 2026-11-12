@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { useFetcher } from "react-router";
 
 import { normalizeFormPages } from "../utils/normalizeFormPages.js";
 import ElementSettings from "../routes/components/ElementSettings.jsx";
@@ -54,6 +55,9 @@ import LivePreview from "../routes/components/LivePreview";
 
 import { useSearchParams } from "react-router";
 import { templates } from "../utils/templates.js";
+
+
+
 
 // =========================================
 // HELPER: NORMALIZE ROWS
@@ -153,6 +157,89 @@ export default function FormEditor() {
     top: 150,
     left: 490,
   });
+
+
+// Get actual Shopify products
+const productFetcher = useFetcher();
+
+const [shopifyProducts, setShopifyProducts] = useState([]);
+
+const [productPageInfo, setProductPageInfo] = useState({
+  hasNextPage: false,
+  endCursor: null,
+});
+
+const appendProductsRef = useRef(false);
+
+// Fetch first 5 products
+useEffect(() => {
+  if (productFetcher.state === "idle" && !productFetcher.data) {
+    productFetcher.load("/app/products");
+  }
+}, []);
+
+// Receive products from Shopify
+useEffect(() => {
+  if (!productFetcher.data) return;
+
+  const newProducts = productFetcher.data.products || [];
+
+  // Capture the value BEFORE resetting the ref.
+  const shouldAppend = appendProductsRef.current;
+
+  setShopifyProducts((previousProducts) => {
+    if (!shouldAppend) {
+      return newProducts;
+    }
+
+    const existingIds = new Set(
+      previousProducts.map((product) => product.id)
+    );
+
+    const uniqueNewProducts = newProducts.filter(
+      (product) => !existingIds.has(product.id)
+    );
+
+    return [...previousProducts, ...uniqueNewProducts];
+  });
+
+  setProductPageInfo(
+    productFetcher.data.pageInfo || {
+      hasNextPage: false,
+      endCursor: null,
+    }
+  );
+
+  appendProductsRef.current = false;
+}, [productFetcher.data]);
+
+// Fetch next 5 products ONLY when Load More is clicked
+const loadMoreProducts = () => {
+  if (
+    !productPageInfo.hasNextPage ||
+    !productPageInfo.endCursor ||
+    productFetcher.state !== "idle"
+  ) {
+    return;
+  }
+
+  appendProductsRef.current = true;
+
+  const params = new URLSearchParams({
+    after: productPageInfo.endCursor,
+  });
+
+  productFetcher.load(`/app/products?${params.toString()}`);
+};
+
+// Loading states
+const productsLoading =
+  productFetcher.state === "loading" &&
+  shopifyProducts.length === 0;
+
+const productsLoadingMore =
+  productFetcher.state === "loading" &&
+  shopifyProducts.length > 0;
 
   // =========================================
   // FUNCTION: OPEN ELEMENT PICKER
@@ -1696,6 +1783,11 @@ export default function FormEditor() {
                 onChange={updateSelectedElement}
                 onDelete={() => handleDeleteElement(selectedElement)}
                 onClose={() => setSelectedElement(null)}
+                products={shopifyProducts}
+                productsLoading={productsLoading}
+                hasMoreProducts={productPageInfo.hasNextPage}
+                productsLoadingMore={productsLoadingMore}
+                onLoadMoreProducts={loadMoreProducts}
               />
             ) : (
               <Box paddingBlockStart="400">
@@ -1848,7 +1940,7 @@ export default function FormEditor() {
           >
             <LivePreview
               pages={pages}
-                activePageId={activePageId}
+              activePageId={activePageId}
               header={header}
               footer={footer}
               templateTitle={templateTitle}
@@ -1860,6 +1952,8 @@ export default function FormEditor() {
               onDeleteElement={handleDeleteElement}
               onOpenElementPicker={openElementPicker}
               onChangeElement={updateSelectedElement}
+              products={shopifyProducts}
+              productsLoading={productsLoading}
             />
           </DndContext>
           {/* </Card> */}
