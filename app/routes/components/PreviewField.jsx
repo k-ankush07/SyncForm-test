@@ -4,6 +4,7 @@ import * as PolarisIcons from "@shopify/polaris-icons";
 import { Icon } from "@shopify/polaris";
 import createDOMPurify from "dompurify";
 import ReactCountryFlag from "react-country-flag";
+
 import ColorInput from "../components/RichTextEditor/ColorInput.jsx"
 import {
   Text,
@@ -18,11 +19,13 @@ import {
   BlockStack,
 } from "@shopify/polaris";
 import { countries } from "../components/elementsettings/utils/countries.js";
+import FormProgressIndicator from './RichTextEditor/FormProgressIndicator';
 
-export default function PreviewField({ element, field }) {
+export default function PreviewField({ element, field, pages = [],   activePageId = null, }) {
   const currentElement = element ?? field;
   // console.log("PreviewField received:", currentElement);
   // console.log("PreviewField type:", currentElement?.type);
+  console.log(pages)
   const normalizedElement =
     typeof currentElement === "string"
       ? {
@@ -403,36 +406,36 @@ export default function PreviewField({ element, field }) {
       );
     }
 
-   case "checkbox":
-case "checkboxes":
-case "checkbox_group":
-  return (
-    <BlockStack gap="200">
-      {fieldLabelWithIcon}
+    case "checkbox":
+    case "checkboxes":
+    case "checkbox_group":
+      return (
+        <BlockStack gap="200">
+          {fieldLabelWithIcon}
 
-      <div style={choiceGridStyle}>
-        {options.map((option, index) => (
-          <Checkbox
-            key={`${option.value}-${index}`}
-            label={option.label}
-            checked={selected.includes(option.value)}
-            onChange={(isChecked) => {
-              setSelected((previous) =>
-                isChecked
-                  ? [...previous, option.value]
-                  : previous.filter(
-                      (selectedValue) =>
-                        selectedValue !== option.value
-                    )
-              );
-            }}
-          />
-        ))}
-      </div>
+          <div style={choiceGridStyle}>
+            {options.map((option, index) => (
+              <Checkbox
+                key={`${option.value}-${index}`}
+                label={option.label}
+                checked={selected.includes(option.value)}
+                onChange={(isChecked) => {
+                  setSelected((previous) =>
+                    isChecked
+                      ? [...previous, option.value]
+                      : previous.filter(
+                        (selectedValue) =>
+                          selectedValue !== option.value
+                      )
+                  );
+                }}
+              />
+            ))}
+          </div>
 
-      {descriptionText}
-    </BlockStack>
-  );
+          {descriptionText}
+        </BlockStack>
+      );
 
     case "radio":
     case "radio_button":
@@ -1020,69 +1023,81 @@ case "checkbox_group":
         </BlockStack>
       );
 
-case "color_picker":
-  return (
-    <BlockStack gap="200">
-      <ColorInput
-        label={hideLabel ? "" : label}
-        value={colorValue}
-        onChange={setColorValue}
-      />
+    case "color_picker":
+      return (
+        <BlockStack gap="200">
+          <ColorInput
+            label={hideLabel ? "" : label}
+            value={colorValue}
+            onChange={setColorValue}
+          />
 
-      {descriptionText}
-    </BlockStack>
-  );
+          {descriptionText}
+        </BlockStack>
+      );
 
-   
-case "form_header": {
-  const headingTag = normalizedElement.headingTag || "h2";
 
-  const headingVariants = {
-    h1: "heading2xl",
-    h2: "headingXl",
-    h3: "headingLg",
-    h4: "headingMd",
-    h5: "headingSm",
-    h6: "headingXs",
-  };
+    case "form_header": {
+      const headingConfig = {
+        h1: { tag: "h1", fontSize: 36 },
+        h2: { tag: "h2", fontSize: 30 },
+        h3: { tag: "h3", fontSize: 24 },
+        h4: { tag: "h4", fontSize: 20 },
+        h5: { tag: "h5", fontSize: 18 },
+        h6: { tag: "h6", fontSize: 16 },
+      };
 
-  const headingStyle = {
-    color: normalizedElement.headingColor || "inherit",
-    fontSize: `${Number(normalizedElement.headingFontSize) || 24}px`,
-    textAlign: normalizedElement.alignment || "left",
-    width: "100%",
-    margin: 0,
-  };
+      const headingTag = String(
+        normalizedElement.headingTag || "h2"
+      ).toLowerCase();
 
-  return (
-    <div
-      style={{
-        textAlign: normalizedElement.alignment || "left",
-        width: "100%",
-      }}
-    >
-      {normalizedElement.showHeader !== false && (
-        <>
-          {React.createElement(
-            headingTag,
-            { style: headingStyle },
-            normalizedElement.title || "Contact us"
+      const config = headingConfig[headingTag] || headingConfig.h2;
+      const HeadingTag = config.tag;
+
+      return (
+        <div
+          style={{
+            width: "100%",
+            textAlign: normalizedElement.alignment || "left",
+          }}
+        >
+          {normalizedElement.showHeader !== false && (
+            <HeadingTag
+              style={{
+                margin: 0,
+                color: normalizedElement.headingColor || "inherit",
+
+                // Use selected tag's font size
+                fontSize: `${config.fontSize}px`,
+
+                fontWeight: 600,
+                lineHeight: 1.3,
+              }}
+            >
+              {normalizedElement.title || "Contact us"}
+            </HeadingTag>
           )}
 
           {normalizedElement.description && (
             <div
               className="rich-text-preview"
+              style={{
+                marginTop: normalizedElement.showHeader !== false
+                  ? "8px"
+                  : 0,
+              }}
               dangerouslySetInnerHTML={{
                 __html: sanitizeHTML(normalizedElement.description),
               }}
             />
           )}
-        </>
-      )}
-    </div>
-  );
-}
-
+          <FormProgressIndicator
+            pages={pages}
+             activePageId={activePageId}
+          />
+        </div>
+      );
+    }
     case "hidden":
       return (
         <div

@@ -149,6 +149,8 @@ function PreviewRowInsert({
 function DraggablePreviewElement({
   element,
   pageId,
+   pages, // ADD THIS
+    activePageId, // ADD
   rowId,
   collection,
   selectedElementId,
@@ -371,13 +373,15 @@ function DraggablePreviewElement({
         </div>
       )}
 
-      <PreviewField element={element} />
+      <PreviewField element={element} pages={pages} />
     </div>
   );
 
 }
 function FixedPreviewElement({
   element,
+   pages = [],
+     activePageId,
   selectedElementId,
   onSelectElement,
 }) {
@@ -410,7 +414,7 @@ function FixedPreviewElement({
         marginBottom: isHeader || isFooter ? "30px" : undefined,
       }}
     >
-      <PreviewField element={element} />
+      <PreviewField element={element} pages={pages}  activePageId={activePageId} />
     </div>
   );
 }
@@ -440,6 +444,7 @@ function PreviewRootDropArea({ pageId, children }) {
 export default function LivePreview({
   pages = [],
   templateTitle = "Untitled form",
+   activePageId,
   header,
   footer,
   formSettings = {},
@@ -501,6 +506,8 @@ export default function LivePreview({
               {header && header.visible !== false && (
                 <FixedPreviewElement
                   element={header}
+                   activePageId={activePageId}
+                  pages={pages}
                   selectedElementId={selectedElementId}
                   onSelectElement={onSelectElement}
                 />
@@ -590,6 +597,8 @@ export default function LivePreview({
                                       key={`${collection}-${element.id}`}
                                       element={element}
                                       pageId={page.id}
+                                       pages={pages} // ADD THIS
+                                        activePageId={activePageId}
                                       rowId={row.id}
                                       collection={collection}
                                       selectedElementId={selectedElementId}
@@ -628,6 +637,8 @@ export default function LivePreview({
                               <DraggablePreviewElement
                                 key={element.id}
                                 element={element}
+                                 pages={pages} // ADD THIS
+                                  activePageId={activePageId}
                                 pageId={page.id}
                                 rowId={null}
                                 collection="rootElements"
@@ -673,6 +684,7 @@ export default function LivePreview({
               {footer && footer.visible !== false && (
                 <FixedPreviewElement
                   element={footer}
+                   activePageId={activePageId}
                   selectedElementId={selectedElementId}
                   onSelectElement={onSelectElement}
                 />

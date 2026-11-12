@@ -1589,6 +1589,10 @@ export default function FormEditor() {
     });
   };
 
+  //active page id
+  const activePageId = pages.find(
+    (page) => page.open && page.visible !== false
+  )?.id;
   // =========================================
   // EDITOR UI
   // =========================================
@@ -1844,6 +1848,7 @@ export default function FormEditor() {
           >
             <LivePreview
               pages={pages}
+                activePageId={activePageId}
               header={header}
               footer={footer}
               templateTitle={templateTitle}
