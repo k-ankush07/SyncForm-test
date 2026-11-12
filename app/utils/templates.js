@@ -9,7 +9,6 @@ export  const templates = [
   theme: "classic",
   layout: "stacked",
   type: "contact",
-
   pages: [
     {
       id: 1,
@@ -29,6 +28,7 @@ export  const templates = [
           elements: [],
         },
       ],
+
 
       rootElements: [
         {
