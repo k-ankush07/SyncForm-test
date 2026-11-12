@@ -12,6 +12,7 @@ import {
   Divider,
 } from "@shopify/polaris";
 import ColorPickerField from "../../RichTextEditor/ColorPickerField";
+import RichTextEditor from "../../RichTextEditor/RichTextEditor";
 
 
 // Shared update helper
@@ -939,6 +940,62 @@ export function CustomHtmlSettings({ element, onChange, onDelete }) {
           Delete
         </Button>
       )}
+    </BlockStack>
+  );
+}
+
+export function ConsentSettings({
+  element,
+  onChange,
+  onDelete,
+}) {
+  const updateElement = (key, value) => {
+    onChange({
+      ...element,
+      [key]: value,
+    });
+  };
+
+  return (
+    <BlockStack gap="400">
+
+      {/* Consent Text Editor */}
+      <BlockStack gap="200">
+        <Text as="h3" variant="headingSm">
+          Consent text
+        </Text>
+
+        <RichTextEditor
+          value={element.label || ""}
+          onChange={(value) => updateElement("label", value)}
+        />
+      </BlockStack>
+
+      {/* Default selected checkbox */}
+      <Checkbox
+        label="Checked by default"
+        checked={element.checkedByDefault ?? true}
+        onChange={(value) =>
+          updateElement("checkedByDefault", value)
+        }
+      />
+
+      {/* Consent-only checkbox */}
+      <Checkbox
+        label="Used only to require user consent (value is not submitted)"
+        checked={element.requireConsentOnly ?? false}
+        onChange={(value) =>
+          updateElement("requireConsentOnly", value)
+        }
+      />
+
+      {/* Delete */}
+      {onDelete && (
+        <Button fullWidth tone="critical" onClick={onDelete}>
+          Delete
+        </Button>
+      )}
+
     </BlockStack>
   );
 }

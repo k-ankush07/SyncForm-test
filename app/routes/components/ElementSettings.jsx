@@ -44,6 +44,7 @@ import {
     RepeaterSettings,
     SignatureSettings,
     CustomHtmlSettings,
+    ConsentSettings,
 } from "./elementsettings/groups/AdvancedElementSettings";
 
 import {
@@ -1063,7 +1064,8 @@ export default function ElementSettings({ element, onChange, onClose, onDelete, 
         hidden: HiddenSettings,
         repeater: RepeaterSettings,
         signature: SignatureSettings,
-         html: CustomHtmlSettings,   
+        html: CustomHtmlSettings,   
+        consent: ConsentSettings,
     };
 
     const GroupComponent = settingsGroups[groupType];

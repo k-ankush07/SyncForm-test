@@ -80,7 +80,11 @@ export default function PreviewField({ element, field, pages = [], activePageId 
     </div>
   );
 
-  const [checked, setChecked] = useState(false);
+ const [checked, setChecked] = useState(
+  normalizedElement.type === "consent"
+    ? normalizedElement.checkedByDefault ?? true
+    : Boolean(normalizedElement.defaultValue)
+);
   const [selected, setSelected] = useState([]);
   const [value, setValue] = useState(defaultValue);
   const [confirmPasswordValue, setConfirmPasswordValue] = useState("");
@@ -98,9 +102,18 @@ export default function PreviewField({ element, field, pages = [], activePageId 
     setConfirmPasswordValue("")
   }, [normalizedElement.id, normalizedElement.defaultValue]);
 
-  useEffect(() => {
-    setChecked(Boolean(normalizedElement.defaultValue));
-  }, [normalizedElement.id, normalizedElement.defaultValue]);
+ useEffect(() => {
+  setChecked(
+    normalizedElement.type === "consent"
+      ? normalizedElement.checkedByDefault ?? true
+      : Boolean(normalizedElement.defaultValue)
+  );
+}, [
+  normalizedElement.id,
+  normalizedElement.defaultValue,
+  normalizedElement.checkedByDefault,
+  normalizedElement.type,
+]);
 
   const rawOptions = normalizedElement.options || [];
 
@@ -480,15 +493,25 @@ export default function PreviewField({ element, field, pages = [], activePageId 
         </BlockStack>
       );
 
-    case "checkbox":
+    case "consent":
       return (
         <BlockStack gap="200">
           <Checkbox
-            label={fieldLabel || label}
+            label={
+              <div
+                className="rich-text-preview"
+                dangerouslySetInnerHTML={{
+                  __html: sanitizeHTML(
+                    normalizedElement.label ||
+                    "<p>I agree to terms and conditions.</p>"
+                  ),
+                }}
+              />
+            }
             checked={checked}
             onChange={setChecked}
-            readOnly
           />
+
           {descriptionText}
         </BlockStack>
       );
@@ -1265,30 +1288,49 @@ export default function PreviewField({ element, field, pages = [], activePageId 
         </BlockStack>
       );
 
-    case "range_slider":
-      return (
-        <BlockStack gap="200">
-          {!hideLabel && (
-            <Text as="p" variant="bodyMd">
-              {label}
-            </Text>
-          )}
-          <input
-            type="range"
-            min="0"
-            max="100"
-            value={rangeValue}
-            onChange={(event) =>
-              setRangeValue(Number(event.target.value))
-            }
-            style={{ width: "100%" }}
-          />
-          <Text as="p" variant="bodySm">
-            {rangeValue}
-          </Text>
-          {descriptionText}
-        </BlockStack>
-      );
+    case "range_slider": {
+  const min = Number(normalizedElement.min ?? 0);
+  const max = Number(normalizedElement.max ?? 100);
+  const step = Math.max(0.000001, Number(normalizedElement.step) || 1);
+
+  const defaultRangeValue = Number(
+    normalizedElement.defaultValue ?? min
+  );
+
+  const safeDefault = Math.min(max, Math.max(min, defaultRangeValue));
+
+  const currentRangeValue = Math.min(
+    max,
+    Math.max(min, rangeValue)
+  );
+
+  return (
+    <BlockStack gap="200">
+      {fieldLabelWithIcon}
+
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={currentRangeValue}
+        onChange={(event) =>
+          setRangeValue(Number(event.target.value))
+        }
+        style={{ width: "100%" }}
+      />
+
+      {normalizedElement.showRangeValue !== false && (
+        <Text as="p" variant="bodySm">
+          {currentRangeValue}
+        </Text>
+      )}
+
+      {descriptionText}
+    </BlockStack>
+  );
+}
+
 
     case "matrix": {
       const toLabel = (x, i, p) =>

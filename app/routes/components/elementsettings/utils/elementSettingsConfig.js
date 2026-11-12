@@ -26,7 +26,6 @@ const CHOICE_TYPES = [
   "checkbox",
   "checkboxes",
   "checkbox_group",
-  "consent",
 ];
 
 const NUMBER_TYPES = ["number", "quantity"];
@@ -69,6 +68,7 @@ export function getElementSettingsType(type) {
   if (normalizedType === "hidden") return "hidden";
   if (normalizedType === "repeater") return "repeater";
   if (normalizedType === "signature") return "signature";
+  if (normalizedType === "consent") return "consent";
  if (["html", "custom_html"].includes(normalizedType)) return "html";
   if (CONTACT_TYPES.includes(normalizedType)) return "contact";
   if (TEXT_TYPES.includes(normalizedType)) return "text";
