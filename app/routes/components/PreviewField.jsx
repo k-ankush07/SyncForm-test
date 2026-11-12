@@ -403,34 +403,36 @@ export default function PreviewField({ element, field }) {
       );
     }
 
-    case "checkboxes":
-    case "checkbox_group":
-      return (
-        <BlockStack gap="200">
-          {fieldLabelWithIcon}
+   case "checkbox":
+case "checkboxes":
+case "checkbox_group":
+  return (
+    <BlockStack gap="200">
+      {fieldLabelWithIcon}
 
-          <div style={choiceGridStyle}>
-            {options.map((option) => (
-              <Checkbox
-                key={option.value}
-                label={option.label}
-                checked={selected.includes(option.value)}
-                onChange={(isChecked) => {
-                  setSelected((previous) =>
-                    isChecked
-                      ? [...previous, option.value]
-                      : previous.filter(
-                        (value) => value !== option.value
-                      )
-                  );
-                }}
-              />
-            ))}
-          </div>
+      <div style={choiceGridStyle}>
+        {options.map((option, index) => (
+          <Checkbox
+            key={`${option.value}-${index}`}
+            label={option.label}
+            checked={selected.includes(option.value)}
+            onChange={(isChecked) => {
+              setSelected((previous) =>
+                isChecked
+                  ? [...previous, option.value]
+                  : previous.filter(
+                      (selectedValue) =>
+                        selectedValue !== option.value
+                    )
+              );
+            }}
+          />
+        ))}
+      </div>
 
-          {descriptionText}
-        </BlockStack>
-      );
+      {descriptionText}
+    </BlockStack>
+  );
 
     case "radio":
     case "radio_button":
@@ -1031,49 +1033,56 @@ case "color_picker":
     </BlockStack>
   );
 
-    case "form_header": {
-      const headingTag = normalizedElement.headingTag || "h2";
+   
+case "form_header": {
+  const headingTag = normalizedElement.headingTag || "h2";
 
-      const headingVariants = {
-        h1: "heading2xl",
-        h2: "headingXl",
-        h3: "headingLg",
-        h4: "headingMd",
-        h5: "headingSm",
-        h6: "headingXs",
-      };
+  const headingVariants = {
+    h1: "heading2xl",
+    h2: "headingXl",
+    h3: "headingLg",
+    h4: "headingMd",
+    h5: "headingSm",
+    h6: "headingXs",
+  };
 
-      return (
-        <div
-          style={{
-            textAlign: normalizedElement.alignment || "center",
-            width: "100%",
-          }}
-        >
-          {normalizedElement.showHeader !== false && (
-            <>
-              <Text
-                as={headingTag}
-                variant={headingVariants[headingTag] || "headingXl"}
-              >
-                {normalizedElement.title || "Contact us"}
-              </Text>
+  const headingStyle = {
+    color: normalizedElement.headingColor || "inherit",
+    fontSize: `${Number(normalizedElement.headingFontSize) || 24}px`,
+    textAlign: normalizedElement.alignment || "left",
+    width: "100%",
+    margin: 0,
+  };
 
-              {normalizedElement.description && (
-                <div
-                  className="rich-text-preview"
-                  dangerouslySetInnerHTML={{
-                    __html: sanitizeHTML(
-                      normalizedElement.description
-                    ),
-                  }}
-                />
-              )}
-            </>
+  return (
+    <div
+      style={{
+        textAlign: normalizedElement.alignment || "left",
+        width: "100%",
+      }}
+    >
+      {normalizedElement.showHeader !== false && (
+        <>
+          {React.createElement(
+            headingTag,
+            { style: headingStyle },
+            normalizedElement.title || "Contact us"
           )}
-        </div>
-      );
-    }
+
+          {normalizedElement.description && (
+            <div
+              className="rich-text-preview"
+              dangerouslySetInnerHTML={{
+                __html: sanitizeHTML(normalizedElement.description),
+              }}
+            />
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
     case "hidden":
       return (
         <div

@@ -104,6 +104,24 @@ export default function ElementsPanel({
             },
         })
     );
+    // to drag and drop options
+    const handleOptionDragEnd = ({ active, over }) => {
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = options.findIndex(
+        (option) => option.id === active.id
+    );
+
+    const newIndex = options.findIndex(
+        (option) => option.id === over.id
+    );
+
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const updatedOptions = arrayMove(options, oldIndex, newIndex);
+
+    update("options", updatedOptions);
+};
 
     // ======================================================
     // FUNCTION: REORDER ELEMENTS INSIDE THE ROWS AND ROOT ELEMENTS

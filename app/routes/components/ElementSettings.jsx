@@ -45,8 +45,108 @@ import {
     SignatureSettings,
 } from "./elementsettings/groups/AdvancedElementSettings";
 
+import {
+    DndContext,
+    PointerSensor,
+    closestCenter,
+    useSensor,
+    useSensors,
+} from "@dnd-kit/core";
+
+import {
+    SortableContext,
+    useSortable,
+    verticalListSortingStrategy,
+    arrayMove,
+} from "@dnd-kit/sortable";
+
+import { CSS } from "@dnd-kit/utilities";
 
 
+function SortableOptionRow({
+    option,
+    index,
+    updateOptionLabel,
+    updateOptionValue,
+    deleteOption,
+}) {
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging,
+    } = useSortable({
+        id: option.id,
+    });
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.5 : 1,
+        position: "relative",
+        zIndex: isDragging ? 10 : "auto",
+    };
+
+    return (
+        <div
+            ref={setNodeRef}
+            style={style}
+            className={`choice-option-row ${isDragging ? "is-dragging" : ""
+                }`}
+        >
+            {/* DRAG HANDLE */}
+
+            <div
+                className="choice-option-drag"
+                {...attributes}
+                {...listeners}
+            >
+                <Text tone="subdued">
+                    ⠿
+                </Text>
+            </div>
+
+            {/* OPTION LABEL */}
+
+            <TextField
+                label={`Option ${index + 1}`}
+                labelHidden
+                value={option.label || ""}
+                suffix="en"
+                onChange={(value) =>
+                    updateOptionLabel(index, value)
+                }
+                autoComplete="off"
+            />
+
+            {/* OPTION VALUE */}
+
+            <div className="choice-option-value">
+                <TextField
+                    label={`Option ${index + 1} value`}
+                    labelHidden
+                    value={option.value ?? option.label ?? ""}
+                    onChange={(value) =>
+                        updateOptionValue(index, value)
+                    }
+                    autoComplete="off"
+                />
+            </div>
+
+            {/* DELETE */}
+
+            <Button
+                variant="plain"
+                tone="critical"
+                icon={PolarisIcons.DeleteIcon}
+                accessibilityLabel={`Delete option ${index + 1}`}
+                onClick={() => deleteOption(index)}
+            />
+        </div>
+    );
+}
 /* =========================================
    COMMON SETTINGS - ALL ELEMENTS
 ========================================= */
@@ -56,6 +156,14 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
     const [optionsExpanded, setOptionsExpanded] = useState(true);
     const [bulkAddOpen, setBulkAddOpen] = useState(false);
     const [bulkOptionsText, setBulkOptionsText] = useState("");
+
+    const sensors = useSensors(
+        useSensor(PointerSensor, {
+            activationConstraint: {
+                distance: 5,
+            },
+        })
+    );
 
     // UPDATE ELEMENT
     const update = (key, value) => {
@@ -174,9 +282,15 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
     const showLimitSelections = isCheckbox;
 
     // CHOICE OPTIONS DATA
-    const options = Array.isArray(element.options)
-        ? element.options
-        : [];
+    const options = (Array.isArray(element.options) ? element.options : [])
+        .map((option, index) => ({
+            ...(
+                typeof option === "string"
+                    ? { label: option, value: option }
+                    : option
+            ),
+            id: option?.id || `option-${element.id || type}-${index}`,
+        }));
 
     // ADD OPTION
     const addOption = () => {
@@ -191,13 +305,34 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
         update("options", [...options, newOption]);
     };
 
-    // UPDATE OPTION
-    const updateOption = (index, value) => {
+
+    // =========================================
+    // UPDATE OPTION LABEL
+    // =========================================
+
+    const updateOptionLabel = (index, value) => {
         const updatedOptions = options.map((option, i) =>
             i === index
                 ? {
                     ...option,
                     label: value,
+                }
+                : option
+        );
+
+        update("options", updatedOptions);
+    };
+
+
+    // =========================================
+    // UPDATE OPTION VALUE
+    // =========================================
+
+    const updateOptionValue = (index, value) => {
+        const updatedOptions = options.map((option, i) =>
+            i === index
+                ? {
+                    ...option,
                     value: value,
                 }
                 : option
@@ -205,6 +340,7 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
 
         update("options", updatedOptions);
     };
+
 
     // DELETE OPTION
     const deleteOption = (index) => {
@@ -215,6 +351,30 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
         update("options", updatedOptions);
     };
 
+    // REORDER OPTIONS
+    const handleOptionDragEnd = (event) => {
+        const { active, over } = event;
+
+        if (!over || active.id === over.id) return;
+
+        const oldIndex = options.findIndex(
+            (option) => option.id === active.id
+        );
+
+        const newIndex = options.findIndex(
+            (option) => option.id === over.id
+        );
+
+        if (oldIndex === -1 || newIndex === -1) return;
+
+        const reorderedOptions = arrayMove(
+            options,
+            oldIndex,
+            newIndex
+        );
+
+        update("options", reorderedOptions);
+    };
     // BULK ADD OPTIONS
     const bulkAddOptions = () => {
         const newOptions = bulkOptionsText
@@ -243,110 +403,108 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
         return (
             <BlockStack gap="300">
 
-                {/* OPTIONS */}
+                {/* =========================================
+                OPTIONS SECTION
+            ========================================= */}
 
-                <Box
-                    borderColor="border"
-                    borderWidth="025"
-                    borderRadius="200"
-                    padding="200"
+                <div
+                    className={
+                        optionsExpanded
+                            ? "choice-options--expanded"
+                            : "choice-options--collapsed"
+                    }
                 >
-                    <BlockStack gap="300">
+                    <Box
+                        borderColor="border"
+                        borderWidth="025"
+                        borderRadius="200"
+                        padding="200"
+                    >
+                        <BlockStack gap="300">
 
-                        <InlineStack
-                            align="space-between"
-                            blockAlign="center"
-                        >
-                            <Text variant="bodyMd">
-                                Options
-                            </Text>
+                            {/* OPTIONS HEADER + EXPAND BUTTON */}
 
-                            <Button
-                                variant="plain"
-                                onClick={() =>
-                                    setOptionsExpanded(!optionsExpanded)
-                                }
+                            <InlineStack
+                                align="space-between"
+                                blockAlign="center"
                             >
-                                {optionsExpanded ? "Collapse" : "Expand"}
-                            </Button>
-                        </InlineStack>
+                                <Text variant="bodyMd">
+                                    Options
+                                </Text>
 
-                        {optionsExpanded && (
+                                <Button
+                                    variant="plain"
+                                    onClick={() =>
+                                        setOptionsExpanded(!optionsExpanded)
+                                    }
+                                >
+                                    {optionsExpanded ? "Collapse" : "Expand"}
+                                </Button>
+                            </InlineStack>
+
+                            {/* OPTIONS CONTENT - ALWAYS VISIBLE */}
+
                             <BlockStack gap="200">
 
-                                {/* OPTION LABEL HEADING */}
+                                {/* COLUMN HEADINGS - EXPANDED ONLY */}
 
-                                <InlineStack
-                                    align="center"
-                                    blockAlign="center"
-                                    gap="200"
-                                    wrap={false}
+                                {optionsExpanded && (
+                                    <div className="choice-option-row choice-option-heading">
+
+                                        {/* Drag handle spacing */}
+                                        <div />
+
+                                        {/* Label heading */}
+                                        <Text variant="bodySm">
+                                            Option Label
+                                        </Text>
+
+                                        {/* Value heading */}
+                                        <Text variant="bodySm">
+                                            Option Value
+                                        </Text>
+
+                                        {/* Delete button spacing */}
+                                        <div />
+
+                                    </div>
+                                )}
+
+                                {/* =====================================
+                                OPTIONS LIST
+                                DRAG AND DROP ENABLED
+                            ===================================== */}
+
+                                <DndContext
+                                    sensors={sensors}
+                                    collisionDetection={closestCenter}
+                                    onDragEnd={handleOptionDragEnd}
                                 >
-                                    <Box width="12px" />
-
-                                    <Box flex="1">
-                                        <InlineStack
-                                            align="center"
-                                            blockAlign="center"
-                                            gap="100"
-                                        >
-                                            <Text variant="bodySm">
-                                                Option Label
-                                            </Text>
-
-                                            <Icon
-                                                source={PolarisIcons.InfoIcon}
-                                                tone="subdued"
-                                            />
-                                        </InlineStack>
-                                    </Box>
-
-                                    <Box width="20px" />
-                                </InlineStack>
-
-                                {/* OPTIONS LIST */}
-
-                                {options.map((option, index) => (
-                                    <InlineStack
-                                        key={option.id || index}
-                                        align="center"
-                                        blockAlign="center"
-                                        gap="200"
+                                    <SortableContext
+                                        items={options.map(
+                                            (option) => option.id
+                                        )}
+                                        strategy={verticalListSortingStrategy}
                                     >
-                                        <Box width="12px">
-                                            <Text tone="subdued">
-                                                ⠿
-                                            </Text>
-                                        </Box>
-
-                                        <Box flex="1">
-                                            <TextField
-                                                label={`Option ${index + 1}`}
-                                                labelHidden
-                                                value={option.label || ""}
-                                                suffix="en"
-                                                onChange={(value) =>
-                                                    updateOption(index, value)
-                                                }
-                                                autoComplete="off"
+                                        {options.map((option, index) => (
+                                            <SortableOptionRow
+                                                key={option.id}
+                                                option={option}
+                                                index={index}
+                                                updateOptionLabel={updateOptionLabel}
+                                                updateOptionValue={updateOptionValue}
+                                                deleteOption={deleteOption}
                                             />
-                                        </Box>
+                                        ))}
+                                    </SortableContext>
+                                </DndContext>
 
-                                        <Button
-                                            variant="plain"
-                                            tone="critical"
-                                            icon={PolarisIcons.DeleteIcon}
-                                            accessibilityLabel={`Delete option ${index + 1}`}
-                                            onClick={() =>
-                                                deleteOption(index)
-                                            }
-                                        />
-                                    </InlineStack>
-                                ))}
-
-                                {/* ADD BUTTONS */}
+                                {/* =====================================
+                                ADD OPTION BUTTONS
+                            ===================================== */}
 
                                 <InlineStack gap="200">
+
                                     <Button
                                         size="slim"
                                         onClick={addOption}
@@ -362,42 +520,55 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
                                     >
                                         Bulk add Option
                                     </Button>
+
                                 </InlineStack>
 
-                                {/* BULK ADD */}
+                                {/* =====================================
+                                BULK ADD OPTIONS
+                            ===================================== */}
 
                                 {bulkAddOpen && (
                                     <BlockStack gap="200">
+
                                         <TextField
                                             label="Add multiple options"
                                             value={bulkOptionsText}
                                             onChange={setBulkOptionsText}
                                             multiline={4}
-                                            placeholder={"Option 1\nOption 2\nOption 3"}
+                                            placeholder={
+                                                "Option 1\nOption 2\nOption 3"
+                                            }
                                             autoComplete="off"
                                         />
 
                                         <InlineStack align="end">
                                             <Button
                                                 variant="primary"
-                                                disabled={!bulkOptionsText.trim()}
+                                                disabled={
+                                                    !bulkOptionsText.trim()
+                                                }
                                                 onClick={bulkAddOptions}
                                             >
                                                 Add options
                                             </Button>
                                         </InlineStack>
+
                                     </BlockStack>
                                 )}
 
                             </BlockStack>
-                        )}
-                    </BlockStack>
-                </Box>
 
-                {/* OTHER OPTION */}
+                        </BlockStack>
+                    </Box>
+                </div>
+
+                {/* =========================================
+                OTHER OPTION SETTINGS
+            ========================================= */}
 
                 {showOtherOption && (
                     <BlockStack gap="200">
+
                         <Checkbox
                             label="Other option"
                             checked={Boolean(element.otherOption)}
@@ -408,6 +579,7 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
 
                         {element.otherOption && (
                             <BlockStack gap="200">
+
                                 <TextField
                                     label="Other label"
                                     value={element.otherLabel || ""}
@@ -425,15 +597,20 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
                                     }
                                     autoComplete="off"
                                 />
+
                             </BlockStack>
                         )}
+
                     </BlockStack>
                 )}
 
-                {/* LIMIT SELECTIONS */}
+                {/* =========================================
+                LIMIT SELECTIONS SETTINGS
+            ========================================= */}
 
                 {showLimitSelections && (
                     <BlockStack gap="200">
+
                         <Checkbox
                             label="Limit selections"
                             checked={Boolean(element.limitSelections)}
@@ -444,12 +621,17 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
 
                         {element.limitSelections && (
                             <InlineStack gap="300" wrap={false}>
+
+                                {/* MIN SELECTIONS */}
+
                                 <Box width="50%">
                                     <TextField
                                         label="Min selections"
                                         type="number"
                                         placeholder="0-2"
-                                        value={String(element.minSelections ?? "")}
+                                        value={String(
+                                            element.minSelections ?? ""
+                                        )}
                                         onChange={(value) =>
                                             update("minSelections", value)
                                         }
@@ -459,12 +641,16 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
                                     />
                                 </Box>
 
+                                {/* MAX SELECTIONS */}
+
                                 <Box width="50%">
                                     <TextField
                                         label="Max selections"
                                         type="number"
                                         placeholder="0-2"
-                                        value={String(element.maxSelections ?? "")}
+                                        value={String(
+                                            element.maxSelections ?? ""
+                                        )}
                                         onChange={(value) =>
                                             update("maxSelections", value)
                                         }
@@ -473,14 +659,18 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
                                         condensed
                                     />
                                 </Box>
+
                             </InlineStack>
                         )}
+
                     </BlockStack>
                 )}
 
             </BlockStack>
         );
     };
+
+
 
     // COMMON SETTINGS UI
     return (

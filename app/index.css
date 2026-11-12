@@ -1946,3 +1946,139 @@
   background: #2c6ecb;
   color: #ffffff;
 }
+
+/* =========================================
+   CHOICE OPTIONS - SETTINGS PANEL WIDTH
+========================================= */
+
+/* Expanded: same width as Paragraph */
+.template-editor__main:has(.choice-options--expanded) {
+    grid-template-columns: 220px 500px minmax(0, 1fr) !important;
+}
+
+/* Collapsed: normal settings width */
+.template-editor__main:has(.choice-options--collapsed) {
+    grid-template-columns: 220px 350px minmax(0, 1fr);
+}
+
+
+/* =========================================
+   CHOICE OPTIONS - COLLAPSED
+========================================= */
+
+/* Keep each option on a separate line */
+.choice-options--collapsed .choice-option-row:not(.choice-option-heading) {
+    display: grid;
+    grid-template-columns: 12px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+}
+
+/* Hide column headings */
+.choice-options--collapsed .choice-option-heading {
+    display: none;
+}
+
+/* Hide only the value input */
+.choice-options--collapsed .choice-option-value {
+    display: none;
+}
+
+
+/* =========================================
+   CHOICE OPTIONS - EXPANDED
+========================================= */
+
+/* Label and value side by side */
+.choice-options--expanded .choice-option-row {
+    display: grid;
+    grid-template-columns:
+        12px
+        minmax(0, 1fr)
+        minmax(0, 1fr)
+        auto;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+}
+
+/* Show column headings */
+.choice-options--expanded .choice-option-heading {
+    display: grid;
+}
+
+/* Show value inputs */
+.choice-options--expanded .choice-option-value {
+    display: block;
+    min-width: 0;
+}
+
+
+/* =========================================
+   SHARED OPTION ROW STYLES
+========================================= */
+
+/* Prevent input overflow */
+.choice-option-row .Polaris-TextField {
+    width: 100%;
+    min-width: 0;
+}
+
+/* Drag handle */
+.choice-option-drag {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Heading alignment */
+.choice-option-heading {
+    align-items: center;
+}
+.choice-option-row {
+    display: grid;
+    grid-template-columns: 24px minmax(0, 1fr) minmax(0, 1fr) 32px;
+    align-items: center;
+    gap: 8px;
+}
+
+.choice-option-drag {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: grab;
+    color: #8c9196;
+    user-select: none;
+}
+
+.choice-option-drag:hover {
+    color: #303030;
+}
+
+.choice-option-drag:active {
+    cursor: grabbing;
+}
+.choice-option-row {
+    display: grid;
+    grid-template-columns: 24px minmax(0, 1fr) minmax(0, 1fr) 32px;
+    align-items: center;
+    gap: 8px;
+}
+
+.choice-option-drag {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: grab;
+    color: #8c9196;
+    user-select: none;
+}
+
+.choice-option-drag:hover {
+    color: #303030;
+}
+
+.choice-option-drag:active {
+    cursor: grabbing;
+}

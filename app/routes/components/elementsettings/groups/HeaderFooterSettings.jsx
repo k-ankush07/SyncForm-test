@@ -11,6 +11,7 @@ import {
 } from "@shopify/polaris";
 
 import RichTextEditor from "../../RichTextEditor/RichTextEditor.jsx";
+import ColorPickerField from "../../RichTextEditor/ColorPickerField.jsx";
 
 /* =========================================
    HEADER AND FOOTER SETTINGS
@@ -87,6 +88,30 @@ export default function HeaderFooterSettings({ element, onChange }) {
                     onChange={(value) =>
                         update("headingTag", value)
                     }
+                />
+                {/* HEADING COLOR */}
+
+                <ColorPickerField
+                    label="Heading color"
+                    value={element.headingColor || ""}
+                    onChange={(value) =>
+                        update("headingColor", value)
+                    }
+                    helpText="Choose a color for your form heading."
+                />
+
+                {/* HEADING FONT SIZE */}
+
+                <TextField
+                    label="Font size"
+                    type="number"
+                    value={String(element.headingFontSize ?? 24)}
+                    onChange={(value) => {
+                        update("headingFontSize", value);
+                    }}
+                    suffix="px"
+                    autoComplete="off"
+                    placeholder="24"
                 />
 
                 {/* ALIGNMENT */}
@@ -247,11 +272,10 @@ export default function HeaderFooterSettings({ element, onChange }) {
                             <button
                                 key={alignment.value}
                                 type="button"
-                                className={`column-width-selector__option ${
-                                    (element.buttonAlignment || "left") === alignment.value
-                                        ? "is-selected"
-                                        : ""
-                                }`}
+                                className={`column-width-selector__option ${(element.buttonAlignment || "left") === alignment.value
+                                    ? "is-selected"
+                                    : ""
+                                    }`}
                                 onClick={() =>
                                     update("buttonAlignment", alignment.value)
                                 }
