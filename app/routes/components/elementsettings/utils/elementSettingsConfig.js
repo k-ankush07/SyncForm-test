@@ -62,6 +62,7 @@ export function getElementSettingsType(type) {
   if (normalizedType === "rating_level") return "ratingLevel";
   if (normalizedType === "range" || normalizedType === "range_slider")
     return "range";
+  if (normalizedType === "url") return "url";
   if (normalizedType === "product") return "product";
   if (normalizedType === "matrix") return "matrix";
   if (normalizedType === "feedback") return "feedback";

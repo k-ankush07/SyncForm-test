@@ -2082,3 +2082,39 @@
 .choice-option-drag:active {
     cursor: grabbing;
 }
+
+/* //preview filed switch btn */
+.preview-switch {
+  position: relative;
+  width: 42px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.preview-switch.is-on {
+  background-color: #008060;
+}
+
+.preview-switch.is-off {
+  background-color: #8c9196;
+}
+
+.preview-switch__thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.preview-switch.is-on .preview-switch__thumb {
+  transform: translateX(18px);
+}

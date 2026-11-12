@@ -1,5 +1,6 @@
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState,useRef } from "react";
+import SignaturePad from "signature_pad";
 
 import * as PolarisIcons from "@shopify/polaris-icons";
 import { Icon } from "@shopify/polaris";
@@ -92,7 +93,7 @@ export default function PreviewField({ element, field, pages = [], activePageId 
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [imagePreview, setImagePreview] = useState("");
   const [rangeValue, setRangeValue] = useState(50);
-  const [colorValue, setColorValue] = useState("#563D7C");
+  //const [colorValue, setColorValue] = useState("#563D7C");
   const [rating, setRating] = useState(0);
 
   // Apply a changed default value when the element settings change.
@@ -115,10 +116,29 @@ export default function PreviewField({ element, field, pages = [], activePageId 
   normalizedElement.type,
 ]);
 
+//switch values
+const [switchValue, setSwitchValue] = useState(
+  Boolean(normalizedElement.defaultChecked)
+);
+useEffect(() => {
+  setSwitchValue(Boolean(normalizedElement.defaultChecked));
+}, [
+  normalizedElement.id,
+  normalizedElement.defaultChecked,
+]);
+
+//color pick show in prevuew
+const [colorValue, setColorValue] = useState(
+  normalizedElement.defaultColor || "#563D7C"
+);
+useEffect(() => {
+  setColorValue(normalizedElement.defaultColor || "#563D7C");
+}, [
+  normalizedElement.id,
+  normalizedElement.defaultColor,
+]);
+
   const rawOptions = normalizedElement.options || [];
-
-
-
 
   //for date and time
   const [dateValue, setDateValue] = useState(
@@ -527,16 +547,22 @@ export default function PreviewField({ element, field, pages = [], activePageId 
         </InlineStack>
       );
     case "url":
-      return (
-        <TextField
-          {...commonTextFieldProps}
-          type="url"
-          placeholder={placeholder || "https://example.com"}
-          value={value}
-          onChange={setValue}
-          readOnly
-        />
-      );
+  return (
+    <TextField
+      {...commonTextFieldProps}
+      type="url"
+      placeholder={placeholder || "https://example.com"}
+      value={value}
+      onChange={setValue}
+      autoComplete="url"
+      readOnly
+      prefix={
+        element.showIcon !== false ? (
+          <Icon source={PolarisIcons.LinkIcon} />
+        ) : undefined
+      }
+    />
+  );
 
     case "date":
       return (
@@ -575,29 +601,213 @@ export default function PreviewField({ element, field, pages = [], activePageId 
         </BlockStack>
       );
 
-    case "signature":
-      return (
-        <BlockStack gap="200">
-          {!hideLabel && (
-            <Text as="p" variant="bodyMd">
-              {label}
-            </Text>
+    
+case "signature": {
+  const canvasRef = useRef(null);
+  const signaturePadRef = useRef(null);
+
+  const [uploadedSignature, setUploadedSignature] = useState(null);
+
+  const showCanvas = normalizedElement.showCanvas !== false;
+  const allowFileUpload = normalizedElement.allowFileUpload === true;
+
+  const canvasHeight = Number(normalizedElement.canvasHeight) || 150;
+  const penColor = normalizedElement.penColor || "#000000";
+  const penWidth = Number(normalizedElement.penWidth) || 2;
+
+  useEffect(() => {
+    if (!showCanvas || !canvasRef.current) return;
+
+    const canvas = canvasRef.current;
+    const signaturePad = new SignaturePad(canvas, {
+      penColor,
+      minWidth: penWidth,
+      maxWidth: penWidth,
+      backgroundColor: normalizedElement.canvasBackground || "#ffffff",
+    });
+
+    signaturePadRef.current = signaturePad;
+
+    const resizeCanvas = () => {
+      const ratio = Math.max(window.devicePixelRatio || 1, 1);
+      const data = signaturePad.isEmpty() ? null : signaturePad.toData();
+
+      canvas.width = canvas.offsetWidth * ratio;
+      canvas.height = canvasHeight * ratio;
+
+      const context = canvas.getContext("2d");
+      context.scale(ratio, ratio);
+
+      signaturePad.clear();
+
+      if (data) {
+        signaturePad.fromData(data);
+      }
+    };
+
+    resizeCanvas();
+
+    return () => {
+      signaturePad.off();
+      signaturePadRef.current = null;
+    };
+  }, [
+    normalizedElement.id,
+    showCanvas,
+    canvasHeight,
+    penColor,
+    penWidth,
+    normalizedElement.canvasBackground,
+  ]);
+
+  const clearSignature = () => {
+    signaturePadRef.current?.clear();
+  };
+
+  const handleSignatureUpload = (event) => {
+    const file = event.target.files?.[0];
+
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      event.target.value = "";
+      return;
+    }
+
+    setUploadedSignature(URL.createObjectURL(file));
+  };
+
+  return (
+    <BlockStack gap="200">
+      {!hideLabel && (
+        <Text as="p" variant="bodyMd">
+          {label}
+          {required && (
+            <span style={{ color: "var(--p-color-text-critical)" }}>
+              {" "}*
+            </span>
           )}
+        </Text>
+      )}
+
+      {/* DRAW SIGNATURE */}
+      {showCanvas && (
+        <BlockStack gap="200">
           <div
             style={{
               border: "1px dashed #8c9196",
               borderRadius: "8px",
-              padding: "28px",
-              textAlign: "center",
+              overflow: "hidden",
+              background: normalizedElement.canvasBackground || "#ffffff",
             }}
           >
-            <Text as="p" variant="bodySm" tone="subdued">
-              Signature area
-            </Text>
+            <canvas
+              ref={canvasRef}
+              style={{
+                display: "block",
+                width: "100%",
+                height: `${canvasHeight}px`,
+                touchAction: "none",
+                cursor: "crosshair",
+              }}
+            />
           </div>
-          {descriptionText}
+
+          {normalizedElement.allowClear !== false && (
+            <InlineStack align="end">
+              <Button
+                size="slim"
+                onClick={clearSignature}
+              >
+                Clear signature
+              </Button>
+            </InlineStack>
+          )}
         </BlockStack>
-      );
+      )}
+
+      {/* OR SEPARATOR */}
+      {showCanvas && allowFileUpload && (
+        <Text as="p" variant="bodySm" tone="subdued">
+          OR
+        </Text>
+      )}
+
+      {/* UPLOAD SIGNATURE */}
+      {allowFileUpload && (
+        <BlockStack gap="200">
+          {uploadedSignature ? (
+            <BlockStack gap="200">
+              <img
+                src={uploadedSignature}
+                alt="Uploaded signature"
+                style={{
+                  maxWidth: "100%",
+                  maxHeight: "150px",
+                  objectFit: "contain",
+                  border: "1px solid #e1e3e5",
+                  borderRadius: "8px",
+                  padding: "8px",
+                }}
+              />
+
+              {normalizedElement.allowReplace !== false && (
+                <label style={{ cursor: "pointer" }}>
+                  <span
+                    style={{
+                      display: "inline-block",
+                      padding: "7px 14px",
+                      border: "1px solid #8c9196",
+                      borderRadius: "6px",
+                    }}
+                  >
+                    Replace signature
+                  </span>
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg"
+                    hidden
+                    onChange={handleSignatureUpload}
+                  />
+                </label>
+              )}
+            </BlockStack>
+          ) : (
+            <label
+              style={{
+                border: "1px dashed #8c9196",
+                borderRadius: "8px",
+                padding: "24px",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: "8px",
+                cursor: "pointer",
+              }}
+            >
+              <Icon source={PolarisIcons.UploadIcon} />
+              <Text as="span" variant="bodyMd">
+                {normalizedElement.uploadButtonText || "Upload signature"}
+              </Text>
+              <Text as="span" variant="bodySm" tone="subdued">
+                {normalizedElement.acceptedFileTypes || "PNG, JPG, JPEG"}
+              </Text>
+
+              <input
+                type="file"
+                accept="image/png,image/jpeg"
+                hidden
+                onChange={handleSignatureUpload}
+              />
+            </label>
+          )}
+        </BlockStack>
+      )}
+
+      {descriptionText}
+    </BlockStack>
+  );
+}
 
     case "heading": {
       const headingConfig = {
@@ -1049,38 +1259,47 @@ export default function PreviewField({ element, field, pages = [], activePageId 
       );
     }
 
-    case "color_swatch":
-      return (
-        <BlockStack gap="200">
-          {!hideLabel && (
-            <Text as="p" variant="bodyMd">
-              {label}
-            </Text>
-          )}
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
-            {["#E53935", "#1E88E5", "#43A047", "#FDD835"].map((color) => (
-              <button
-                key={color}
-                type="button"
-                aria-label={color}
-                onClick={() => setColorValue(color)}
-                style={{
-                  width: "32px",
-                  height: "32px",
-                  borderRadius: "50%",
-                  background: color,
-                  border:
-                    colorValue === color
-                      ? "3px solid #202223"
-                      : "1px solid #d2d5d8",
-                  cursor: "pointer",
-                }}
-              />
-            ))}
-          </div>
-          {descriptionText}
-        </BlockStack>
-      );
+    case "color_swatch": {
+  const colors = Array.isArray(normalizedElement.colors)
+    ? normalizedElement.colors
+    : ["#E53935", "#1E88E5", "#43A047", "#FDD835"];
+
+  return (
+    <BlockStack gap="200">
+      {fieldLabelWithIcon}
+
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          gap: "10px",
+        }}
+      >
+        {colors.map((color, index) => (
+          <button
+            key={`${color}-${index}`}
+            type="button"
+            aria-label={`Select ${color}`}
+            onClick={() => setColorValue(color)}
+            style={{
+              width: "32px",
+              height: "32px",
+              borderRadius: "50%",
+              background: color,
+              border:
+                colorValue === color
+                  ? "3px solid #202223"
+                  : "1px solid #d2d5d8",
+              cursor: "pointer",
+            }}
+          />
+        ))}
+      </div>
+
+      {descriptionText}
+    </BlockStack>
+  );
+}
 
     case "color_picker":
       return (
@@ -1422,48 +1641,32 @@ export default function PreviewField({ element, field, pages = [], activePageId 
         </BlockStack>
       );
     }
-    case "switch":
-      return (
-        <BlockStack gap="200">
-          <InlineStack gap="300" blockAlign="center">
-            <button
-              type="button"
-              role="switch"
-              aria-checked={checked}
-              onClick={() => setChecked((prev) => !prev)}
-              style={{
-                width: "42px",
-                height: "24px",
-                minWidth: "42px",
-                borderRadius: "20px",
-                border: "none",
-                padding: "3px",
-                cursor: "pointer",
-                backgroundColor: checked ? "#008060" : "#8C9196",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: checked ? "flex-end" : "flex-start",
-                transition: "background-color 0.2s ease",
-              }}
-            >
-              <span
-                style={{
-                  width: "18px",
-                  height: "18px",
-                  borderRadius: "50%",
-                  backgroundColor: "#ffffff",
-                  boxShadow: "0 1px 3px rgba(0,0,0,0.25)",
-                  transition: "transform 0.2s ease",
-                }}
-              />
-            </button>
+case "switch":
+  return (
+    <BlockStack gap="200">
+      {fieldLabelWithIcon}
 
-            {fieldLabelWithIcon}
-          </InlineStack>
+      <InlineStack align="start" blockAlign="center" gap="300">
+        <button
+          type="button"
+          role="switch"
+          aria-checked={switchValue}
+          onClick={() => setSwitchValue((prev) => !prev)}
+          className={`preview-switch ${switchValue ? "is-on" : "is-off"}`}
+        >
+          <span className="preview-switch__thumb" />
+        </button>
 
-          {descriptionText}
-        </BlockStack>
-      );
+        <Text as="span" variant="bodySm">
+          {switchValue
+            ? normalizedElement.onText || "On"
+            : normalizedElement.offText || "Off"}
+        </Text>
+      </InlineStack>
+
+      {descriptionText}
+    </BlockStack>
+  );
 
     case "image_dropdown": {
       const imageOptions = rawOptions.filter(

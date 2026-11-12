@@ -13,6 +13,7 @@ import {
 } from "@shopify/polaris";
 import ColorPickerField from "../../RichTextEditor/ColorPickerField";
 import RichTextEditor from "../../RichTextEditor/RichTextEditor";
+import ColorInput from "../../RichTextEditor/ColorInput.jsx";
 
 
 // Shared update helper
@@ -211,12 +212,15 @@ export function ColorSettings({ element, onChange }) {
     updateElement(element, onChange, key, value);
 
   const updateColor = (index, value) => {
-    update("colors", colors.map((color, i) => i === index ? value : color));
+    update(
+      "colors",
+      colors.map((color, i) => (i === index ? value : color))
+    );
   };
 
   return (
     <BlockStack gap="300">
-      <ColorPickerField
+      <ColorInput
         label="Default color"
         value={element.defaultColor || "#563D7C"}
         onChange={(value) => update("defaultColor", value)}
@@ -225,7 +229,10 @@ export function ColorSettings({ element, onChange }) {
       {isSwatch && (
         <>
           <Divider />
-          <Text as="h3" variant="headingSm">Swatch colors</Text>
+
+          <Text as="h3" variant="headingSm">
+            Swatch colors
+          </Text>
 
           {colors.map((color, index) => (
             <InlineStack key={index} gap="200" blockAlign="center">
@@ -236,22 +243,26 @@ export function ColorSettings({ element, onChange }) {
                   background: color,
                   border: "1px solid #ccc",
                   borderRadius: "4px",
+                  flexShrink: 0,
                 }}
               />
+
               <div style={{ flex: 1 }}>
-                <TextField
+                <ColorInput
                   label={`Color ${index + 1}`}
-                  labelHidden
                   value={color}
                   onChange={(value) => updateColor(index, value)}
-                  autoComplete="off"
                 />
               </div>
+
               <Button
                 variant="plain"
                 tone="critical"
                 onClick={() =>
-                  update("colors", colors.filter((_, i) => i !== index))
+                  update(
+                    "colors",
+                    colors.filter((_, i) => i !== index)
+                  )
                 }
               >
                 Remove
@@ -803,30 +814,108 @@ export function RepeaterSettings({ element, onChange }) {
 }
 
 // SIGNATURE
+
 export function SignatureSettings({ element, onChange }) {
   const update = (key, value) =>
     updateElement(element, onChange, key, value);
 
+  const showCanvas = element.showCanvas !== false;
+  const allowFileUpload = element.allowFileUpload === true;
+
   return (
     <BlockStack gap="300">
-      <TextField
-        label="Placeholder"
-        value={element.placeholder || "Sign here"}
-        onChange={(value) => update("placeholder", value)}
-        autoComplete="off"
-      />
 
-      <ColorPickerField
-        label="Pen color"
-        value={element.penColor || "#000000"}
-        onChange={(value) => update("penColor", value)}
+      {/* SIGNATURE OPTIONS */}
+      <Text variant="headingSm" as="h3">
+        Signature options
+      </Text>
+
+      <Checkbox
+        label="Show signature canvas"
+        checked={showCanvas}
+        onChange={(value) => update("showCanvas", value)}
       />
 
       <Checkbox
-        label="Allow clearing signature"
-        checked={element.allowClear !== false}
-        onChange={(value) => update("allowClear", value)}
+        label="Allow signature file upload"
+        checked={allowFileUpload}
+        onChange={(value) => update("allowFileUpload", value)}
       />
+
+      <Divider />
+
+      {/* CANVAS SETTINGS */}
+      {showCanvas && (
+        <BlockStack gap="300">
+          <Text variant="headingSm" as="h3">
+            Signature canvas
+          </Text>
+
+          <TextField
+            label="Placeholder"
+            value={element.placeholder || "Sign here"}
+            onChange={(value) => update("placeholder", value)}
+            autoComplete="off"
+          />
+
+          <TextField
+            label="Canvas height (px)"
+            type="number"
+            value={String(element.canvasHeight ?? 150)}
+            onChange={(value) => update("canvasHeight", value)}
+            autoComplete="off"
+          />
+
+          <ColorInput
+            label="Pen color"
+            value={element.penColor || "#000000"}
+            onChange={(value) => update("penColor", value)}
+          />
+
+          <TextField
+            label="Pen thickness (px)"
+            type="number"
+            value={String(element.penWidth ?? 2)}
+            onChange={(value) => update("penWidth", value)}
+            autoComplete="off"
+          />
+
+          <Checkbox
+            label="Allow clearing signature"
+            checked={element.allowClear !== false}
+            onChange={(value) => update("allowClear", value)}
+          />
+        </BlockStack>
+      )}
+
+      {/* FILE UPLOAD SETTINGS */}
+      {allowFileUpload && (
+        <BlockStack gap="300">
+          <Divider />
+
+          <Text variant="headingSm" as="h3">
+            Signature file upload
+          </Text>
+
+          <TextField
+            label="Upload button text"
+            value={element.uploadButtonText || "Upload signature"}
+            onChange={(value) =>
+              update("uploadButtonText", value)
+            }
+            autoComplete="off"
+          />
+
+
+
+          <Checkbox
+            label="Allow replacing uploaded signature"
+            checked={element.allowReplace !== false}
+            onChange={(value) => update("allowReplace", value)}
+          />
+        </BlockStack>
+      )}
+
     </BlockStack>
   );
 }
@@ -995,6 +1084,106 @@ export function ConsentSettings({
           Delete
         </Button>
       )}
+
+    </BlockStack>
+  );
+}
+//URL
+export function UrlSettings({ element, onChange }) {
+  const update = (key, value) =>
+    updateElement(element, onChange, key, value);
+
+  return (
+    <BlockStack gap="300">
+
+      <TextField
+        label="Field label"
+        value={element.label || "Website URL"}
+        onChange={(value) => update("label", value)}
+        autoComplete="off"
+      />
+
+      <TextField
+        label="Placeholder"
+        value={element.placeholder || "https://example.com"}
+        onChange={(value) => update("placeholder", value)}
+        autoComplete="off"
+      />
+
+      <TextField
+        label="Field name (key)"
+        value={element.name || "website_url"}
+        onChange={(value) => update("name", value)}
+        autoComplete="off"
+        helpText="Used to identify this field in form submissions."
+      />
+
+      <Divider />
+
+      <Text variant="headingSm" as="h3">
+        Default value
+      </Text>
+
+      <TextField
+        label="Default URL"
+        labelHidden
+        value={element.defaultValue || ""}
+        onChange={(value) => update("defaultValue", value)}
+        placeholder="https://yourwebsite.com"
+        autoComplete="off"
+        helpText="Pre-fill the field with a URL (optional)."
+      />
+
+      <Divider />
+
+      <Text variant="headingSm" as="h3">
+        Validation
+      </Text>
+
+      <Checkbox
+        label="Validate URL format"
+        checked={element.validateUrl !== false}
+        onChange={(value) => update("validateUrl", value)}
+      />
+
+      <Checkbox
+        label="Require HTTPS"
+        checked={Boolean(element.requireHttps)}
+        onChange={(value) => update("requireHttps", value)}
+      />
+
+      <Checkbox
+        label="Make field required"
+        checked={Boolean(element.required)}
+        onChange={(value) => update("required", value)}
+      />
+
+      <Divider />
+
+      <Text variant="headingSm" as="h3">
+        Advanced options
+      </Text>
+
+      <Checkbox
+        label="Show link icon"
+        checked={element.showIcon !== false}
+        onChange={(value) => update("showIcon", value)}
+      />
+
+      <Checkbox
+        label="Open link in new tab"
+        checked={element.openInNewTab !== false}
+        onChange={(value) => update("openInNewTab", value)}
+      />
+
+      <TextField
+        label="Allowed domains"
+        value={element.allowedDomains || ""}
+        onChange={(value) => update("allowedDomains", value)}
+        placeholder="example.com, shopify.com"
+        autoComplete="off"
+        helpText="Leave empty to allow any valid domain."
+      />
 
     </BlockStack>
   );

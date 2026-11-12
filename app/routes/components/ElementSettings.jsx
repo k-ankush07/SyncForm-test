@@ -45,6 +45,7 @@ import {
     SignatureSettings,
     CustomHtmlSettings,
     ConsentSettings,
+    UrlSettings,
 } from "./elementsettings/groups/AdvancedElementSettings";
 
 import {
@@ -1066,6 +1067,7 @@ export default function ElementSettings({ element, onChange, onClose, onDelete, 
         signature: SignatureSettings,
         html: CustomHtmlSettings,   
         consent: ConsentSettings,
+        url: UrlSettings
     };
 
     const GroupComponent = settingsGroups[groupType];
