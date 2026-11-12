@@ -45,7 +45,7 @@ const RATING_TYPES = ["rating", "ratings", "rating_star"];
 
 const IMAGE_CHOICE_TYPES = ["image_options", "image_dropdown"];
 
-const STATIC_TYPES = ["heading", "paragraph", "divider", "html"];
+const STATIC_TYPES = ["heading", "paragraph", "divider"];
 
 export function normalizeElementType(type = "") {
   return String(type)
@@ -69,7 +69,7 @@ export function getElementSettingsType(type) {
   if (normalizedType === "hidden") return "hidden";
   if (normalizedType === "repeater") return "repeater";
   if (normalizedType === "signature") return "signature";
-
+ if (["html", "custom_html"].includes(normalizedType)) return "html";
   if (CONTACT_TYPES.includes(normalizedType)) return "contact";
   if (TEXT_TYPES.includes(normalizedType)) return "text";
   if (CHOICE_TYPES.includes(normalizedType)) return "choice";

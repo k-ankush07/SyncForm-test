@@ -1063,7 +1063,7 @@ export default function ElementSettings({ element, onChange, onClose, onDelete, 
         hidden: HiddenSettings,
         repeater: RepeaterSettings,
         signature: SignatureSettings,
-         customHtml: CustomHtmlSettings,   
+         html: CustomHtmlSettings,   
     };
 
     const GroupComponent = settingsGroups[groupType];
