@@ -201,13 +201,17 @@ function DraggablePreviewElement({
     // Color input is allowed to initiate dragging.
     const isColorInput = target.closest(".color-input-activator");
 
+    // Allow dragging directly from Star Rating buttons.
+    const isRatingStarButton = target.closest(".rating-star-button");
+
     if (
       !isColorInput &&
+      !isRatingStarButton &&
       target.closest(
         [
           ".preview-drop-zone",
           "input:not([readonly])",
-          "textarea",
+
           "select",
           "button",
           "[role='dialog']",
@@ -252,8 +256,8 @@ function DraggablePreviewElement({
         cursor: isDragging ? "grabbing" : "default",
       }}
       className={[
-         "preview-element",
-  element.customClass || "",
+        "preview-element",
+        element.customClass || "",
         isSelected ? "preview-element--selected" : "",
         isHidden ? "preview-element--hidden" : "",
         isDragging ? "preview-element--dragging" : "",
@@ -471,6 +475,27 @@ export default function LivePreview({
   isModelPreview = false,
 
 }) {
+  const renderRootElement = (element, page) => (
+    <DraggablePreviewElement
+      key={element.id}
+      element={element}
+      pageId={page.id}
+      pages={pages}
+      activePageId={activePageId}
+      rowId={null}
+      collection="rootElements"
+      selectedElementId={selectedElementId}
+      onSelectElement={onSelectElement}
+      onDuplicateElement={onDuplicateElement}
+      onToggleElementVisibility={onToggleElementVisibility}
+      onDeleteElement={onDeleteElement}
+      onOpenElementPicker={onOpenElementPicker}
+      onChangeElement={onChangeElement}
+      products={products}
+      productsLoading={productsLoading}
+      isModelPreview={isModelPreview}
+    />
+  );
   return (
     <div
       className={[
@@ -605,6 +630,14 @@ export default function LivePreview({
                                 placement="before"
                                 onOpenElementPicker={onOpenElementPicker}
                               />
+                              {/* Standalone elements positioned before this row */}
+                              {(page.rootElements ?? [])
+                                .filter(
+                                  (element) =>
+                                    element.visible !== false &&
+                                    element.insertBeforeRowId === row.id
+                                )
+                                .map((element) => renderRootElement(element, page))}
 
                               {/* Existing row */}
                               <div className="preview-row">
@@ -637,6 +670,14 @@ export default function LivePreview({
                                   ))}
                                 </div>
                               </div>
+                              {/* Standalone elements positioned after this row */}
+                              {(page.rootElements ?? [])
+                                .filter(
+                                  (element) =>
+                                    element.visible !== false &&
+                                    element.insertAfterRowId === row.id
+                                )
+                                .map((element) => renderRootElement(element, page))}
 
                               {/* Add element after the last row */}
                               {index === allRows.length - 1 && (
@@ -653,10 +694,13 @@ export default function LivePreview({
 
 
                         {/* Root elements remain full width. */}
-                        <BlockStack gap="300">
+                        {/* <BlockStack gap="300">
                           {(page.rootElements ?? [])
                             .filter(
-                              (element) => element.visible !== false
+                              (element) =>
+                                element.visible !== false &&
+                                !element.insertBeforeRowId &&
+                                !element.insertAfterRowId
                             )
                             .map((element) => (
                               <DraggablePreviewElement
@@ -682,6 +726,17 @@ export default function LivePreview({
                                 isModelPreview={isModelPreview}
                               />
                             ))}
+                        </BlockStack> */}
+                        {/* Root elements remain full width. */}
+                        <BlockStack gap="300">
+                          {(page.rootElements ?? [])
+                            .filter(
+                              (element) =>
+                                element.visible !== false &&
+                                !element.insertBeforeRowId &&
+                                !element.insertAfterRowId
+                            )
+                            .map((element) => renderRootElement(element, page))}
                         </BlockStack>
 
                         {/* Existing submit button */}

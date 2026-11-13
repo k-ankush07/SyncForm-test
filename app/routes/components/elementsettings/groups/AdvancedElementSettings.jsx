@@ -761,8 +761,6 @@ export function FeedbackSettings({ element, onChange }) {
 }
 
 
-
-
 // REPEATER
 export function RepeaterSettings({ element, onChange }) {
   const update = (key, value) =>
@@ -1173,9 +1171,7 @@ export function UrlSettings({ element, onChange }) {
 }
 
 // HIDDEN
-
 // HIDDEN FIELD SETTINGS
-
 function normalizeConditionType(type = "") {
   return String(type).toLowerCase().replace(/[\s-]+/g, "_");
 }

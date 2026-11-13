@@ -40,7 +40,7 @@ const DATE_TYPES = [
 
 const FILE_TYPES = ["file", "file_upload", "upload"];
 
-const RATING_TYPES = ["rating", "ratings", "rating_star"];
+const RATING_TYPES = ["rating", "ratings", "rating_star", "star_rating"];
 
 const IMAGE_CHOICE_TYPES = ["image_options", "image_dropdown"];
 

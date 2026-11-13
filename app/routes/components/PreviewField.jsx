@@ -1048,81 +1048,109 @@ export default function PreviewField({
       );
     }
 
-    case "rating_star": {
-      const customRatingIcon =
-        normalizedElement.useCustomRatingIcon && normalizedElement.ratingIcon
-          ? PolarisIcons[normalizedElement.ratingIcon]
-          : null;
+ case "rating_star": {
+  const customRatingIcon =
+    normalizedElement.useCustomRatingIcon && normalizedElement.ratingIcon
+      ? PolarisIcons[normalizedElement.ratingIcon]
+      : null;
 
-      return (
-        <BlockStack gap="200">
-          {fieldLabelWithIcon}
+  return (
+    <BlockStack gap="200">
+      {fieldLabelWithIcon}
 
-          <div style={{ display: "flex", gap: "9px", alignItems: "center" }}>
-            {[1, 2, 3, 4, 5].map((star) => (
-              <div
-                key={star}
+      <div
+        style={{
+          width: "100%",
+          maxWidth: "100%",
+          minWidth: 0,
+          containerType: "inline-size",
+          containerName: "rating-container",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            width: "100%",
+            maxWidth: "100%",
+            gap: "clamp(2px, 2cqw, 9px)",
+            alignItems: "center",
+            justifyContent: "flex-start",
+            boxSizing: "border-box",
+            minWidth: 0,
+          }}
+        >
+          {[1, 2, 3, 4, 5].map((star) => (
+            <div
+              key={star}
+              style={{
+                flex: "1 1 0",
+                minWidth: 0,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: "8px",
+              }}
+            >
+              <button
+                type="button"
+                 className="rating-star-button"
+                disabled={isReadOnly}
+                onClick={() => setRating(star)}
                 style={{
+                  width: "100%",
+                  aspectRatio: "1 / 1",
+                  maxWidth: "90px",
+                  minWidth: 0,
+                  border: "none",
+                  background: "transparent",
+                  cursor: isReadOnly ? "default" : "pointer",
+                  padding: "2px",
                   display: "flex",
-                  flexDirection: "column",
                   alignItems: "center",
-                  gap: "30px",
+                  justifyContent: "center",
+                  color: star <= rating ? "#F5A623" : "#C9CCCF",
+                  fontSize: "clamp(18px, 12cqw, 54px)",
+                  lineHeight: 1,
+                  boxSizing: "border-box",
+                  overflow: "hidden",
                 }}
               >
-                <button
-                  type="button"
-                  disabled={isReadOnly}
-                  onClick={() => setRating(star)}
+                {customRatingIcon ? (
+                  <span
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Icon source={customRatingIcon} />
+                  </span>
+                ) : (
+                  "★"
+                )}
+              </button>
+
+              {normalizedElement.showNumberUnderIcon && (
+                <span
                   style={{
-                    border: "none",
-                    background: "transparent",
-                    cursor: isReadOnly ? "default" : "pointer",
-                    padding: 0,
-                    transform: "scale(2.3)",
-                    transformOrigin: "center",
-                    color: star <= rating ? "#F5A623" : "#C9CCCF",
+                    fontSize: "14px",
+                    color: "#6D7175",
                   }}
                 >
-                  {customRatingIcon ? (
-                    <span
-                      style={{
-                        display: "flex",
-                        width: "80px",
-                        height: "80px",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <Icon source={customRatingIcon} />
-                    </span>
-                  ) : (
-                    <span
-                      style={{
-                        display: "flex",
-                        width: "68px",
-                        height: "68px",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      ★
-                    </span>
-                  )}
-                </button>
+                  {star}
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
 
-                {normalizedElement.showNumberUnderIcon && (
-                  <span style={{ fontSize: "14px", color: "#6D7175" }}>
-                    {star}
-                  </span>
-                )}
-              </div>
-            ))}
-          </div>
-
-          {descriptionText}
-        </BlockStack>
-      );
-    }
+      {descriptionText}
+    </BlockStack>
+  );
+}
 
     case "file_upload": {
       const buttonText = normalizedElement.buttonText || "Browse file";
@@ -1350,65 +1378,72 @@ export default function PreviewField({
         </BlockStack>
       );
 
-    case "form_header": {
-      const headingConfig = {
-        h1: { tag: "h1", fontSize: 36 },
-        h2: { tag: "h2", fontSize: 30 },
-        h3: { tag: "h3", fontSize: 24 },
-        h4: { tag: "h4", fontSize: 20 },
-        h5: { tag: "h5", fontSize: 18 },
-        h6: { tag: "h6", fontSize: 16 },
-      };
+  case "form_header": {
+  const headingConfig = {
+    h1: { tag: "h1", fontSize: 36 },
+    h2: { tag: "h2", fontSize: 30 },
+    h3: { tag: "h3", fontSize: 24 },
+    h4: { tag: "h4", fontSize: 20 },
+    h5: { tag: "h5", fontSize: 18 },
+    h6: { tag: "h6", fontSize: 16 },
+  };
 
-      const headingTag = String(
-        normalizedElement.headingTag || "h2"
-      ).toLowerCase();
+  const headingTag = String(
+    normalizedElement.headingTag || "h2"
+  ).toLowerCase();
 
-      const config = headingConfig[headingTag] || headingConfig.h2;
-      const HeadingTag = config.tag;
+  const config = headingConfig[headingTag] || headingConfig.h2;
+  const HeadingTag = config.tag;
 
-      return (
-        <div
+  // Use the selected heading tag's default size
+  // when no custom font size has been entered.
+  const headingFontSize =
+    normalizedElement.headingFontSize !== undefined &&
+    normalizedElement.headingFontSize !== ""
+      ? Number(normalizedElement.headingFontSize)
+      : config.fontSize;
+
+  return (
+    <div
+      style={{
+        width: "100%",
+        textAlign: normalizedElement.alignment || "left",
+      }}
+    >
+      {normalizedElement.showHeader !== false && (
+        <HeadingTag
           style={{
-            width: "100%",
-            textAlign: normalizedElement.alignment || "left",
+            margin: 0,
+            color: normalizedElement.headingColor || "inherit",
+            fontSize: `${headingFontSize}px`,
+            fontWeight: 100,
+            lineHeight: 1.3,
           }}
         >
-          {normalizedElement.showHeader !== false && (
-            <HeadingTag
-              style={{
-                margin: 0,
-                color: normalizedElement.headingColor || "inherit",
-                fontSize: `${config.fontSize}px`,
-                fontWeight: 600,
-                lineHeight: 1.3,
-              }}
-            >
-              {normalizedElement.title || "Contact us"}
-            </HeadingTag>
-          )}
+          {normalizedElement.title || "Contact us"}
+        </HeadingTag>
+      )}
 
-          {normalizedElement.description && (
-            <div
-              className="rich-text-preview"
-              style={{
-                marginTop:
-                  normalizedElement.showHeader !== false ? "8px" : 0,
-              }}
-              dangerouslySetInnerHTML={{
-                __html: sanitizeHTML(normalizedElement.description),
-              }}
-            />
-          )}
+      {normalizedElement.description && (
+        <div
+          className="rich-text-preview"
+          style={{
+            marginTop:
+              normalizedElement.showHeader !== false ? "8px" : 0,
+          }}
+          dangerouslySetInnerHTML={{
+            __html: sanitizeHTML(normalizedElement.description),
+          }}
+        />
+      )}
 
-          <FormProgressIndicator
-            pages={pages}
-            activePageId={activePageId}
-          />
-        </div>
-      );
-    }
-
+      <FormProgressIndicator
+        pages={pages}
+        activePageId={activePageId}
+      />
+    </div>
+  );
+}
     case "hidden":
       return (
         <div
@@ -1666,27 +1701,69 @@ export default function PreviewField({
     }
 
     case "feedback": {
-      const emojis = ["😡", "🙁", "😐", "🙂", "😍"];
-      const items =
-        options.length > 0
-          ? options
-          : emojis.map((e) => ({ label: e, value: e }));
+  const emojis = ["😡", "🙁", "😐", "🙂", "😍"];
 
-      return (
-        <BlockStack gap="200">
-          {fieldLabelWithIcon}
-          <div style={{ display: "flex", gap: "12px" }}>
-            {items.map((item) => (
+  const items =
+    options.length > 0
+      ? options
+      : emojis.map((e) => ({ label: e, value: e }));
+
+  return (
+    <BlockStack gap="200">
+      {fieldLabelWithIcon}
+
+      {/* Responsive feedback container */}
+      <div
+        style={{
+          width: "100%",
+          maxWidth: "100%",
+          minWidth: 0,
+          containerType: "inline-size",
+          containerName: "feedback-container",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            width: "100%",
+            maxWidth: "100%",
+            gap: "clamp(2px, 2cqw, 9px)",
+            alignItems: "center",
+            justifyContent: "flex-start",
+            boxSizing: "border-box",
+            minWidth: 0,
+          }}
+        >
+          {items.map((item) => (
+            <div
+              key={item.value}
+              style={{
+                flex: "1 1 0",
+                minWidth: 0,
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+              }}
+            >
               <button
-                key={item.value}
                 type="button"
                 disabled={isReadOnly}
                 onClick={() => setSelected([item.value])}
                 style={{
-                  fontSize: "26px",
+                  width: "100%",
+                  aspectRatio: "1 / 1",
+                  maxWidth: "90px",
+                  minWidth: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "clamp(18px, 12cqw, 54px)",
+                  lineHeight: 1,
                   background: "transparent",
                   cursor: isReadOnly ? "default" : "pointer",
-                  padding: "4px 8px",
+                  padding: "2px",
+                  boxSizing: "border-box",
+                  overflow: "hidden",
                   borderRadius: "8px",
                   border:
                     selected[0] === item.value
@@ -1696,12 +1773,15 @@ export default function PreviewField({
               >
                 {item.label}
               </button>
-            ))}
-          </div>
-          {descriptionText}
-        </BlockStack>
-      );
-    }
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {descriptionText}
+    </BlockStack>
+  );
+}
 
     case "switch":
       return (

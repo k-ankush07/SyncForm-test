@@ -74,52 +74,103 @@ import { templates } from "../utils/templates.js";
 // synchronized through the shared pages state.
 // =========================================
 
+
 const normalizeRows = (pages) =>
   pages.map((page) => {
-    const rootElements = [...(page.rootElements ?? [])];
-    const updatedRows = [];
+    const originalRows = page.rows ?? [];
+    const existingRootElements = [...(page.rootElements ?? [])];
 
-    (page.rows ?? []).forEach((row) => {
+    // Keep only rows that contain two or more elements.
+    const updatedRows = originalRows.filter((row) => {
+      const totalElements =
+        (row.fields ?? []).length +
+        (row.elements ?? []).length;
+
+      return totalElements >= 2;
+    });
+
+    const convertedElements = [];
+
+    originalRows.forEach((row, originalIndex) => {
       const fields = row.fields ?? [];
       const elements = row.elements ?? [];
 
       const totalElements = fields.length + elements.length;
 
-      // CASE 1: Remove completely empty rows.
-      if (totalElements === 0) {
-        return;
-      }
+      // CASE 1: Empty row. Nothing to convert.
+      if (totalElements === 0) return;
 
-      // CASE 2: Convert a single-element row into a root element.
-      if (totalElements === 1) {
-        const remainingElement = fields[0] ?? elements[0];
+      // CASE 2: Keep rows with two or more elements.
+      if (totalElements >= 2) return;
 
-        // Prevent accidentally adding the same element twice.
-        const alreadyExists = rootElements.some(
-          (item) => item.id === remainingElement.id
+      // CASE 3: Convert a single-element row into a root element.
+      const remainingElement = fields[0] ?? elements[0];
+
+      if (!remainingElement) return;
+
+      // Find the next row that will remain after normalization.
+      const nextRow = originalRows
+        .slice(originalIndex + 1)
+        .find(
+          (candidate) =>
+            (candidate.fields?.length ?? 0) +
+            (candidate.elements?.length ?? 0) >= 2
         );
 
-        if (!alreadyExists) {
-          rootElements.push(remainingElement);
-        }
+      // If there is no next row, find the previous surviving row.
+      const previousRow = originalRows
+        .slice(0, originalIndex)
+        .reverse()
+        .find(
+          (candidate) =>
+            (candidate.fields?.length ?? 0) +
+            (candidate.elements?.length ?? 0) >= 2
+        );
 
-        return;
+      // Remove any old position metadata before assigning its new position.
+      const {
+        insertBeforeRowId,
+        insertAfterRowId,
+        ...elementWithoutPosition
+      } = remainingElement;
+
+      let standaloneElement = {
+        ...elementWithoutPosition,
+      };
+
+      if (nextRow) {
+        // Keep the element immediately before the next surviving row.
+        standaloneElement.insertBeforeRowId = nextRow.id;
+      } else if (previousRow) {
+        // If there is no next row, keep it immediately after the previous row.
+        standaloneElement.insertAfterRowId = previousRow.id;
       }
 
-      // CASE 3: Keep rows containing two or more elements.
-      updatedRows.push({
-        ...row,
-        fields,
-        elements,
-      });
+      // Preserve the original order of converted elements.
+      convertedElements.push(standaloneElement);
     });
+
+    // Avoid adding an element twice.
+    const existingIds = new Set(
+      existingRootElements.map((element) => element.id)
+    );
+
+    const newConvertedElements = convertedElements.filter(
+      (element) => !existingIds.has(element.id)
+    );
 
     return {
       ...page,
       rows: updatedRows,
-      rootElements,
+
+      // Converted elements are placed before ordinary bottom root elements.
+      rootElements: [
+        ...newConvertedElements,
+        ...existingRootElements,
+      ],
     };
   });
+
 
 // Creates a duplicate of an object-based element
 // with a new ID and new option IDs.
@@ -332,6 +383,7 @@ export default function FormEditor() {
           collection,
           placement,
           insertIndex,
+          referenceElementId,
         } = elementTarget;
 
 
@@ -340,41 +392,65 @@ export default function FormEditor() {
         // Used by the plus button in LivePreview.
         // =========================================
 
+        // =========================================
+        // CASE 0: INSERT A STANDALONE ELEMENT BETWEEN ROWS
+        // Used by the plus button in LivePreview.
+        // =========================================
+
         if (
           collection === "rows" &&
           rowId != null &&
           (placement === "before" || placement === "after")
         ) {
-          const rows = [...(page.rows || [])];
+          // Keep the new element outside the rows array.
+          const standaloneElement = {
+            ...newElement,
 
-          const targetIndex = rows.findIndex(
-            (row) => row.id === rowId
-          );
-
-          if (targetIndex === -1) return page;
-
-          // Create a new row containing the selected element.
-          const newRow = {
-            id: crypto.randomUUID(),
-            fields: [],
-            elements: [newElement],
+            // Remember which row this element belongs beside.
+            ...(placement === "before"
+              ? { insertBeforeRowId: rowId }
+              : { insertAfterRowId: rowId }),
           };
-
-          // Insert before or after the target row.
-          rows.splice(
-            placement === "before"
-              ? targetIndex
-              : targetIndex + 1,
-            0,
-            newRow
-          );
 
           return {
             ...page,
-            rows,
+            rootElements: [
+              ...(page.rootElements || []),
+              standaloneElement,
+            ],
           };
         }
 
+        // =========================================
+// CASE 0.5: INSERT BETWEEN STANDALONE ELEMENTS
+// =========================================
+
+if (
+  collection === "rootElements" &&
+  referenceElementId != null &&
+  (placement === "before" || placement === "after")
+) {
+  const rootElements = [...(page.rootElements || [])];
+
+  const targetIndex = rootElements.findIndex(
+    (element) => element.id === referenceElementId
+  );
+
+  if (targetIndex === -1) return page;
+
+  // Insert before or after the selected standalone element.
+  const insertAt =
+    placement === "before"
+      ? targetIndex
+      : targetIndex + 1;
+
+  rootElements.splice(insertAt, 0, newElement);
+
+  return {
+    ...page,
+    rootElements,
+  };
+}
 
         // =========================================
         // CASE 1: PREVIEW INSERTION INTO A ROW
@@ -605,7 +681,7 @@ export default function FormEditor() {
 
     showHeader: true,
     headingTag: "h2",
-    alignment: "left",
+    alignment: "center",
 
     visible: true,
   };
@@ -1404,6 +1480,55 @@ export default function FormEditor() {
       );
 
       if (!targetPage) return previousPages;
+      // =========================================
+      // CASE 0: DROP BETWEEN TWO ROWS
+      // Create a new row at the selected position.
+      // =========================================
+
+
+      if (overData.type === "previewRowInsert") {
+        const targetIndex = targetPage.rows.findIndex(
+          (row) => row.id === overData.targetRowId
+        );
+
+        if (targetIndex === -1) return previousPages;
+
+        // Remove any empty source rows left after dragging.
+        // Keep the target row because it is our insertion anchor.
+        targetPage.rows = targetPage.rows.filter(
+          (row) =>
+            row.id === overData.targetRowId ||
+            (row.fields?.length ?? 0) > 0 ||
+            (row.elements?.length ?? 0) > 0
+        );
+
+        // Make sure the target row still exists.
+        const updatedTargetIndex = targetPage.rows.findIndex(
+          (row) => row.id === overData.targetRowId
+        );
+
+        if (updatedTargetIndex === -1) return previousPages;
+
+        // Remove any old standalone positioning metadata.
+        const {
+          insertBeforeRowId,
+          insertAfterRowId,
+          ...elementWithoutPosition
+        } = draggedElement;
+
+        // Keep the element standalone and remember its position.
+        const standaloneElement = {
+          ...elementWithoutPosition,
+          ...(overData.placement === "before"
+            ? { insertBeforeRowId: overData.targetRowId }
+            : { insertAfterRowId: overData.targetRowId }),
+        };
+
+        targetPage.rootElements = targetPage.rootElements || [];
+        targetPage.rootElements.push(standaloneElement);
+
+        return updatedPages;
+      }
 
       // CASE 1:
       // Drop outside a row.
@@ -1568,20 +1693,30 @@ export default function FormEditor() {
   const previewCollisionDetection = (args) => {
     const collisions = pointerWithin(args);
 
+    const getType = (collision) =>
+      collision.data?.droppableContainer?.data.current?.type;
+
+    // Priority 1: Drop between rows.
+    const rowInsertCollisions = collisions.filter(
+      (collision) => getType(collision) === "previewRowInsert"
+    );
+
+    if (rowInsertCollisions.length > 0) {
+      return rowInsertCollisions;
+    }
+
+    // Priority 2: Drop around individual elements.
     const edgeCollisions = collisions.filter(
-      (collision) =>
-        collision.data?.droppableContainer?.data.current?.type ===
-        "previewDrop"
+      (collision) => getType(collision) === "previewDrop"
     );
 
     if (edgeCollisions.length > 0) {
       return edgeCollisions;
     }
 
+    // Priority 3: Drop into the general preview area.
     return collisions.filter(
-      (collision) =>
-        collision.data?.droppableContainer?.data.current?.type ===
-        "rootDrop"
+      (collision) => getType(collision) === "rootDrop"
     );
   };
 

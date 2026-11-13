@@ -106,22 +106,22 @@ export default function ElementsPanel({
     );
     // to drag and drop options
     const handleOptionDragEnd = ({ active, over }) => {
-    if (!over || active.id === over.id) return;
+        if (!over || active.id === over.id) return;
 
-    const oldIndex = options.findIndex(
-        (option) => option.id === active.id
-    );
+        const oldIndex = options.findIndex(
+            (option) => option.id === active.id
+        );
 
-    const newIndex = options.findIndex(
-        (option) => option.id === over.id
-    );
+        const newIndex = options.findIndex(
+            (option) => option.id === over.id
+        );
 
-    if (oldIndex === -1 || newIndex === -1) return;
+        if (oldIndex === -1 || newIndex === -1) return;
 
-    const updatedOptions = arrayMove(options, oldIndex, newIndex);
+        const updatedOptions = arrayMove(options, oldIndex, newIndex);
 
-    update("options", updatedOptions);
-};
+        update("options", updatedOptions);
+    };
 
     // ======================================================
     // FUNCTION: REORDER ELEMENTS INSIDE THE ROWS AND ROOT ELEMENTS
@@ -799,9 +799,13 @@ const getDragItemId = (item, index) => {
 };
 
 ///insert btw rows
+
+
 function SidebarSectionInsert({
     pageId,
-    insertIndex,
+    rowId,
+    placement,
+    referenceElementId,
     openElementPicker,
 }) {
     return (
@@ -817,9 +821,12 @@ function SidebarSectionInsert({
                 onClick={(event) => {
                     event.stopPropagation();
 
-                    openElementPicker(pageId, null, event, {
-                        type: "rootElement",
-                        insertIndex,
+                    openElementPicker(pageId, rowId ?? null, event, {
+                        collection: referenceElementId
+                            ? "rootElements"
+                            : "rows",
+                        placement,
+                        referenceElementId: referenceElementId ?? null,
                     });
                 }}
             >
@@ -828,11 +835,14 @@ function SidebarSectionInsert({
         </div>
     );
 }
+
+
 // ======================================================
 // COMPONENT: SORTABLE PAGE
 // Makes the page draggable using its drag handle.
 // Its rows and elements remain inside the page.
 // ======================================================
+
 
 function SortablePage({
     page,
@@ -848,14 +858,14 @@ function SortablePage({
     onDuplicateElement,
     onDeleteElement,
     openElementPicker,
-    onSelectElement, // ADD THIS
+    onSelectElement,
 
-    // NEW: Row toolbox actions
+    // Row toolbox actions
     onToggleRowVisibility,
     onDuplicateRow,
     onDeleteRow,
 
-    // NEW: Page toolbox action
+    // Page toolbox action
     onDuplicatePage,
 }) {
     const {
@@ -881,7 +891,6 @@ function SortablePage({
         transform: CSS.Transform.toString(transform),
         transition,
 
-        // Floating card effect while dragging
         background: isDragging ? "#FFFFFF" : "transparent",
         boxShadow: isDragging
             ? "0 8px 24px rgba(0, 0, 0, 0.15)"
@@ -893,7 +902,7 @@ function SortablePage({
         position: "relative",
         zIndex: isDragging ? 10 : "auto",
     };
-    //hover
+
     return (
         <div
             ref={setNodeRef}
@@ -920,12 +929,9 @@ function SortablePage({
                     />
                 </button>
 
-                {/* Page icon changes to drag icon on hover */}
+                {/* Page icon and drag icon */}
 
-                <span
-                    className="element-tree__field-icon element-tree__page-icon"
-
-                >
+                <span className="element-tree__field-icon element-tree__page-icon">
                     <span className="element-tree__default-icon">
                         <Icon source={FileIcon} />
                     </span>
@@ -945,7 +951,7 @@ function SortablePage({
                     {page.label}
                 </button>
 
-                {/* Duplicate button is always visible when page is open */}
+                {/* Duplicate page */}
 
                 {page.open && (
                     <button
@@ -963,30 +969,66 @@ function SortablePage({
                 )}
             </div>
 
-            {/* PAGE CONTENT
-            Rows and root elements are shown only when open. */}
+            {/* PAGE CONTENT */}
 
             {page.open && (
-                <>
-                    <div className="element-tree__page-content">
+                <div className="element-tree__page-content">
 
-                        {/* ROWS LIST */}
+                    {/* ROWS AND ROOT ELEMENTS */}
 
-                        <SortableContext
-                            items={(page.rows || []).map(
+                    <SortableContext
+                        items={[
+                            ...(page.rows || []).map(
                                 (row) => `row-${row.id}`
-                            )}
-                            strategy={verticalListSortingStrategy}
-                        >
-                            {/* ABOVE ROW 1 */}
+                            ),
+                            ...(page.rootElements || []).map(
+                                (element) => `element-${element.id}`
+                            ),
+                        ]}
+                        strategy={verticalListSortingStrategy}
+                    >
+                        {/* ABOVE FIRST ROW */}
+
+                        {/* INSERT BEFORE FIRST ROW */}
+
+                        {(page.rows || []).length > 0 && (
                             <SidebarSectionInsert
                                 pageId={page.id}
-                                insertIndex={0}
+                                rowId={page.rows[0].id}
+                                placement="before"
                                 openElementPicker={openElementPicker}
                             />
-                            {(page.rows || []).map((row) => (
+                        )}
+
+                        {/* RENDER ROWS AND POSITIONED ROOT ELEMENTS */}
+
+                        {(page.rows || []).map((row) => (
+                            <React.Fragment key={row.id}>
+
+                                {/* ROOT ELEMENTS BEFORE ROW */}
+
+                                {(page.rootElements || [])
+                                    .filter(
+                                        (element) =>
+                                            element.insertBeforeRowId === row.id
+                                    )
+                                    .map((element) => (
+                                        <SortableCreatedElement
+                                            key={element.id}
+                                            element={element}
+                                            type="rootElement"
+                                            rowId={null}
+                                            pageId={page.id}
+                                            onSelectElement={onSelectElement}
+                                            onToggleElementVisibility={onToggleElementVisibility}
+                                            onDuplicateElement={onDuplicateElement}
+                                            onDeleteElement={onDeleteElement}
+                                        />
+                                    ))}
+
+                                {/* ACTUAL ROW */}
+
                                 <SortableRow
-                                    key={row.id}
                                     row={row}
                                     pageId={page.id}
                                     sensors={sensors}
@@ -998,65 +1040,110 @@ function SortablePage({
                                     onDuplicateElement={onDuplicateElement}
                                     onDeleteElement={onDeleteElement}
                                     onSelectElement={onSelectElement}
-                                    // NEW: Row toolbox actions
                                     onToggleRowVisibility={onToggleRowVisibility}
                                     onDuplicateRow={onDuplicateRow}
                                     onDeleteRow={onDeleteRow}
                                 />
-                            ))}
-                        </SortableContext>
 
-                        {/* DIVIDER BETWEEN LAST ROW AND ROOT ELEMENTS */}
+                                {/* ROOT ELEMENTS AFTER ROW */}
 
-                        {(page.rows || []).length > 0 && (
+                                {(page.rootElements || [])
+                                    .filter(
+                                        (element) =>
+                                            element.insertAfterRowId === row.id
+                                    )
+                                    .map((element) => (
+                                        <SortableCreatedElement
+                                            key={element.id}
+                                            element={element}
+                                            type="rootElement"
+                                            rowId={null}
+                                            pageId={page.id}
+                                            onSelectElement={onSelectElement}
+                                            onToggleElementVisibility={onToggleElementVisibility}
+                                            onDuplicateElement={onDuplicateElement}
+                                            onDeleteElement={onDeleteElement}
+                                        />
+                                    ))}
+                                {/* ADD ELEMENT BETWEEN ROWS */}
+
+                                <SidebarSectionInsert
+                                    pageId={page.id}
+                                    rowId={row.id}
+                                    placement="after"
+                                    openElementPicker={openElementPicker}
+                                />
+                            </React.Fragment>
+                        ))}
+
+                        {/* DIVIDER AFTER LAST ROW */}
+
+                        {/* {(page.rows || []).length > 0 && (
                             <SidebarSectionInsert
                                 pageId={page.id}
                                 openElementPicker={openElementPicker}
                             />
-                        )}
+                        )} */}
 
-                        {/* ROOT ELEMENTS LIST */}
+                        {/* NORMAL ROOT ELEMENTS */}
 
-                        <SortableContext
-                            items={(page.rootElements || []).map(
-                                (element) => `element-${element.id}`
-                            )}
-                            strategy={verticalListSortingStrategy}
-                        >
-                            {(page.rootElements || []).map((element) => (
-                                <SortableCreatedElement
-                                    key={element.id}
-                                    element={element}
-                                    type="rootElement"
-                                    rowId={null}
-                                    pageId={page.id}
-                                    onSelectElement={onSelectElement}
-                                    // Pass toolbox handlers to root elements.
-                                    onToggleElementVisibility={onToggleElementVisibility}
-                                    onDuplicateElement={onDuplicateElement}
-                                    onDeleteElement={onDeleteElement}
-                                />
+
+                        {/* NORMAL ROOT ELEMENTS */}
+
+                        {(page.rootElements || [])
+                            .filter(
+                                (element) =>
+                                    element.insertBeforeRowId == null &&
+                                    element.insertAfterRowId == null
+                            )
+                            .map((element) => (
+                                <React.Fragment key={element.id}>
+
+                                    {/* ADD BUTTON BEFORE THIS ELEMENT */}
+
+                                    <SidebarSectionInsert
+                                        pageId={page.id}
+                                        referenceElementId={element.id}
+                                        placement="before"
+                                        openElementPicker={openElementPicker}
+                                    />
+
+                                    <SortableCreatedElement
+                                        element={element}
+                                        type="rootElement"
+                                        rowId={null}
+                                        pageId={page.id}
+                                        onSelectElement={onSelectElement}
+                                        onToggleElementVisibility={onToggleElementVisibility}
+                                        onDuplicateElement={onDuplicateElement}
+                                        onDeleteElement={onDeleteElement}
+                                    />
+
+                                </React.Fragment>
                             ))}
-                        </SortableContext>
 
-                        {/* ADD ELEMENT OUTSIDE ROWS */}
 
-                        <button
-                            type="button"
-                            className="element-tree__add element-tree__add--root"
-                            onClick={(event) => {
-                                openElementPicker(page.id, null, event);
-                            }}
-                        >
-                            <Icon source={PlusCircleIcon} />
-                            <span>Add elements</span>
-                        </button>
-                    </div>
-                </>
+                    </SortableContext>
+
+                    {/* ADD ELEMENT OUTSIDE ROWS */}
+
+                    <button
+                        type="button"
+                        className="element-tree__add element-tree__add--root"
+                        onClick={(event) => {
+                            openElementPicker(page.id, null, event);
+                        }}
+                    >
+                        <Icon source={PlusCircleIcon} />
+                        <span>Add elements</span>
+                    </button>
+
+                </div>
             )}
         </div>
     );
 }
+
 
 // ======================================================
 // COMPONENT: SORTABLE ROW
@@ -1135,6 +1222,10 @@ function SortableRow({
 
     // state to show hover 
     const [isHovered, setIsHovered] = useState(false);
+    const fields = row.fields || [];
+    const elements = row.elements || [];
+
+    const totalRowItems = fields.length + elements.length;
 
     return (
         <div
