@@ -1,19 +1,50 @@
-/* =========================================
-   1. EDITOR SHELL & LAYOUT
-========================================= */
+/* =====================================================================
+   TEMPLATE EDITOR - CLEANED & SORTED STYLESHEET
+   ---------------------------------------------------------------------
+   TABLE OF CONTENTS
+    1. Editor shell & main layout
+    2. Sidebar
+    3. Settings panel (fixed height + internal scroll)
+    4. Element picker popover
+    5. Live preview - base layout (body, form, header, content)
+    6. Preview rows & element widths
+    7. Preview element + floating toolbar
+    8. Drag & drop, insertion lines, row insert
+    9. Live preview toolbar (top bar of the preview)
+   10. Themes: shared (classic + query)
+   11. Theme: classic
+   12. Theme: query
+   13. Themes - responsive (<= 600px)
+   14. Editor workspace (grey area + fixed white form card)
+   15. Mobile preview mode (470px)
+   16. Settings controls (width selectors, choice options, etc.)
+   17. Popovers, date/time pickers & z-index layering
+   ---------------------------------------------------------------------
+   NOTE: Order matters. Sections 14 and 15 must stay near the end,
+   because they intentionally override the base/theme rules above.
+===================================================================== */
 
+
+/* =====================================================================
+   1. EDITOR SHELL & MAIN LAYOUT
+===================================================================== */
+
+/* Full-screen editor container */
 .template-editor {
   position: fixed;
   inset: 0;
-  width: 100vw;
+  width: 100%;
+  max-width: 100%;
   height: 100vh;
   z-index: 9999;
   background: #ffffff;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  box-sizing: border-box;
 }
 
+/* Top header bar of the editor */
 .template-editor__header {
   display: flex;
   align-items: center;
@@ -23,19 +54,21 @@
   flex-shrink: 0;
 }
 
-.Polaris-Modal-Dialog__Container {
-  z-index: 99999 !important;
-}
-
+/* Main 3-column grid: sidebar | settings | preview */
 .template-editor__main {
   display: grid;
   flex: 1;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
   min-height: 0;
   height: 100%;
   overflow: hidden;
+  box-sizing: border-box;
   transition: grid-template-columns 0.2s ease;
 }
 
+/* Column variants (sidebar | settings | preview) */
 .template-editor__main--expanded {
   grid-template-columns: 220px 350px minmax(0, 1fr) !important;
 }
@@ -48,15 +81,20 @@
   grid-template-columns: 56px 260px minmax(0, 1fr);
 }
 
-.template-editor__preview {
-  min-width: 0;
-  min-height: 0;
-  overflow: hidden;
+/* Choice options: widen settings panel when value column is shown */
+.template-editor__main:has(.choice-options--expanded) {
+  grid-template-columns: 220px 500px minmax(0, 1fr) !important;
 }
 
-/* =========================================
+/* Choice options: normal settings width when collapsed */
+.template-editor__main:has(.choice-options--collapsed) {
+  grid-template-columns: 220px 350px minmax(0, 1fr);
+}
+
+
+/* =====================================================================
    2. SIDEBAR
-========================================= */
+===================================================================== */
 
 .template-editor__sidebar {
   display: flex;
@@ -75,6 +113,7 @@
   flex: 1;
 }
 
+/* Sidebar option button */
 .template-editor__option {
   display: flex;
   align-items: center;
@@ -110,9 +149,10 @@
   padding-top: 8px;
 }
 
-/* =========================================
-   3. SETTINGS PANEL (fixed height + scroll)
-========================================= */
+
+/* =====================================================================
+   3. SETTINGS PANEL (fixed height + internal scroll)
+===================================================================== */
 
 .template-editor__settings {
   display: flex;
@@ -196,7 +236,7 @@
   background: #fff;
 }
 
-/* Remove button */
+/* Remove-element button */
 .remove-element-btn {
   width: 100%;
   justify-content: flex-start;
@@ -209,9 +249,10 @@
   background-color: #f1f1f1;
 }
 
-/* =========================================
+
+/* =====================================================================
    4. ELEMENT PICKER POPOVER
-========================================= */
+===================================================================== */
 
 .element-picker-backdrop {
   position: fixed;
@@ -249,7 +290,8 @@
   border-radius: 6px;
 }
 
-/* Search */
+/* ---- Picker: search ---- */
+
 .element-picker-search {
   flex-shrink: 0;
   padding: 12px 14px;
@@ -320,7 +362,8 @@
   background: #e4e5e7;
 }
 
-/* Four-column layout */
+/* ---- Picker: four-column layout ---- */
+
 .element-picker-popover__columns {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -337,7 +380,8 @@
   min-width: 0;
 }
 
-/* Categories */
+/* ---- Picker: categories ---- */
+
 .element-picker-category {
   min-width: 0;
 }
@@ -355,7 +399,8 @@
   line-height: 18px;
 }
 
-/* Items */
+/* ---- Picker: items ---- */
+
 .element-picker-items {
   display: flex;
   flex-direction: column;
@@ -416,7 +461,7 @@
   text-overflow: ellipsis;
 }
 
-/* Hot and New badges */
+/* "Hot" and "New" badges */
 .element-picker-item__badge {
   display: inline-flex;
   flex: 0 0 auto;
@@ -438,7 +483,7 @@
   line-height: 1;
 }
 
-/* Disabled elements */
+/* Disabled items */
 .element-picker-item.is-disabled,
 .element-picker-item:disabled {
   color: #b5b5b5;
@@ -453,7 +498,8 @@
   color: #b5b5b5;
 }
 
-/* Picker responsive layout */
+/* ---- Picker: responsive ---- */
+
 @media (max-width: 900px) {
   .element-picker-popover__columns {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -477,9 +523,11 @@
   }
 }
 
-/* =========================================
+
+/* =====================================================================
    5. LIVE PREVIEW - BASE LAYOUT
-========================================= */
+   (body, form, header, content)
+===================================================================== */
 
 .live-preview {
   width: 100%;
@@ -510,6 +558,7 @@
   height: 100vh !important;
   overflow-y: auto !important;
   background: #ffffff;
+  transition: width 0.25s ease, max-width 0.25s ease;
 }
 
 .live-preview__header {
@@ -541,10 +590,19 @@
   cursor: pointer;
 }
 
-/* Rows */
+
+/* =====================================================================
+   6. PREVIEW ROWS & ELEMENT WIDTHS
+   (elements stay in ONE horizontal row; width comes from
+    --element-column-width)
+===================================================================== */
+
+/* Row container */
 .preview-row {
+  display: block !important;
   width: 100%;
   min-width: 0;
+  margin-bottom: 16px;
   box-sizing: border-box;
 }
 
@@ -553,47 +611,64 @@
   display: none !important;
 }
 
-/* Dynamic columns based on visible elements */
-.preview-row-grid {
-  display: grid !important;
-  grid-template-columns: repeat(
-    var(--preview-column-count, 1),
-    minmax(0, 1fr)
-  ) !important;
-  grid-auto-flow: row;
-  grid-auto-columns: unset;
-  gap: 20px 16px;
+/* Row grid (actually a flex row) */
+.preview-row-grid,
+.live-preview--classic .preview-row-grid,
+.live-preview--query .preview-row-grid {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  align-items: stretch;
+  gap: 1px;
   width: 100%;
   min-width: 0;
   box-sizing: border-box;
 }
 
-/* Every element fits inside its column */
-.preview-row-grid > .preview-element {
-  width: 100%;
-  min-width: 0;
+/* Individual element width */
+.preview-row-grid > .preview-element,
+.live-preview--classic .preview-row-grid > .preview-element,
+.live-preview--query .preview-row-grid > .preview-element {
+  flex: 0 1 var(--element-column-width, 100%) !important;
+  width: var(--element-column-width, 100%) !important;
+  min-width: 0 !important;
+  max-width: 100%;
   box-sizing: border-box;
+  grid-column: auto !important;
 }
 
-/* A single element in a row takes the full width */
-.preview-row-grid > .preview-element:only-child {
-  grid-column: 1 / -1;
+/* Inner form controls can shrink */
+.preview-row-grid > .preview-element .Polaris-TextField,
+.preview-row-grid > .preview-element .Polaris-Select,
+.preview-row-grid > .preview-element .Polaris-TextField__Input {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 /* Root elements always take full width */
 .preview-root-drop-area > .Polaris-BlockStack > .preview-element {
   width: 100%;
+  min-width: 0;
 }
 
-/* =========================================
-   6. PREVIEW ELEMENT + FLOATING TOOLBAR
-========================================= */
+/* Small screens: keep elements in one row */
+@media (max-width: 600px) {
+  .preview-row-grid,
+  .live-preview--classic .preview-row-grid,
+  .live-preview--query .preview-row-grid {
+    flex-wrap: nowrap !important;
+    gap: 8px;
+  }
+}
 
 
-/* =========================================
-   PREVIEW ELEMENT - SMOOTH BLUE HOVER
-========================================= */
+/* =====================================================================
+   7. PREVIEW ELEMENT + FLOATING TOOLBAR
+===================================================================== */
 
+/* Element wrapper (smooth blue hover) */
 .preview-element {
   position: relative;
   min-width: 0;
@@ -603,14 +678,12 @@
   padding: 2px;
   cursor: pointer;
   overflow: visible;
-
   transition:
     border-color 180ms ease,
     background-color 180ms ease,
     box-shadow 180ms ease;
 }
 
-/* Blue border on hover */
 .preview-element:hover {
   border-color: #80a9e8;
   background-color: rgba(44, 110, 203, 0.025);
@@ -622,18 +695,12 @@
   background: rgba(44, 110, 203, 0.04);
 }
 
-/* Selected element hover - maintain strong blue */
 .preview-element--selected:hover {
   border-color: #2c6ecb;
   background: rgba(44, 110, 203, 0.05);
 }
 
-
-.preview-element--selected {
-  border: 2px solid #2c6ecb;
-  background: rgba(44, 110, 203, 0.04);
-}
-
+/* Hidden element */
 .preview-element--hidden {
   opacity: 0.45;
   border-style: dashed;
@@ -651,18 +718,16 @@
   pointer-events: none;
 }
 
-/* Floating toolbar */
+/* Floating toolbar (appears above the selected element) */
 .element-floating-toolbar {
   position: absolute;
   z-index: 50;
   bottom: calc(100% + 6px);
   left: 0;
-
   display: flex;
   align-items: center;
   gap: 4px;
   padding: 7px;
-
   background: #303030;
   color: #ffffff;
   border-radius: 7px;
@@ -673,10 +738,7 @@
   opacity: 0;
   transform: translate3d(0, 12px, 0) scale(0.96);
   transform-origin: bottom center;
-
-  animation: floatingToolbarEnter 500ms
-    cubic-bezier(0.16, 1, 0.3, 1) forwards;
-
+  animation: floatingToolbarEnter 500ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
   will-change: transform, opacity;
 }
 
@@ -729,9 +791,10 @@
   cursor: grabbing;
 }
 
-/* =========================================
-   7. DRAG AND DROP + INSERTION LINES
-========================================= */
+
+/* =====================================================================
+   8. DRAG & DROP, INSERTION LINES, ROW INSERT
+===================================================================== */
 
 /* Highlight the root area when dropping outside a row */
 .preview-root-drop-area--active {
@@ -764,7 +827,7 @@
   pointer-events: auto;
 }
 
-/* Top and bottom zones create separate rows */
+/* Top / bottom zones create separate rows */
 .preview-drop-zone--top,
 .preview-drop-zone--bottom {
   left: 12px;
@@ -781,7 +844,7 @@
   bottom: -10px;
 }
 
-/* Left and right zones create side-by-side elements */
+/* Left / right zones create side-by-side elements */
 .preview-drop-zone--left,
 .preview-drop-zone--right {
   top: 2px;
@@ -882,10 +945,7 @@
   transform: translate(-50%, -50%) scaleY(1);
 }
 
-/* Active state while dragging
-   (must stay after the base line/button rules above)
-   Note: the old `background: rgba(44,110,203,.35)` was always overridden by
-   `.preview-drop-zone { background: transparent }`, so it is not kept here. */
+/* Active state while dragging (must stay after the base line/button rules) */
 .preview-drop-zone--active {
   outline: 1px solid #2c6ecb;
 }
@@ -906,9 +966,295 @@
   opacity: 1;
 }
 
-/* =========================================
-   8. THEMES: SHARED (classic + query)
-========================================= */
+/* ---- Row insert (hover between rows) ---- */
+
+.preview-row-insert {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 12px;
+  margin: 0;
+  z-index: 10;
+  cursor: pointer;
+}
+
+/* Hidden line by default */
+.preview-row-insert__line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: #2c6ecb;
+  opacity: 0;
+  transition: opacity 0.18s ease;
+}
+
+/* Hidden plus by default */
+.preview-row-insert .preview-insert-button {
+  position: relative;
+  z-index: 2;
+  top: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid #2c6ecb;
+  border-radius: 50%;
+  background: #ffffff;
+  color: #2c6ecb;
+  font-size: 17px;
+  cursor: pointer;
+  opacity: 0;
+  transform: scale(0.85);
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease,
+    background 0.18s ease;
+}
+
+/* Show line and plus when hovering between rows */
+.preview-row-insert:hover .preview-row-insert__line,
+.preview-row-insert--active .preview-row-insert__line {
+  opacity: 1;
+}
+
+.preview-row-insert:hover .preview-insert-button,
+.preview-row-insert--active .preview-insert-button {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Plus hover */
+.preview-row-insert .preview-insert-button:hover {
+  background: #2c6ecb;
+  color: #ffffff;
+}
+
+
+/* =====================================================================
+   9. LIVE PREVIEW TOOLBAR (top bar above the preview)
+===================================================================== */
+
+.live-preview__toolbar {
+  position: relative;
+  z-index: 20;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  height: 50px;
+  min-height: 50px;
+  flex: 0 0 50px;
+  margin: 0;
+  padding: 0 16px;
+  box-sizing: border-box;
+  background: #ffffff;
+  color: #202223;
+  border-bottom: 1px solid #e3e3e3;
+  border-radius: 0;
+  overflow: visible;
+}
+
+.live-preview__toolbar * {
+  color: #202223;
+}
+
+/* Inside the editor the toolbar keeps a fixed height */
+.template-editor__preview > .live-preview__toolbar {
+  flex: 0 0 50px !important;
+  height: 50px !important;
+  min-height: 50px !important;
+  padding: 0 16px !important;
+  background: #ffffff !important;
+  color: #202223 !important;
+  border-radius: 0 !important;
+}
+
+/* ---- Toolbar: left ---- */
+
+.live-preview__toolbar-left {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.live-preview__toolbar-left .Polaris-Button {
+  min-height: 28px;
+  padding: 0 4px;
+}
+
+.live-preview__toolbar-left .Polaris-InlineStack {
+  min-width: 0;
+  max-width: 100%;
+  flex-wrap: nowrap;
+}
+
+/* "Draft" badge */
+.live-preview__toolbar-left .Polaris-Badge {
+  background: #f1f1f1;
+  color: #616161;
+  border: none;
+  border-radius: 7px;
+  font-size: 11px;
+}
+
+/* ---- Toolbar: center ---- */
+
+.live-preview__toolbar-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.live-preview__toolbar-center .Polaris-Button {
+  min-height: 32px;
+  font-size: 13px;
+}
+
+/* ---- Toolbar: right ---- */
+
+.live-preview__toolbar-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+
+.live-preview__toolbar-right .Polaris-Button {
+  min-width: 30px;
+  min-height: 30px;
+  padding: 5px;
+  border-radius: 8px;
+}
+
+.template-editor__preview .live-preview__toolbar-right > .Polaris-Button {
+  flex: 0 0 auto;
+}
+
+/* Segmented preview buttons */
+.live-preview__toolbar-right .Polaris-Button--primary {
+  background: #f0f0f0;
+  color: #303030;
+  border: none;
+  box-shadow: none;
+}
+
+/* Disabled buttons */
+.live-preview__toolbar-right .Polaris-Button:disabled {
+  opacity: 0.45;
+}
+
+/* Undo / redo group */
+.template-editor__preview .live-preview__toolbar-right .Polaris-ButtonGroup {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+}
+
+/* ---- Toolbar: icons & buttons ---- */
+
+.live-preview__toolbar .Polaris-Icon {
+  width: 16px;
+  height: 16px;
+}
+
+/* Mode button (desktop / mobile switch) */
+.live-preview__toolbar .toolbar-mode-button {
+  min-width: 36px;
+  min-height: 36px;
+  border-radius: 8px;
+}
+
+/* Custom icon buttons */
+.template-editor__preview .live-preview__toolbar .toolbar-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 36px;
+  width: 36px;
+  min-width: 36px;
+  max-width: 36px;
+  height: 36px;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #616161;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.template-editor__preview .live-preview__toolbar .toolbar-icon-button:hover {
+  background: #f1f1f1;
+  color: #303030;
+}
+
+.template-editor__preview .live-preview__toolbar .toolbar-icon-button.active {
+  background: #eaf2ff !important;
+  color: #155eef !important;
+}
+
+.template-editor__preview .live-preview__toolbar .toolbar-icon-button.active svg {
+  color: #155eef !important;
+}
+
+.template-editor__preview .live-preview__toolbar .toolbar-icon-button .Polaris-Icon {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+}
+
+/* Tooltip stays visible above the header */
+.template-editor__preview .live-preview__toolbar .Polaris-Tooltip {
+  z-index: 100000;
+}
+
+/* ---- Toolbar: responsive ---- */
+
+@media screen and (max-width: 1100px) {
+  .template-editor__preview .live-preview__toolbar {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 6px;
+  }
+
+  .template-editor__preview .live-preview__toolbar-center {
+    display: none;
+  }
+}
+
+@media screen and (max-width: 600px) {
+  .template-editor__preview .live-preview__toolbar {
+    padding: 0 8px !important;
+  }
+
+  .template-editor__preview .live-preview__toolbar-right {
+    gap: 4px;
+  }
+}
+
+
+/* =====================================================================
+   10. THEMES: SHARED (classic + query)
+===================================================================== */
 
 .live-preview--classic,
 .live-preview--query {
@@ -970,19 +1316,10 @@
   background: transparent;
 }
 
-/* Rows */
+/* Rows (no extra spacing inside themes) */
 .live-preview--classic .preview-row,
 .live-preview--query .preview-row {
-  margin: 0 0 0px;
-}
-
-.live-preview--classic .preview-row-grid,
-.live-preview--query .preview-row-grid {
-  grid-template-columns: repeat(
-    var(--preview-column-count, 1),
-    minmax(0, 1fr)
-  ) !important;
-  gap: 16px;
+  margin: 0;
 }
 
 /* Labels */
@@ -1053,16 +1390,17 @@
 .live-preview--classic textarea.Polaris-TextField__Input,
 .live-preview--query textarea.Polaris-TextField__Input {
   min-height: 110px;
-  resize: vertical;
-  background: #ededed;
+  padding: 14px 12px;
   border: 1px solid #ededed;
   border-radius: 7px;
-  padding: 14px 12px;
+  background: #ededed;
+  resize: vertical;
 }
 
-/* =========================================
-   9. THEME: CLASSIC (additions)
-========================================= */
+
+/* =====================================================================
+   11. THEME: CLASSIC
+===================================================================== */
 
 .live-preview--classic {
   width: 100%;
@@ -1071,6 +1409,7 @@
   background-color: #ffffff !important;
 }
 
+/* Header & content */
 .live-preview--classic .live-preview__header {
   background: #ffffff !important;
 }
@@ -1105,10 +1444,6 @@
 .live-preview--classic .preview-row-grid > div {
   width: 100%;
   min-width: 0;
-}
-
-.live-preview--classic .preview-row-grid > div:only-child {
-  grid-column: 1 / -1;
 }
 
 /* Labels */
@@ -1198,9 +1533,10 @@
   outline-offset: 3px;
 }
 
-/* =========================================
-   10. THEME: QUERY (button only)
-========================================= */
+
+/* =====================================================================
+   12. THEME: QUERY (button only)
+===================================================================== */
 
 .live-preview--query .Polaris-Button--primary {
   min-height: 35px;
@@ -1218,21 +1554,15 @@
   background: #333;
 }
 
-/* =========================================
-   11. LIVE PREVIEW - MOBILE (<= 600px)
-   Keep this after all the rules it overrides.
-========================================= */
+
+/* =====================================================================
+   13. THEMES - RESPONSIVE (<= 600px)
+   Keep this after all the theme rules it overrides.
+===================================================================== */
 
 @media (max-width: 600px) {
   .live-preview__form {
     padding: 16px;
-  }
-
-  .preview-row-grid,
-  .live-preview--classic .preview-row-grid,
-  .live-preview--query .preview-row-grid {
-    grid-template-columns: minmax(0, 1fr) !important;
-    gap: 16px;
   }
 
   .live-preview--classic .live-preview__header,
@@ -1251,11 +1581,235 @@
   }
 }
 
-/* =========================================
-   12. SETTINGS CONTROLS
-========================================= */
 
-/* Column width setting */
+/* =====================================================================
+   14. EDITOR WORKSPACE
+   Grey workspace + fixed white form card with internal scroll.
+   (Toolbar stays outside the card.)
+===================================================================== */
+
+/* ---- Preview column (grey workspace) ---- */
+.template-editor__preview {
+  position: relative;
+  display: flex !important;
+  flex-direction: column !important;
+  width: 100% !important;
+  max-width: 100%;
+  height: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  padding: 0 20px 20px 0 !important;
+  background: #f1f2f4 !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+}
+
+/* Outer preview card */
+.template-editor__preview > .Polaris-Card {
+  flex: 1 1 auto;
+  width: 100% !important;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 0;
+  padding: 24px !important;
+  background: #ffffff !important;
+  border: 1px solid #e3e3e3 !important;
+  border-radius: 12px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
+  box-sizing: border-box !important;
+}
+
+/* Preview fills the remaining workspace below the toolbar */
+.template-editor__preview > .live-preview {
+  flex: 1 1 0 !important;
+  width: 100% !important;
+  height: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+}
+
+/* Theme wrapper fills the workspace (no theme margin) */
+.template-editor__preview .live-preview--classic,
+.template-editor__preview .live-preview--query {
+  height: 100% !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
+}
+
+/* Grey area around the white card */
+.template-editor__preview .live-preview__body {
+  display: flex !important;
+  align-items: stretch !important;
+  justify-content: stretch !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 20px !important;
+  background: #f1f2f4 !important;
+  /* border: 1px solid #e3e3e3 !important; */
+  border: 1px solid #e3e3e3 !important;
+  border-radius: 8px !important;
+  box-shadow: none !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+}
+
+/* White card - fixed available height, scrolls internally */
+.template-editor__preview .live-preview__form {
+  flex: 1 1 0 !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: 100% !important;
+  margin: 0 !important;
+  padding: 32px !important;
+  background: #ffffff !important;
+  border: 1px solid #e3e3e3;
+  border-radius: 10px;
+  box-sizing: border-box !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  scrollbar-width: thin;
+  scrollbar-color: #999 transparent;
+}
+
+/* Scrollbar styling for the white card */
+.template-editor__preview .live-preview__form::-webkit-scrollbar {
+  width: 8px;
+}
+
+.template-editor__preview .live-preview__form::-webkit-scrollbar-thumb {
+  background: #999;
+  border-radius: 10px;
+}
+
+.template-editor__preview .live-preview__form::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Content grows naturally inside the card */
+.template-editor__preview .live-preview__data,
+.template-editor__preview .live-preview__content,
+.template-editor__preview .preview-page,
+.template-editor__preview .preview-root-drop-area {
+  height: auto !important;
+  min-height: 0 !important;
+  overflow: visible !important;
+}
+
+
+/* =====================================================================
+   15. MOBILE PREVIEW MODE (470px)
+   Must stay AFTER section 14. Selectors are prefixed with
+   .template-editor__preview so they win over the workspace rules.
+===================================================================== */
+
+/* Outer area: center the form, allow horizontal scrolling */
+.template-editor__preview .live-preview--mobile-preview .live-preview__body {
+  justify-content: center !important;
+  align-items: flex-start !important;
+  padding: 20px 16px !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  background-color: #f1f2f4 !important;
+  scrollbar-width: thin;
+  scrollbar-color: #8c9196 #e4e5e7;
+}
+
+/* Horizontal scrollbar */
+.live-preview--mobile-preview .live-preview__body::-webkit-scrollbar {
+  height: 10px;
+}
+
+.live-preview--mobile-preview .live-preview__body::-webkit-scrollbar-track {
+  background: #e4e5e7;
+}
+
+.live-preview--mobile-preview .live-preview__body::-webkit-scrollbar-thumb {
+  background: #8c9196;
+  border-radius: 10px;
+}
+
+/* 470px mobile form card (scrolls vertically inside) */
+.template-editor__preview .live-preview--mobile-preview .live-preview__form {
+  flex: 0 0 470px !important;
+  width: 470px !important;
+  min-width: 470px !important;
+  max-width: 470px !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  margin: 0 auto !important;
+  padding: 15px !important;
+  border-radius: 10px;
+}
+
+/* Inner content */
+.live-preview--mobile-preview .live-preview__data,
+.live-preview--mobile-preview .live-preview__content,
+.live-preview--mobile-preview .preview-page,
+.live-preview--mobile-preview .preview-root-drop-area {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+}
+
+/* Remove classic content padding */
+.live-preview--mobile-preview.live-preview--classic .live-preview__content {
+  padding: 0 !important;
+}
+
+/* Stack fields vertically */
+.live-preview--mobile-preview .preview-row-grid,
+.live-preview--mobile-preview.live-preview--classic .preview-row-grid,
+.live-preview--mobile-preview.live-preview--query .preview-row-grid {
+  display: flex !important;
+  flex-direction: column !important;
+  width: 100% !important;
+  gap: 16px;
+  box-sizing: border-box !important;
+}
+
+/* Full-width fields (beats the custom element width from section 6) */
+.live-preview--mobile-preview .preview-row-grid > .preview-element,
+.live-preview--mobile-preview.live-preview--classic .preview-row-grid > .preview-element,
+.live-preview--mobile-preview.live-preview--query .preview-row-grid > .preview-element {
+  flex: 0 0 auto !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+}
+
+/* Header and footer */
+.live-preview--mobile-preview .preview-fixed-element {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+}
+
+/* Inputs */
+.live-preview--mobile-preview input,
+.live-preview--mobile-preview textarea,
+.live-preview--mobile-preview select {
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+
+/* =====================================================================
+   16. SETTINGS CONTROLS
+===================================================================== */
+
+/* ---- Column width setting ---- */
+
 .column-width-setting {
   display: flex;
   flex-direction: column;
@@ -1263,7 +1817,7 @@
   width: 100%;
 }
 
-/* Segmented container (used by column width + options per line) */
+/* Segmented container (column width + options per line) */
 .column-width-selector {
   display: flex;
   align-items: center;
@@ -1277,7 +1831,7 @@
   box-sizing: border-box;
 }
 
-/* Segmented options - variant 1 */
+/* Segmented option - variant 1 */
 .column-width-option {
   flex: 1;
   min-width: 0;
@@ -1303,7 +1857,7 @@
   background: rgba(255, 255, 255, 0.5);
 }
 
-/* Segmented options - variant 2 (row width selector) */
+/* Segmented option - variant 2 (row width selector) */
 .column-width-selector__option {
   flex: 1;
   min-width: 0;
@@ -1322,7 +1876,7 @@
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
 }
 
-/* Segmented options - variant 3 (number of options per line) */
+/* Segmented option - variant 3 (options per line) */
 .chooseItem {
   flex: 1;
   display: flex;
@@ -1342,7 +1896,8 @@
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
 }
 
-/* Character limit (min / max) settings */
+/* ---- Character limit (min / max) ---- */
+
 .character-limit-settings {
   display: flex;
   flex-direction: column;
@@ -1366,7 +1921,8 @@
   line-height: 1.5;
 }
 
-/* Icon selector */
+/* ---- Icon selector ---- */
+
 .select-icon-container {
   display: flex;
   align-items: center;
@@ -1392,7 +1948,8 @@
   box-sizing: border-box;
 }
 
-/* Rich text preview */
+/* ---- Rich text preview ---- */
+
 .rich-text-preview h1 {
   font-size: 32px;
   font-weight: 700;
@@ -1441,7 +1998,8 @@
   background: #f6f6f7;
 }
 
-/* Footer color setting */
+/* ---- Footer color setting ---- */
+
 .footer-color-setting {
   display: flex;
   align-items: center;
@@ -1459,15 +2017,129 @@
   flex-shrink: 0;
 }
 
-/* =========================================
-   13. POPOVERS & DATE / TIME PICKERS
-========================================= */
+/* ---- Choice options (drag + label/value rows) ---- */
 
-/* Layering: the editor is 9999, the element picker 10001 and the modal 99999.
-   Everything that floats above them is set here, so all of it stays visible. */
+/* Base row (label + value + remove button) */
+.choice-option-row {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) minmax(0, 1fr) 32px;
+  align-items: center;
+  gap: 8px;
+}
 
-/* Polaris popovers, tooltips, color picker, autocomplete, listbox, etc.
-   (all of these render inside a PositionedOverlay) */
+.choice-option-row .Polaris-TextField {
+  width: 100%;
+  min-width: 0;
+}
+
+/* Drag handle */
+.choice-option-drag {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  color: #8c9196;
+  user-select: none;
+}
+
+.choice-option-drag:hover {
+  color: #303030;
+}
+
+.choice-option-drag:active {
+  cursor: grabbing;
+}
+
+/* Heading row */
+.choice-option-heading {
+  align-items: center;
+}
+
+/* Collapsed: label only, each option on a separate line */
+.choice-options--collapsed .choice-option-row:not(.choice-option-heading) {
+  display: grid;
+  grid-template-columns: 12px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.choice-options--collapsed .choice-option-heading {
+  display: none;
+}
+
+.choice-options--collapsed .choice-option-value {
+  display: none;
+}
+
+/* Expanded: label and value side by side */
+.choice-options--expanded .choice-option-row {
+  display: grid;
+  grid-template-columns: 12px minmax(0, 1fr) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.choice-options--expanded .choice-option-heading {
+  display: grid;
+}
+
+.choice-options--expanded .choice-option-value {
+  display: block;
+  min-width: 0;
+}
+
+/* ---- Preview field switch button ---- */
+
+.preview-switch {
+  position: relative;
+  width: 42px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.preview-switch.is-on {
+  background-color: #008060;
+}
+
+.preview-switch.is-off {
+  background-color: #8c9196;
+}
+
+.preview-switch__thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.preview-switch.is-on .preview-switch__thumb {
+  transform: translateX(18px);
+}
+
+
+/* =====================================================================
+   17. POPOVERS, DATE/TIME PICKERS & Z-INDEX LAYERING
+   Layers: editor 9999 < picker 10001 < modal 99999 < popovers 100000
+           < flatpickr 100001 < toasts 100002
+===================================================================== */
+
+/* Polaris modal */
+.Polaris-Modal-Dialog__Container {
+  z-index: 99999 !important;
+}
+
+/* Polaris popovers, tooltips, color picker, autocomplete, listbox */
 .Polaris-PositionedOverlay,
 .Polaris-Popover,
 .Polaris-Popover__PopoverOverlay,
@@ -1477,9 +2149,7 @@
   z-index: 100000 !important;
 }
 
-/* Popover height: Polaris clamps the popover to the scrollable settings panel
-   it was opened from, which makes it very short. Let it size to its content
-   and scroll only when it is genuinely tall. */
+/* Popover height: size to content, scroll only when genuinely tall */
 .Polaris-Popover__Content {
   height: auto !important;
   min-height: 0;
@@ -1491,7 +2161,7 @@
   overflow-y: auto;
 }
 
-/* Date / time pickers (Flatpickr appends its calendar to <body>) */
+/* Flatpickr calendar (appended to <body>) */
 .flatpickr-calendar,
 .flatpickr-calendar.open {
   z-index: 100001 !important;
@@ -1503,7 +2173,8 @@
   z-index: 100002 !important;
 }
 
-/* Flatpickr time */
+/* ---- Flatpickr time ---- */
+
 .flatpickr-calendar.hasTime.noCalendar {
   width: 180px;
 }
@@ -1541,7 +2212,8 @@
   box-shadow: none !important;
 }
 
-/* Target days picker */
+/* ---- Target days picker ---- */
+
 .target-days-picker {
   position: relative;
   width: 100%;
@@ -1649,835 +2321,4 @@
 
 .target-days-option.selected span:last-child {
   font-weight: 600;
-}
-/* // new css for col width */
-
-/* =========================================
-   FINAL OVERRIDE - ELEMENT CUSTOM WIDTH
-   Add this at the VERY END of your CSS
-========================================= */
-
-/* Row container */
-.preview-row {
-  display: block !important;
-  width: 100%;
-  min-width: 0;
-  box-sizing: border-box;
-  margin-bottom: 16px;
-}
-
-/* All elements stay in ONE horizontal row */
-.preview-row-grid,
-.live-preview--classic .preview-row-grid,
-.live-preview--query .preview-row-grid {
-  display: flex !important;
-  flex-direction: row !important;
-  flex-wrap: nowrap !important;
-  align-items: stretch;
-  gap: 1px;
-  width: 100%;
-  min-width: 0;
-  box-sizing: border-box;
-  grid-template-columns: none !important;
-  grid-auto-flow: unset !important;
-}
-
-/* Individual element width */
-.preview-row-grid > .preview-element,
-.live-preview--classic .preview-row-grid > .preview-element,
-.live-preview--query .preview-row-grid > .preview-element {
-  flex: 0 1 var(--element-column-width, 100%) !important;
-  width: var(--element-column-width, 100%) !important;
-  min-width: 0 !important;
-  max-width: 100%;
-  box-sizing: border-box;
-  grid-column: auto !important;
-}
-
-/* Allow inner form controls to shrink */
-.preview-row-grid > .preview-element .Polaris-TextField,
-.preview-row-grid > .preview-element .Polaris-Select,
-.preview-row-grid > .preview-element .Polaris-TextField__Input {
-  width: 100%;
-  min-width: 0;
-  max-width: 100%;
-  box-sizing: border-box;
-}
-
-/* Root elements remain full width */
-.preview-root-drop-area > .Polaris-BlockStack > .preview-element {
-  width: 100%;
-  min-width: 0;
-}
-
-/* Mobile: still keep elements in one row */
-@media (max-width: 600px) {
-  .preview-row-grid,
-  .live-preview--classic .preview-row-grid,
-  .live-preview--query .preview-row-grid {
-    flex-wrap: nowrap !important;
-    gap: 8px;
-  }
-}
-/* =========================================
-   PREVIEW WORKSPACE ONLY
-   Keep Contact form / Draft header outside
-========================================= */
-
-.template-editor__preview {
-  background: #f1f2f4 !important;
-  box-sizing: border-box !important;
-}
-
-/* Outer preview card */
-.template-editor__preview > .Polaris-Card {
-  width: 100% !important;
-  padding: 24px !important;
-  background: #ffffff !important;
-  border: 1px solid #e3e3e3 !important;
-  border-radius: 12px !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
-  box-sizing: border-box !important;
-}
-
-/* Inner default page */
-.template-editor__preview .live-preview__body {
-  padding: 24px !important;
-  /* background: #f6f6f7 !important; */
-  border: 1px solid #e3e3e3 !important;
-  border-radius: 8px !important;
-  box-shadow: none !important;
-  box-sizing: border-box !important;
-  height: 100vh;
-  overflow-y: auto;
-}
-
-/* Form content page */
-.template-editor__preview .live-preview__form {
-  min-height: 500px !important;
-  height: auto !important;
-  margin: 0 auto !important;
-  padding: 32px !important;
-  background: #ffffff !important;
-  overflow: visible !important;
-  box-sizing: border-box !important;
-}
-/* //defult */
-.live-preview__toolbar {
-  background: #ffffff !important;
-  color: #202223 !important;
-  padding: 16px 20px !important;
-  border-radius: 8px !important;
-  box-sizing: border-box !important;
-}
-
-.live-preview__toolbar * {
-  color: #202223;
-}
-
-/* //toolbar of live preview */
-/* =========================================
-   LIVE PREVIEW TOOLBAR
-========================================= */
-
-.live-preview__toolbar {
-  width: 100%;
-  height: 50px;
-  min-height: 50px;
-  padding: 0 16px 0 20px;
-  background: #ffffff;
-  border-bottom: 1px solid #e3e3e3;
-
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-
-  box-sizing: border-box;
-  position: relative;
-  z-index: 10;
-}
-
-/* LEFT */
-
-.live-preview__toolbar-left {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  min-width: 0;
-}
-
-.live-preview__toolbar-left .Polaris-Button {
-  min-height: 28px;
-  padding: 0 4px;
-}
-
-/* DRAFT BADGE */
-
-.live-preview__toolbar-left .Polaris-Badge {
-  background: #f1f1f1;
-  color: #616161;
-  border: none;
-  border-radius: 7px;
-  font-size: 11px;
-}
-
-/* CENTER */
-
-.live-preview__toolbar-center {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.live-preview__toolbar-center .Polaris-Button {
-  min-height: 32px;
-  font-size: 13px;
-}
-
-/* RIGHT */
-
-.live-preview__toolbar-right {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 12px;
-}
-
-.live-preview__toolbar-right .Polaris-Button {
-  min-width: 30px;
-  min-height: 30px;
-  padding: 5px;
-  border-radius: 8px;
-}
-
-/* ICON SIZES */
-
-.live-preview__toolbar .Polaris-Icon {
-  width: 16px;
-  height: 16px;
-}
-
-/* SEGMENTED PREVIEW BUTTONS */
-
-.live-preview__toolbar-right .Polaris-Button--primary {
-  background: #f0f0f0;
-  color: #303030;
-  border: none;
-  box-shadow: none;
-}
-
-/* DISABLED BUTTONS */
-
-.live-preview__toolbar-right .Polaris-Button:disabled {
-  opacity: 0.45;
-}
-/* //smooth toolbox */
-
-/* //root-add modal */
-/* =========================================
-   ROW INSERT — HOVER BEHAVIOR
-========================================= */
-
-.preview-row-insert {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 12px;
-  margin: 0;
-  z-index: 10;
-  cursor: pointer;
-}
-
-/* Hidden line by default */
-.preview-row-insert__line {
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: #2c6ecb;
-  height:4px;
-  opacity: 0;
-  transition: opacity 0.18s ease;
-}
-
-/* Hidden plus by default */
-.preview-row-insert .preview-insert-button {
-  position: relative;
-  z-index: 2;
-  left: 0px;
-  top: 0px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  padding: 0;
-  border: 1px solid #2c6ecb;
-  border-radius: 50%;
-  background: #ffffff;
-  color: #2c6ecb;
-  font-size: 17px;
-
-  cursor: pointer;
-  opacity: 0;
-  transform: scale(0.85);
-  transition:
-    opacity 0.18s ease,
-    transform 0.18s ease,
-    background 0.18s ease;
-}
-
-/* Show line and plus when hovering between rows */
-.preview-row-insert:hover .preview-row-insert__line,
-.preview-row-insert--active .preview-row-insert__line {
-  opacity: 1;
-}
-
-.preview-row-insert:hover .preview-insert-button,
-.preview-row-insert--active .preview-insert-button {
-  opacity: 1;
-  transform: scale(1);
-}
-
-/* Plus hover */
-.preview-row-insert .preview-insert-button:hover {
-  background: #2c6ecb;
-  color: #ffffff;
-}
-
-/* =========================================
-   CHOICE OPTIONS - SETTINGS PANEL WIDTH
-========================================= */
-
-/* Expanded: same width as Paragraph */
-.template-editor__main:has(.choice-options--expanded) {
-    grid-template-columns: 220px 500px minmax(0, 1fr) !important;
-}
-
-/* Collapsed: normal settings width */
-.template-editor__main:has(.choice-options--collapsed) {
-    grid-template-columns: 220px 350px minmax(0, 1fr);
-}
-
-
-/* =========================================
-   CHOICE OPTIONS - COLLAPSED
-========================================= */
-
-/* Keep each option on a separate line */
-.choice-options--collapsed .choice-option-row:not(.choice-option-heading) {
-    display: grid;
-    grid-template-columns: 12px minmax(0, 1fr) auto;
-    align-items: center;
-    gap: 12px;
-    width: 100%;
-}
-
-/* Hide column headings */
-.choice-options--collapsed .choice-option-heading {
-    display: none;
-}
-
-/* Hide only the value input */
-.choice-options--collapsed .choice-option-value {
-    display: none;
-}
-
-
-/* =========================================
-   CHOICE OPTIONS - EXPANDED
-========================================= */
-
-/* Label and value side by side */
-.choice-options--expanded .choice-option-row {
-    display: grid;
-    grid-template-columns:
-        12px
-        minmax(0, 1fr)
-        minmax(0, 1fr)
-        auto;
-    align-items: center;
-    gap: 12px;
-    width: 100%;
-}
-
-/* Show column headings */
-.choice-options--expanded .choice-option-heading {
-    display: grid;
-}
-
-/* Show value inputs */
-.choice-options--expanded .choice-option-value {
-    display: block;
-    min-width: 0;
-}
-
-
-/* =========================================
-   SHARED OPTION ROW STYLES
-========================================= */
-
-/* Prevent input overflow */
-.choice-option-row .Polaris-TextField {
-    width: 100%;
-    min-width: 0;
-}
-
-/* Drag handle */
-.choice-option-drag {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-/* Heading alignment */
-.choice-option-heading {
-    align-items: center;
-}
-.choice-option-row {
-    display: grid;
-    grid-template-columns: 24px minmax(0, 1fr) minmax(0, 1fr) 32px;
-    align-items: center;
-    gap: 8px;
-}
-
-.choice-option-drag {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: grab;
-    color: #8c9196;
-    user-select: none;
-}
-
-.choice-option-drag:hover {
-    color: #303030;
-}
-
-.choice-option-drag:active {
-    cursor: grabbing;
-}
-.choice-option-row {
-    display: grid;
-    grid-template-columns: 24px minmax(0, 1fr) minmax(0, 1fr) 32px;
-    align-items: center;
-    gap: 8px;
-}
-
-.choice-option-drag {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: grab;
-    color: #8c9196;
-    user-select: none;
-}
-
-.choice-option-drag:hover {
-    color: #303030;
-}
-
-.choice-option-drag:active {
-    cursor: grabbing;
-}
-
-/* //preview filed switch btn */
-.preview-switch {
-  position: relative;
-  width: 42px;
-  height: 24px;
-  padding: 0;
-  border: none;
-  border-radius: 20px;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-}
-
-.preview-switch.is-on {
-  background-color: #008060;
-}
-
-.preview-switch.is-off {
-  background-color: #8c9196;
-}
-
-.preview-switch__thumb {
-  position: absolute;
-  top: 3px;
-  left: 3px;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: #fff;
-  transition: transform 0.2s ease;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-}
-
-.preview-switch.is-on .preview-switch__thumb {
-  transform: translateX(18px);
-}
-/* //for the header of live preview formdtor page */
-.live-preview__toolbar .toolbar-mode-button {
-  border-radius: 8px;
-  min-width: 36px;
-  min-height: 36px;
-}
-
-/* Active button background */
-
-/* =========================================
-   FINAL FIX - EDITOR PREVIEW TOOLBAR
-   Does not change existing preview design
-========================================= */
-
-/* Editor shell */
-.template-editor {
-  width: 100%;
-  max-width: 100%;
-  box-sizing: border-box;
-}
-
-/* Main editor grid */
-.template-editor__main {
-  width: 100%;
-  min-width: 0;
-  max-width: 100%;
-  box-sizing: border-box;
-}
-
-/* Preview column */
-.template-editor__preview {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  min-height: 0;
-  width: 100%;
-  max-width: 100%;
-  box-sizing: border-box;
-  overflow: hidden;
-}
-
-/* =========================================
-   LIVE PREVIEW TOOLBAR
-========================================= */
-
-.template-editor__preview .live-preview__toolbar {
-  position: relative;
-  z-index: 20;
-
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-
-  align-items: center;
-  gap: 8px;
-
-  width: 100%;
-  max-width: 100%;
-  min-width: 0;
-
-  height: 50px;
-  min-height: 50px;
-
-  padding: 0 16px !important;
-  margin: 0;
-
-  box-sizing: border-box;
-  flex: 0 0 50px;
-
-  background: #ffffff !important;
-  color: #202223 !important;
-  border-bottom: 1px solid #e3e3e3;
-  border-radius: 0 !important;
-
-  overflow: visible;
-}
-
-/* LEFT */
-.template-editor__preview .live-preview__toolbar-left {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-
-  min-width: 0;
-  max-width: 100%;
-  overflow: hidden;
-}
-
-.template-editor__preview .live-preview__toolbar-left .Polaris-InlineStack {
-  min-width: 0;
-  max-width: 100%;
-  flex-wrap: nowrap;
-}
-
-/* CENTER */
-.template-editor__preview .live-preview__toolbar-center {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  min-width: 0;
-  white-space: nowrap;
-}
-
-/* RIGHT */
-.template-editor__preview .live-preview__toolbar-right {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-
-  min-width: 0;
-  max-width: 100%;
-
-  gap: 8px;
-  flex-wrap: nowrap;
-  white-space: nowrap;
-}
-
-/* =========================================
-   EDITOR / MOBILE CUSTOM ICON BUTTONS
-========================================= */
-
-.template-editor__preview .live-preview__toolbar .toolbar-icon-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-
-  flex: 0 0 36px;
-  width: 36px;
-  min-width: 36px;
-  max-width: 36px;
-  height: 36px;
-
-  padding: 0;
-  margin: 0;
-
-  box-sizing: border-box;
-
-  border: none;
-  border-radius: 8px;
-
-  background: transparent;
-  color: #616161;
-
-  cursor: pointer;
-  transition: background-color 0.15s ease, color 0.15s ease;
-}
-
-/* Hover */
-.template-editor__preview .live-preview__toolbar .toolbar-icon-button:hover {
-  background: #f1f1f1;
-  color: #303030;
-}
-
-/* Active */
-.template-editor__preview .live-preview__toolbar .toolbar-icon-button.active {
-  background: #eaf2ff !important;
-  color: #155eef !important;
-}
-
-/* Active icon */
-.template-editor__preview .live-preview__toolbar .toolbar-icon-button.active svg {
-  color: #155eef !important;
-}
-
-/* Icon dimensions */
-.template-editor__preview .live-preview__toolbar .toolbar-icon-button .Polaris-Icon {
-  width: 20px;
-  height: 20px;
-  margin: 0;
-}
-
-/* =========================================
-   UNDO / REDO
-========================================= */
-
-.template-editor__preview .live-preview__toolbar-right .Polaris-ButtonGroup {
-  display: flex;
-  flex: 0 0 auto;
-  flex-wrap: nowrap;
-}
-
-.template-editor__preview .live-preview__toolbar-right > .Polaris-Button {
-  flex: 0 0 auto;
-}
-
-/* =========================================
-   TOOLBAR TOOLTIP
-   Keep tooltip visible above header
-========================================= */
-
-.template-editor__preview .live-preview__toolbar .Polaris-Tooltip {
-  z-index: 100000;
-}
-
-/* =========================================
-   PREVIEW CARD
-   Preserve existing card appearance
-========================================= */
-
-.template-editor__preview > .Polaris-Card {
-  flex: 1 1 auto;
-  min-width: 0;
-  min-height: 0;
-  max-width: 100%;
-  box-sizing: border-box;
-}
-
-/* =========================================
-   RESPONSIVE WIDTH
-========================================= */
-
-@media screen and (max-width: 1100px) {
-  .template-editor__preview .live-preview__toolbar {
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 6px;
-  }
-
-  .template-editor__preview .live-preview__toolbar-center {
-    display: none;
-  }
-}
-
-@media screen and (max-width: 600px) {
-  .template-editor__preview .live-preview__toolbar {
-    padding: 0 8px !important;
-  }
-
-  .template-editor__preview .live-preview__toolbar-right {
-    gap: 4px;
-  }
-}
-
-/* =========================================
-   MOBILE PREVIEW MODE
-========================================= */
-
-/* =========================================
-   MOBILE PREVIEW MODE - 470px
-========================================= */
-
-/* Outer preview area: center the form and allow horizontal scrolling */
-.live-preview--mobile-preview .live-preview__body {
-  display: flex !important;
-  justify-content: center !important;
-  align-items: flex-start !important;
-
-  width: 100% !important;
-  height: 100% !important;
-  min-width: 0 !important;
-
-  overflow-x: auto !important;
-  overflow-y: hidden !important;
-
-  padding: 0 16px 12px !important;
-  box-sizing: border-box !important;
-  background-color: #F1F2F4;
-
-  scrollbar-width: thin;
-  scrollbar-color: #8c9196 #e4e5e7;
-}
-
-/* Horizontal scrollbar */
-.live-preview--mobile-preview .live-preview__body::-webkit-scrollbar {
-  height: 10px;
-}
-
-.live-preview--mobile-preview .live-preview__body::-webkit-scrollbar-track {
-  background: #e4e5e7;
-}
-
-.live-preview--mobile-preview .live-preview__body::-webkit-scrollbar-thumb {
-  background: #8c9196;
-  border-radius: 10px;
-}
-
-/* 470px mobile form with its own vertical scrollbar */
-.live-preview--mobile-preview .live-preview__form {
-     flex: 0 0 470px !important;
-    width: 470px !important;
-    min-width: 470px !important;
-    max-width: 470px !important;
-    height: 78vh !important;
-    min-height: 0 !important;
-    max-height: 78vh !important;
-    margin: 46px auto !important;
-    padding: 15px !important;
-    overflow-x: hidden !important;
-    overflow-y: auto !important;
-    box-sizing: border-box !important;
-    scrollbar-width: thin;
-    scrollbar-color: #8c9196 #e4e5e7;
-    border-radius: 10px;
-}
-
-/* Vertical scrollbar inside the mobile form */
-.live-preview--mobile-preview .live-preview__form::-webkit-scrollbar {
-  width: 8px;
-}
-
-.live-preview--mobile-preview .live-preview__form::-webkit-scrollbar-track {
-  background: #e4e5e7;
-}
-
-.live-preview--mobile-preview .live-preview__form::-webkit-scrollbar-thumb {
-  background: #8c9196;
-  border-radius: 10px;
-}
-
-/* Inner content */
-.live-preview--mobile-preview .live-preview__data,
-.live-preview--mobile-preview .live-preview__content,
-.live-preview--mobile-preview .preview-page,
-.live-preview--mobile-preview .preview-root-drop-area {
-  width: 100% !important;
-  max-width: 100% !important;
-  min-width: 0 !important;
-  box-sizing: border-box !important;
-}
-
-/* Remove classic content padding */
-.live-preview--mobile-preview.live-preview--classic .live-preview__content {
-  padding: 0 !important;
-}
-
-/* Stack fields vertically */
-.live-preview--mobile-preview .preview-row-grid {
-  display: flex !important;
-  flex-direction: column !important;
-  width: 100% !important;
-  gap: 16px;
-  box-sizing: border-box !important;
-}
-
-/* Full-width fields */
-.live-preview--mobile-preview .preview-element {
-  flex: 0 0 100% !important;
-  width: 100% !important;
-  max-width: 100% !important;
-  min-width: 0 !important;
-  box-sizing: border-box !important;
-}
-
-/* Header and footer */
-.live-preview--mobile-preview .preview-fixed-element {
-  width: 100% !important;
-  max-width: 100% !important;
-  min-width: 0 !important;
-  box-sizing: border-box !important;
-}
-
-/* Inputs */
-.live-preview--mobile-preview input,
-.live-preview--mobile-preview textarea,
-.live-preview--mobile-preview select {
-  max-width: 100% !important;
-  box-sizing: border-box !important;
-}
-
-/* Desktop/mobile transition */
-.live-preview__form {
-  transition: width 0.25s ease, max-width 0.25s ease;
 }

@@ -760,6 +760,10 @@
    COMPACT INSERTION BETWEEN ELEMENTS
 ========================================= */
 
+/* =========================================
+   ROW INSERTION LINE
+========================================= */
+
 .element-tree__section-insert {
     position: relative;
     display: flex;
@@ -773,6 +777,7 @@
     z-index: 10;
 }
 
+/* Horizontal line: grows from center */
 .element-tree__section-insert-line {
     position: absolute;
     left: 0;
@@ -780,39 +785,60 @@
     width: 100%;
     height: 1px;
     background: #2c6ecb;
+
     opacity: 0;
-    transform: translateY(-50%);
-    transition: opacity 0.2s ease;
+    transform: translateY(-50%) scaleX(0);
+    transform-origin: center;
+
+    transition:
+        transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+        opacity 0.2s ease;
 }
 
+/* Circular plus button */
 .element-tree__section-insert-button {
     position: absolute;
     left: 50%;
     top: 50%;
+
     display: flex;
     align-items: center;
     justify-content: center;
+
     width: 20px;
     height: 20px;
     padding: 0;
+
     border: 1px solid #2c6ecb;
     border-radius: 50%;
+
     background: #fff;
     color: #2c6ecb;
+
     font-size: 16px;
     line-height: 1;
     cursor: pointer;
+
     opacity: 0;
     pointer-events: none;
-    transform: translate(-50%, -50%) scale(0.85);
-    transition: opacity 0.2s ease, transform 0.2s ease;
+
+    transform: translate(-50%, -50%) scale(0.65);
+
+    transition:
+        opacity 0.2s ease,
+        transform 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+        background 0.2s ease,
+        color 0.2s ease;
 }
 
+/* Show and grow line */
 .element-tree__section-insert:hover
 .element-tree__section-insert-line {
     opacity: 1;
+    transform: translateY(-50%) scaleX(1);
 }
 
+/* Show and pop plus button */
 .element-tree__section-insert:hover
 .element-tree__section-insert-button {
     opacity: 1;
@@ -820,19 +846,127 @@
     transform: translate(-50%, -50%) scale(1);
 }
 
+/* Plus hover */
 .element-tree__section-insert-button:hover {
     background: #2c6ecb;
     color: #fff;
 }
 
+/* Keyboard focus */
+.element-tree__section-insert:focus-within
+.element-tree__section-insert-line {
+    opacity: 1;
+    transform: translateY(-50%) scaleX(1);
+}
 
-.element-tree__section-insert:hover
-.element-tree__section-insert-button {
+/* =========================================
+   INSERTION BETWEEN ELEMENTS
+========================================= */
+
+/* Element wrapper */
+.element-tree__item-wrapper {
+    position: relative;
+    width: 100%;
+    min-width: 0;
+}
+
+/* Insertion control */
+.element-tree__item-insert {
+    position: absolute;
+    left: 0;
+    width: 100%;
+    height: 8px;
+    margin: 0;
+    padding: 0;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    z-index: 30;
+}
+
+/* Above element */
+.element-tree__item-insert--before {
+    top: 0;
+    transform: translateY(-50%);
+}
+
+/* Below element */
+.element-tree__item-insert--after {
+    bottom: 0;
+    transform: translateY(50%);
+}
+
+/* Horizontal line: grows from center */
+.element-tree__item-insert::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 50%;
+    width: 100%;
+    height: 1px;
+    background: #2c6ecb;
+
+    opacity: 0;
+    transform: translateY(-50%) scaleX(0);
+    transform-origin: center;
+
+    transition:
+        transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+        opacity 0.2s ease;
+
+    pointer-events: none;
+}
+
+/* Circular plus */
+.element-tree__item-insert::after {
+    content: "+";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+
+    width: 20px;
+    height: 20px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border: 1px solid #2c6ecb;
+    border-radius: 50%;
+
+    background: #fff;
+    color: #2c6ecb;
+
+    font-size: 16px;
+    line-height: 1;
+
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.65);
+
+    transition:
+        opacity 0.2s ease,
+        transform 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+        background 0.2s ease,
+        color 0.2s ease;
+
+    pointer-events: none;
+}
+
+/* Show only the hovered insertion position */
+.element-tree__item-insert:hover::before,
+.element-tree__item-insert:focus-visible::before {
+    opacity: 1;
+    transform: translateY(-50%) scaleX(1);
+}
+
+.element-tree__item-insert:hover::after,
+.element-tree__item-insert:focus-visible::after {
     opacity: 1;
     transform: translate(-50%, -50%) scale(1);
 }
 
-.element-tree__section-insert-button:hover {
+/* Plus hover */
+.element-tree__item-insert:hover::after {
     background: #2c6ecb;
     color: #fff;
 }
