@@ -162,6 +162,7 @@ function DraggablePreviewElement({
   onChangeElement, // ADD THIS
   products = [],
   productsLoading = false,
+  isModelPreview = false,
 }) {
   const isSelected = element.id === selectedElementId;
   const isHidden = element.visible === false;
@@ -376,7 +377,7 @@ function DraggablePreviewElement({
       )}
 
       <PreviewField element={element} pages={pages} products={products}
-        productsLoading={productsLoading} />
+        productsLoading={productsLoading} isModelPreview={isModelPreview} />
     </div>
   );
 
@@ -389,6 +390,7 @@ function FixedPreviewElement({
   onSelectElement,
   products = [],
   productsLoading = false,
+  isModelPreview = false,
 }) {
   if (!element) return null;
 
@@ -420,7 +422,7 @@ function FixedPreviewElement({
       }}
     >
       <PreviewField element={element} pages={pages} activePageId={activePageId} products={products}
-        productsLoading={productsLoading} />
+        productsLoading={productsLoading} isModelPreview={isModelPreview} />
     </div>
   );
 }
@@ -463,12 +465,18 @@ export default function LivePreview({
   onChangeElement, // ADD THIS
   products = [],
   productsLoading = false,
-  
+  isMobilePreview = false,
+  isModelPreview = false,
+
 }) {
   return (
     <div
-      className={`live-preview live-preview--${formSettings.theme || "classic"
-        }`}
+      className={[
+        `live-preview live-preview--${formSettings.theme || "classic"}`,
+        isMobilePreview ? "live-preview--mobile-preview" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
     >
       {/* <Box background="bg-surface" padding="300">
         <InlineStack
@@ -521,6 +529,7 @@ export default function LivePreview({
                   onSelectElement={onSelectElement}
                   products={products}
                   productsLoading={productsLoading}
+                  isModelPreview={isModelPreview}
                 />
               )}
 
@@ -621,6 +630,7 @@ export default function LivePreview({
                                       onChangeElement={onChangeElement}
                                       products={products}
                                       productsLoading={productsLoading}
+                                      isModelPreview={isModelPreview}
                                     />
                                   ))}
                                 </div>
@@ -667,6 +677,7 @@ export default function LivePreview({
                                 onChangeElement={onChangeElement}
                                 products={products}
                                 productsLoading={productsLoading}
+                                isModelPreview={isModelPreview}
                               />
                             ))}
                         </BlockStack>
@@ -702,6 +713,7 @@ export default function LivePreview({
                   activePageId={activePageId}
                   selectedElementId={selectedElementId}
                   onSelectElement={onSelectElement}
+                  isModelPreview={isModelPreview}
                 />
               )}
 

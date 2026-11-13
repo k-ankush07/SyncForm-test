@@ -1002,10 +1002,15 @@ function LayoutSettings({ element, onChange, onDelete }) {
    ELEMENT SETTINGS CONTROLLER
 ========================================= */
 
-export default function ElementSettings({ element, onChange, onClose, onDelete, products,
+export default function ElementSettings({
+    element,
+    onChange,
+    onClose,
+    onDelete,
+    products,
     productsLoading, hasMoreProducts = false,
     productsLoadingMore = false,
-    onLoadMoreProducts, }) {
+    onLoadMoreProducts, pages = [], }) {
 
     const [activeSection, setActiveSection] = useState("main");
 
@@ -1062,15 +1067,20 @@ export default function ElementSettings({ element, onChange, onClose, onDelete, 
         product: ProductSettings,
         matrix: MatrixSettings,
         feedback: FeedbackSettings,
-        hidden: HiddenSettings,
         repeater: RepeaterSettings,
         signature: SignatureSettings,
-        html: CustomHtmlSettings,   
+        html: CustomHtmlSettings,
         consent: ConsentSettings,
-        url: UrlSettings
+        url: UrlSettings,
+        hidden: HiddenSettings
     };
 
     const GroupComponent = settingsGroups[groupType];
+    console.log("Element type:", element?.type);
+console.log("Group type:", groupType);
+console.log("Group component:", GroupComponent);
+console.log("GroupComponent:", GroupComponent);
+console.log("Is function:", typeof GroupComponent === "function");
 
     // SELECT ICON SECTION
 
@@ -1158,6 +1168,7 @@ export default function ElementSettings({ element, onChange, onClose, onDelete, 
 
                     {!isHeaderFooter && GroupComponent && (
                         <GroupComponent
+                            pages={pages}
                             element={element}
                             onChange={onChange}
                             products={products}
@@ -1169,6 +1180,7 @@ export default function ElementSettings({ element, onChange, onClose, onDelete, 
                                 setActiveSection("ratingIcon")
                             }
                         />
+                        
                     )}
 
                     {!isHeaderFooter && showOptionsPerLine && (

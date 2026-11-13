@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState,useRef } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import SignaturePad from "signature_pad";
 
 import * as PolarisIcons from "@shopify/polaris-icons";
@@ -23,7 +23,7 @@ import {
 import { countries } from "../components/elementsettings/utils/countries.js";
 import FormProgressIndicator from './RichTextEditor/FormProgressIndicator';
 
-export default function PreviewField({ element, field, pages = [], activePageId = null, products = [],
+export default function PreviewField({ element, field, pages = [], activePageId = null, products = [],  isModelPreview = false,
   productsLoading = false, }) {
   const currentElement = element ?? field;
   // console.log("PreviewField received:", currentElement);
@@ -81,11 +81,11 @@ export default function PreviewField({ element, field, pages = [], activePageId 
     </div>
   );
 
- const [checked, setChecked] = useState(
-  normalizedElement.type === "consent"
-    ? normalizedElement.checkedByDefault ?? true
-    : Boolean(normalizedElement.defaultValue)
-);
+  const [checked, setChecked] = useState(
+    normalizedElement.type === "consent"
+      ? normalizedElement.checkedByDefault ?? true
+      : Boolean(normalizedElement.defaultValue)
+  );
   const [selected, setSelected] = useState([]);
   const [value, setValue] = useState(defaultValue);
   const [confirmPasswordValue, setConfirmPasswordValue] = useState("");
@@ -103,40 +103,40 @@ export default function PreviewField({ element, field, pages = [], activePageId 
     setConfirmPasswordValue("")
   }, [normalizedElement.id, normalizedElement.defaultValue]);
 
- useEffect(() => {
-  setChecked(
-    normalizedElement.type === "consent"
-      ? normalizedElement.checkedByDefault ?? true
-      : Boolean(normalizedElement.defaultValue)
+  useEffect(() => {
+    setChecked(
+      normalizedElement.type === "consent"
+        ? normalizedElement.checkedByDefault ?? true
+        : Boolean(normalizedElement.defaultValue)
+    );
+  }, [
+    normalizedElement.id,
+    normalizedElement.defaultValue,
+    normalizedElement.checkedByDefault,
+    normalizedElement.type,
+  ]);
+
+  //switch values
+  const [switchValue, setSwitchValue] = useState(
+    Boolean(normalizedElement.defaultChecked)
   );
-}, [
-  normalizedElement.id,
-  normalizedElement.defaultValue,
-  normalizedElement.checkedByDefault,
-  normalizedElement.type,
-]);
+  useEffect(() => {
+    setSwitchValue(Boolean(normalizedElement.defaultChecked));
+  }, [
+    normalizedElement.id,
+    normalizedElement.defaultChecked,
+  ]);
 
-//switch values
-const [switchValue, setSwitchValue] = useState(
-  Boolean(normalizedElement.defaultChecked)
-);
-useEffect(() => {
-  setSwitchValue(Boolean(normalizedElement.defaultChecked));
-}, [
-  normalizedElement.id,
-  normalizedElement.defaultChecked,
-]);
-
-//color pick show in prevuew
-const [colorValue, setColorValue] = useState(
-  normalizedElement.defaultColor || "#563D7C"
-);
-useEffect(() => {
-  setColorValue(normalizedElement.defaultColor || "#563D7C");
-}, [
-  normalizedElement.id,
-  normalizedElement.defaultColor,
-]);
+  //color pick show in prevuew
+  const [colorValue, setColorValue] = useState(
+    normalizedElement.defaultColor || "#563D7C"
+  );
+  useEffect(() => {
+    setColorValue(normalizedElement.defaultColor || "#563D7C");
+  }, [
+    normalizedElement.id,
+    normalizedElement.defaultColor,
+  ]);
 
   const rawOptions = normalizedElement.options || [];
 
@@ -228,7 +228,7 @@ useEffect(() => {
           autoComplete="email"
           value={value}
           onChange={setValue}
-          readOnly
+         readOnly={!isModelPreview}
         />
       );
 
@@ -547,22 +547,22 @@ useEffect(() => {
         </InlineStack>
       );
     case "url":
-  return (
-    <TextField
-      {...commonTextFieldProps}
-      type="url"
-      placeholder={placeholder || "https://example.com"}
-      value={value}
-      onChange={setValue}
-      autoComplete="url"
-      readOnly
-      prefix={
-        element.showIcon !== false ? (
-          <Icon source={PolarisIcons.LinkIcon} />
-        ) : undefined
-      }
-    />
-  );
+      return (
+        <TextField
+          {...commonTextFieldProps}
+          type="url"
+          placeholder={placeholder || "https://example.com"}
+          value={value}
+          onChange={setValue}
+          autoComplete="url"
+          readOnly
+          prefix={
+            element.showIcon !== false ? (
+              <Icon source={PolarisIcons.LinkIcon} />
+            ) : undefined
+          }
+        />
+      );
 
     case "date":
       return (
@@ -601,168 +601,198 @@ useEffect(() => {
         </BlockStack>
       );
 
-    
-case "signature": {
-  const canvasRef = useRef(null);
-  const signaturePadRef = useRef(null);
 
-  const [uploadedSignature, setUploadedSignature] = useState(null);
+    case "signature": {
+      const canvasRef = useRef(null);
+      const signaturePadRef = useRef(null);
 
-  const showCanvas = normalizedElement.showCanvas !== false;
-  const allowFileUpload = normalizedElement.allowFileUpload === true;
+      const [uploadedSignature, setUploadedSignature] = useState(null);
 
-  const canvasHeight = Number(normalizedElement.canvasHeight) || 150;
-  const penColor = normalizedElement.penColor || "#000000";
-  const penWidth = Number(normalizedElement.penWidth) || 2;
+      const showCanvas = normalizedElement.showCanvas !== false;
+      const allowFileUpload = normalizedElement.allowFileUpload === true;
 
-  useEffect(() => {
-    if (!showCanvas || !canvasRef.current) return;
+      const canvasHeight = Number(normalizedElement.canvasHeight) || 150;
+      const penColor = normalizedElement.penColor || "#000000";
+      const penWidth = Number(normalizedElement.penWidth) || 2;
 
-    const canvas = canvasRef.current;
-    const signaturePad = new SignaturePad(canvas, {
-      penColor,
-      minWidth: penWidth,
-      maxWidth: penWidth,
-      backgroundColor: normalizedElement.canvasBackground || "#ffffff",
-    });
+      useEffect(() => {
+        if (!showCanvas || !canvasRef.current) return;
 
-    signaturePadRef.current = signaturePad;
+        const canvas = canvasRef.current;
+        const signaturePad = new SignaturePad(canvas, {
+          penColor,
+          minWidth: penWidth,
+          maxWidth: penWidth,
+          backgroundColor: normalizedElement.canvasBackground || "#ffffff",
+        });
 
-    const resizeCanvas = () => {
-      const ratio = Math.max(window.devicePixelRatio || 1, 1);
-      const data = signaturePad.isEmpty() ? null : signaturePad.toData();
+        signaturePadRef.current = signaturePad;
 
-      canvas.width = canvas.offsetWidth * ratio;
-      canvas.height = canvasHeight * ratio;
+        const resizeCanvas = () => {
+          const ratio = Math.max(window.devicePixelRatio || 1, 1);
+          const data = signaturePad.isEmpty() ? null : signaturePad.toData();
 
-      const context = canvas.getContext("2d");
-      context.scale(ratio, ratio);
+          canvas.width = canvas.offsetWidth * ratio;
+          canvas.height = canvasHeight * ratio;
 
-      signaturePad.clear();
+          const context = canvas.getContext("2d");
+          context.scale(ratio, ratio);
 
-      if (data) {
-        signaturePad.fromData(data);
-      }
-    };
+          signaturePad.clear();
 
-    resizeCanvas();
+          if (data) {
+            signaturePad.fromData(data);
+          }
+        };
 
-    return () => {
-      signaturePad.off();
-      signaturePadRef.current = null;
-    };
-  }, [
-    normalizedElement.id,
-    showCanvas,
-    canvasHeight,
-    penColor,
-    penWidth,
-    normalizedElement.canvasBackground,
-  ]);
+        resizeCanvas();
 
-  const clearSignature = () => {
-    signaturePadRef.current?.clear();
-  };
+        return () => {
+          signaturePad.off();
+          signaturePadRef.current = null;
+        };
+      }, [
+        normalizedElement.id,
+        showCanvas,
+        canvasHeight,
+        penColor,
+        penWidth,
+        normalizedElement.canvasBackground,
+      ]);
 
-  const handleSignatureUpload = (event) => {
-    const file = event.target.files?.[0];
+      const clearSignature = () => {
+        signaturePadRef.current?.clear();
+      };
 
-    if (!file) return;
+      const handleSignatureUpload = (event) => {
+        const file = event.target.files?.[0];
 
-    if (!file.type.startsWith("image/")) {
-      event.target.value = "";
-      return;
-    }
+        if (!file) return;
 
-    setUploadedSignature(URL.createObjectURL(file));
-  };
+        if (!file.type.startsWith("image/")) {
+          event.target.value = "";
+          return;
+        }
 
-  return (
-    <BlockStack gap="200">
-      {!hideLabel && (
-        <Text as="p" variant="bodyMd">
-          {label}
-          {required && (
-            <span style={{ color: "var(--p-color-text-critical)" }}>
-              {" "}*
-            </span>
-          )}
-        </Text>
-      )}
+        setUploadedSignature(URL.createObjectURL(file));
+      };
 
-      {/* DRAW SIGNATURE */}
-      {showCanvas && (
+      return (
         <BlockStack gap="200">
-          <div
-            style={{
-              border: "1px dashed #8c9196",
-              borderRadius: "8px",
-              overflow: "hidden",
-              background: normalizedElement.canvasBackground || "#ffffff",
-            }}
-          >
-            <canvas
-              ref={canvasRef}
-              style={{
-                display: "block",
-                width: "100%",
-                height: `${canvasHeight}px`,
-                touchAction: "none",
-                cursor: "crosshair",
-              }}
-            />
-          </div>
-
-          {normalizedElement.allowClear !== false && (
-            <InlineStack align="end">
-              <Button
-                size="slim"
-                onClick={clearSignature}
-              >
-                Clear signature
-              </Button>
-            </InlineStack>
+          {!hideLabel && (
+            <Text as="p" variant="bodyMd">
+              {label}
+              {required && (
+                <span style={{ color: "var(--p-color-text-critical)" }}>
+                  {" "}*
+                </span>
+              )}
+            </Text>
           )}
-        </BlockStack>
-      )}
 
-      {/* OR SEPARATOR */}
-      {showCanvas && allowFileUpload && (
-        <Text as="p" variant="bodySm" tone="subdued">
-          OR
-        </Text>
-      )}
-
-      {/* UPLOAD SIGNATURE */}
-      {allowFileUpload && (
-        <BlockStack gap="200">
-          {uploadedSignature ? (
+          {/* DRAW SIGNATURE */}
+          {showCanvas && (
             <BlockStack gap="200">
-              <img
-                src={uploadedSignature}
-                alt="Uploaded signature"
+              <div
                 style={{
-                  maxWidth: "100%",
-                  maxHeight: "150px",
-                  objectFit: "contain",
-                  border: "1px solid #e1e3e5",
+                  border: "1px dashed #8c9196",
                   borderRadius: "8px",
-                  padding: "8px",
+                  overflow: "hidden",
+                  background: normalizedElement.canvasBackground || "#ffffff",
                 }}
-              />
+              >
+                <canvas
+                  ref={canvasRef}
+                  style={{
+                    display: "block",
+                    width: "100%",
+                    height: `${canvasHeight}px`,
+                    touchAction: "none",
+                    cursor: "crosshair",
+                  }}
+                />
+              </div>
 
-              {normalizedElement.allowReplace !== false && (
-                <label style={{ cursor: "pointer" }}>
-                  <span
-                    style={{
-                      display: "inline-block",
-                      padding: "7px 14px",
-                      border: "1px solid #8c9196",
-                      borderRadius: "6px",
-                    }}
+              {normalizedElement.allowClear !== false && (
+                <InlineStack align="end">
+                  <Button
+                    size="slim"
+                    onClick={clearSignature}
                   >
-                    Replace signature
-                  </span>
+                    Clear signature
+                  </Button>
+                </InlineStack>
+              )}
+            </BlockStack>
+          )}
+
+          {/* OR SEPARATOR */}
+          {showCanvas && allowFileUpload && (
+            <Text as="p" variant="bodySm" tone="subdued">
+              OR
+            </Text>
+          )}
+
+          {/* UPLOAD SIGNATURE */}
+          {allowFileUpload && (
+            <BlockStack gap="200">
+              {uploadedSignature ? (
+                <BlockStack gap="200">
+                  <img
+                    src={uploadedSignature}
+                    alt="Uploaded signature"
+                    style={{
+                      maxWidth: "100%",
+                      maxHeight: "150px",
+                      objectFit: "contain",
+                      border: "1px solid #e1e3e5",
+                      borderRadius: "8px",
+                      padding: "8px",
+                    }}
+                  />
+
+                  {normalizedElement.allowReplace !== false && (
+                    <label style={{ cursor: "pointer" }}>
+                      <span
+                        style={{
+                          display: "inline-block",
+                          padding: "7px 14px",
+                          border: "1px solid #8c9196",
+                          borderRadius: "6px",
+                        }}
+                      >
+                        Replace signature
+                      </span>
+                      <input
+                        type="file"
+                        accept="image/png,image/jpeg"
+                        hidden
+                        onChange={handleSignatureUpload}
+                      />
+                    </label>
+                  )}
+                </BlockStack>
+              ) : (
+                <label
+                  style={{
+                    border: "1px dashed #8c9196",
+                    borderRadius: "8px",
+                    padding: "24px",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: "8px",
+                    cursor: "pointer",
+                  }}
+                >
+                  <Icon source={PolarisIcons.UploadIcon} />
+                  <Text as="span" variant="bodyMd">
+                    {normalizedElement.uploadButtonText || "Upload signature"}
+                  </Text>
+                  <Text as="span" variant="bodySm" tone="subdued">
+                    {normalizedElement.acceptedFileTypes || "PNG, JPG, JPEG"}
+                  </Text>
+
                   <input
                     type="file"
                     accept="image/png,image/jpeg"
@@ -772,42 +802,12 @@ case "signature": {
                 </label>
               )}
             </BlockStack>
-          ) : (
-            <label
-              style={{
-                border: "1px dashed #8c9196",
-                borderRadius: "8px",
-                padding: "24px",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: "8px",
-                cursor: "pointer",
-              }}
-            >
-              <Icon source={PolarisIcons.UploadIcon} />
-              <Text as="span" variant="bodyMd">
-                {normalizedElement.uploadButtonText || "Upload signature"}
-              </Text>
-              <Text as="span" variant="bodySm" tone="subdued">
-                {normalizedElement.acceptedFileTypes || "PNG, JPG, JPEG"}
-              </Text>
-
-              <input
-                type="file"
-                accept="image/png,image/jpeg"
-                hidden
-                onChange={handleSignatureUpload}
-              />
-            </label>
           )}
-        </BlockStack>
-      )}
 
-      {descriptionText}
-    </BlockStack>
-  );
-}
+          {descriptionText}
+        </BlockStack>
+      );
+    }
 
     case "heading": {
       const headingConfig = {
@@ -927,101 +927,109 @@ case "signature": {
         />
       );
 
-    case "quantity": {
-      const min = normalizedElement.setMinValue
-        ? Number(normalizedElement.minValue || 0)
-        : 0;
+   case "quantity": {
+  const parsedMin = Number(normalizedElement.minValue);
+  const parsedMax = Number(normalizedElement.maxValue);
 
-      const max = normalizedElement.setMaxValue &&
-        normalizedElement.maxValue !== ""
-        ? Number(normalizedElement.maxValue)
-        : Infinity;
+  const min = normalizedElement.setMinValue &&
+    Number.isFinite(parsedMin)
+    ? parsedMin
+    : 0;
 
-      // Start from minimum value
-      const currentValue =
-        value === "" || value === undefined || value === null
-          ? min
-          : Number(value);
+  const max = normalizedElement.setMaxValue &&
+    normalizedElement.maxValue !== "" &&
+    Number.isFinite(parsedMax)
+    ? Math.max(min, parsedMax)
+    : Infinity;
 
-      // Keep value within min and max
-      const safeValue = Math.min(max, Math.max(min, currentValue));
+  const parsedValue = Number(value);
 
-      const decreaseValue = () => {
-        setValue(String(Math.max(min, safeValue - 1)));
-      };
+  const currentValue =
+    value === "" ||
+    value === null ||
+    value === undefined ||
+    !Number.isFinite(parsedValue)
+      ? min
+      : parsedValue;
 
-      const increaseValue = () => {
-        setValue(String(Math.min(max, safeValue + 1)));
-      };
+  const safeValue = Math.min(max, Math.max(min, currentValue));
 
-      return (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            width: "100%",
-            minHeight: "54px",
-            padding: "0 14px",
-            background: "#eeeeee",
-            borderRadius: "9px",
-            boxSizing: "border-box",
-          }}
-        >
-          <button
-            type="button"
-            disabled={safeValue <= min}
-            onClick={decreaseValue}
-            style={{
-              border: "none",
-              background: "transparent",
-              color: safeValue <= min ? "#C9CCCF" : "#555",
-              fontSize: "20px",
-              cursor: safeValue <= min ? "not-allowed" : "pointer",
-            }}
-          >
-            −
-          </button>
+  const decreaseValue = () => {
+    setValue(String(Math.max(min, safeValue - 1)));
+  };
 
-          <span
-            style={{
-              flex: 1,
-              marginLeft: "12px",
-              fontSize: "14px",
-              color: "#303030",
-            }}
-          >
-            {commonTextFieldProps.label || "Quantity"}
-          </span>
+  const increaseValue = () => {
+    setValue(String(Math.min(max, safeValue + 1)));
+  };
 
-          <span
-            style={{
-              fontSize: "14px",
-              fontWeight: 500,
-              color: "#303030",
-              marginRight: "12px",
-            }}
-          >
-            {safeValue}
-          </span>
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        width: "100%",
+        minHeight: "54px",
+        padding: "0 14px",
+        background: "#eeeeee",
+        borderRadius: "9px",
+        boxSizing: "border-box",
+      }}
+    >
+      <button
+        type="button"
+        disabled={safeValue <= min}
+        onClick={decreaseValue}
+        style={{
+          border: "none",
+          background: "transparent",
+          color: safeValue <= min ? "#C9CCCF" : "#555",
+          fontSize: "20px",
+          cursor: safeValue <= min ? "not-allowed" : "pointer",
+        }}
+      >
+        −
+      </button>
 
-          <button
-            type="button"
-            disabled={safeValue >= max}
-            onClick={increaseValue}
-            style={{
-              border: "none",
-              background: "transparent",
-              color: safeValue >= max ? "#C9CCCF" : "#555",
-              fontSize: "20px",
-              cursor: safeValue >= max ? "not-allowed" : "pointer",
-            }}
-          >
-            +
-          </button>
-        </div>
-      );
-    }
+      <span
+        style={{
+          flex: 1,
+          marginLeft: "12px",
+          fontSize: "14px",
+          color: "#303030",
+        }}
+      >
+        {label || "Quantity"}
+      </span>
+
+      <span
+        style={{
+          fontSize: "14px",
+          fontWeight: 500,
+          color: "#303030",
+          marginRight: "12px",
+        }}
+      >
+        {safeValue}
+      </span>
+
+      <button
+        type="button"
+        disabled={safeValue >= max}
+        onClick={increaseValue}
+        style={{
+          border: "none",
+          background: "transparent",
+          color: safeValue >= max ? "#C9CCCF" : "#555",
+          fontSize: "20px",
+          cursor: safeValue >= max ? "not-allowed" : "pointer",
+        }}
+      >
+        +
+      </button>
+    </div>
+  );
+}
 
     case "rating_star": {
       const customRatingIcon =
@@ -1260,46 +1268,46 @@ case "signature": {
     }
 
     case "color_swatch": {
-  const colors = Array.isArray(normalizedElement.colors)
-    ? normalizedElement.colors
-    : ["#E53935", "#1E88E5", "#43A047", "#FDD835"];
+      const colors = Array.isArray(normalizedElement.colors)
+        ? normalizedElement.colors
+        : ["#E53935", "#1E88E5", "#43A047", "#FDD835"];
 
-  return (
-    <BlockStack gap="200">
-      {fieldLabelWithIcon}
+      return (
+        <BlockStack gap="200">
+          {fieldLabelWithIcon}
 
-      <div
-        style={{
-          display: "flex",
-          flexWrap: "wrap",
-          gap: "10px",
-        }}
-      >
-        {colors.map((color, index) => (
-          <button
-            key={`${color}-${index}`}
-            type="button"
-            aria-label={`Select ${color}`}
-            onClick={() => setColorValue(color)}
+          <div
             style={{
-              width: "32px",
-              height: "32px",
-              borderRadius: "50%",
-              background: color,
-              border:
-                colorValue === color
-                  ? "3px solid #202223"
-                  : "1px solid #d2d5d8",
-              cursor: "pointer",
+              display: "flex",
+              flexWrap: "wrap",
+              gap: "10px",
             }}
-          />
-        ))}
-      </div>
+          >
+            {colors.map((color, index) => (
+              <button
+                key={`${color}-${index}`}
+                type="button"
+                aria-label={`Select ${color}`}
+                onClick={() => setColorValue(color)}
+                style={{
+                  width: "32px",
+                  height: "32px",
+                  borderRadius: "50%",
+                  background: color,
+                  border:
+                    colorValue === color
+                      ? "3px solid #202223"
+                      : "1px solid #d2d5d8",
+                  cursor: "pointer",
+                }}
+              />
+            ))}
+          </div>
 
-      {descriptionText}
-    </BlockStack>
-  );
-}
+          {descriptionText}
+        </BlockStack>
+      );
+    }
 
     case "color_picker":
       return (
@@ -1385,6 +1393,7 @@ case "signature": {
             padding: "10px 24px",
             background: "#f7f7f7",
             display: "flex",
+            flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
             gap: "8px",
@@ -1393,6 +1402,9 @@ case "signature": {
 
           <Text as="span" variant="bodySm" tone="subdued">
             {value || "Hidden field"}
+          </Text>
+          <Text as="p" variant="bodySm" tone="subdued">
+            This field will not be visible to customers on the published form.
           </Text>
         </div>
       );
@@ -1508,47 +1520,47 @@ case "signature": {
       );
 
     case "range_slider": {
-  const min = Number(normalizedElement.min ?? 0);
-  const max = Number(normalizedElement.max ?? 100);
-  const step = Math.max(0.000001, Number(normalizedElement.step) || 1);
+      const min = Number(normalizedElement.min ?? 0);
+      const max = Number(normalizedElement.max ?? 100);
+      const step = Math.max(0.000001, Number(normalizedElement.step) || 1);
 
-  const defaultRangeValue = Number(
-    normalizedElement.defaultValue ?? min
-  );
+      const defaultRangeValue = Number(
+        normalizedElement.defaultValue ?? min
+      );
 
-  const safeDefault = Math.min(max, Math.max(min, defaultRangeValue));
+      const safeDefault = Math.min(max, Math.max(min, defaultRangeValue));
 
-  const currentRangeValue = Math.min(
-    max,
-    Math.max(min, rangeValue)
-  );
+      const currentRangeValue = Math.min(
+        max,
+        Math.max(min, rangeValue)
+      );
 
-  return (
-    <BlockStack gap="200">
-      {fieldLabelWithIcon}
+      return (
+        <BlockStack gap="200">
+          {fieldLabelWithIcon}
 
-      <input
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={currentRangeValue}
-        onChange={(event) =>
-          setRangeValue(Number(event.target.value))
-        }
-        style={{ width: "100%" }}
-      />
+          <input
+            type="range"
+            min={min}
+            max={max}
+            step={step}
+            value={currentRangeValue}
+            onChange={(event) =>
+              setRangeValue(Number(event.target.value))
+            }
+            style={{ width: "100%" }}
+          />
 
-      {normalizedElement.showRangeValue !== false && (
-        <Text as="p" variant="bodySm">
-          {currentRangeValue}
-        </Text>
-      )}
+          {normalizedElement.showRangeValue !== false && (
+            <Text as="p" variant="bodySm">
+              {currentRangeValue}
+            </Text>
+          )}
 
-      {descriptionText}
-    </BlockStack>
-  );
-}
+          {descriptionText}
+        </BlockStack>
+      );
+    }
 
 
     case "matrix": {
@@ -1641,32 +1653,32 @@ case "signature": {
         </BlockStack>
       );
     }
-case "switch":
-  return (
-    <BlockStack gap="200">
-      {fieldLabelWithIcon}
+    case "switch":
+      return (
+        <BlockStack gap="200">
+          {fieldLabelWithIcon}
 
-      <InlineStack align="start" blockAlign="center" gap="300">
-        <button
-          type="button"
-          role="switch"
-          aria-checked={switchValue}
-          onClick={() => setSwitchValue((prev) => !prev)}
-          className={`preview-switch ${switchValue ? "is-on" : "is-off"}`}
-        >
-          <span className="preview-switch__thumb" />
-        </button>
+          <InlineStack align="start" blockAlign="center" gap="300">
+            <button
+              type="button"
+              role="switch"
+              aria-checked={switchValue}
+              onClick={() => setSwitchValue((prev) => !prev)}
+              className={`preview-switch ${switchValue ? "is-on" : "is-off"}`}
+            >
+              <span className="preview-switch__thumb" />
+            </button>
 
-        <Text as="span" variant="bodySm">
-          {switchValue
-            ? normalizedElement.onText || "On"
-            : normalizedElement.offText || "Off"}
-        </Text>
-      </InlineStack>
+            <Text as="span" variant="bodySm">
+              {switchValue
+                ? normalizedElement.onText || "On"
+                : normalizedElement.offText || "Off"}
+            </Text>
+          </InlineStack>
 
-      {descriptionText}
-    </BlockStack>
-  );
+          {descriptionText}
+        </BlockStack>
+      );
 
     case "image_dropdown": {
       const imageOptions = rawOptions.filter(

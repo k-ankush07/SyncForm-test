@@ -5,14 +5,17 @@ import { normalizeFormPages } from "../utils/normalizeFormPages.js";
 import ElementSettings from "../routes/components/ElementSettings.jsx";
 import { createElementConfig } from "../utils/elementHelpers.js";
 import ElementPickerPopover from "../routes/components/ElementPickerPopover.jsx";
+
+
 import {
   MenuHorizontalIcon,
   LanguageIcon,
-  DesktopIcon,
+  CursorIcon,
   MobileIcon,
   UndoIcon,
   RedoIcon,
 } from "@shopify/polaris-icons";
+
 
 import {
   BlockStack,
@@ -141,7 +144,9 @@ export default function FormEditor() {
 
   const templateId = searchParams.get("templateId");
   const templateTitle = searchParams.get("title") || "Form editor";
-
+  // header preview
+  const [isModelPreview, setIsModelPreview] = useState(false);
+  const [isMobilePreview, setIsMobilePreview] = useState(false);
   // Main editor states.
   const [selectedOption, setSelectedOption] = useState("Elements");
   const [collpase, setCollapse] = useState(false);
@@ -159,87 +164,87 @@ export default function FormEditor() {
   });
 
 
-// Get actual Shopify products
-const productFetcher = useFetcher();
+  // Get actual Shopify products
+  const productFetcher = useFetcher();
 
-const [shopifyProducts, setShopifyProducts] = useState([]);
+  const [shopifyProducts, setShopifyProducts] = useState([]);
 
-const [productPageInfo, setProductPageInfo] = useState({
-  hasNextPage: false,
-  endCursor: null,
-});
-
-const appendProductsRef = useRef(false);
-
-// Fetch first 5 products
-useEffect(() => {
-  if (productFetcher.state === "idle" && !productFetcher.data) {
-    productFetcher.load("/app/products");
-  }
-}, []);
-
-// Receive products from Shopify
-useEffect(() => {
-  if (!productFetcher.data) return;
-
-  const newProducts = productFetcher.data.products || [];
-
-  // Capture the value BEFORE resetting the ref.
-  const shouldAppend = appendProductsRef.current;
-
-  setShopifyProducts((previousProducts) => {
-    if (!shouldAppend) {
-      return newProducts;
-    }
-
-    const existingIds = new Set(
-      previousProducts.map((product) => product.id)
-    );
-
-    const uniqueNewProducts = newProducts.filter(
-      (product) => !existingIds.has(product.id)
-    );
-
-    return [...previousProducts, ...uniqueNewProducts];
+  const [productPageInfo, setProductPageInfo] = useState({
+    hasNextPage: false,
+    endCursor: null,
   });
 
-  setProductPageInfo(
-    productFetcher.data.pageInfo || {
-      hasNextPage: false,
-      endCursor: null,
+  const appendProductsRef = useRef(false);
+
+  // Fetch first 5 products
+  useEffect(() => {
+    if (productFetcher.state === "idle" && !productFetcher.data) {
+      productFetcher.load("/app/products");
     }
-  );
+  }, []);
 
-  appendProductsRef.current = false;
-}, [productFetcher.data]);
+  // Receive products from Shopify
+  useEffect(() => {
+    if (!productFetcher.data) return;
 
-// Fetch next 5 products ONLY when Load More is clicked
-const loadMoreProducts = () => {
-  if (
-    !productPageInfo.hasNextPage ||
-    !productPageInfo.endCursor ||
-    productFetcher.state !== "idle"
-  ) {
-    return;
-  }
+    const newProducts = productFetcher.data.products || [];
 
-  appendProductsRef.current = true;
+    // Capture the value BEFORE resetting the ref.
+    const shouldAppend = appendProductsRef.current;
 
-  const params = new URLSearchParams({
-    after: productPageInfo.endCursor,
-  });
+    setShopifyProducts((previousProducts) => {
+      if (!shouldAppend) {
+        return newProducts;
+      }
 
-  productFetcher.load(`/app/products?${params.toString()}`);
-};
+      const existingIds = new Set(
+        previousProducts.map((product) => product.id)
+      );
 
-// Loading states
-const productsLoading =
-  productFetcher.state === "loading" &&
-  shopifyProducts.length === 0;
+      const uniqueNewProducts = newProducts.filter(
+        (product) => !existingIds.has(product.id)
+      );
 
-const productsLoadingMore =
-  productFetcher.state === "loading" &&
-  shopifyProducts.length > 0;
+      return [...previousProducts, ...uniqueNewProducts];
+    });
+
+    setProductPageInfo(
+      productFetcher.data.pageInfo || {
+        hasNextPage: false,
+        endCursor: null,
+      }
+    );
+
+    appendProductsRef.current = false;
+  }, [productFetcher.data]);
+
+  // Fetch next 5 products ONLY when Load More is clicked
+  const loadMoreProducts = () => {
+    if (
+      !productPageInfo.hasNextPage ||
+      !productPageInfo.endCursor ||
+      productFetcher.state !== "idle"
+    ) {
+      return;
+    }
+
+    appendProductsRef.current = true;
+
+    const params = new URLSearchParams({
+      after: productPageInfo.endCursor,
+    });
+
+    productFetcher.load(`/app/products?${params.toString()}`);
+  };
+
+  // Loading states
+  const productsLoading =
+    productFetcher.state === "loading" &&
+    shopifyProducts.length === 0;
+
+  const productsLoadingMore =
+    productFetcher.state === "loading" &&
+    shopifyProducts.length > 0;
 
   // =========================================
   // FUNCTION: OPEN ELEMENT PICKER
@@ -1780,6 +1785,7 @@ const productsLoadingMore =
             {selectedElement ? (
               <ElementSettings
                 element={selectedElement}
+                pages={pages}
                 onChange={updateSelectedElement}
                 onDelete={() => handleDeleteElement(selectedElement)}
                 onClose={() => setSelectedElement(null)}
@@ -1872,6 +1878,7 @@ const productsLoadingMore =
         {/* Live preview */}
 
         <div className="template-editor__preview">
+
           {/* HEADER - OUTSIDE THE CARD */}
           <div className="live-preview__toolbar">
             {/* LEFT: Form title */}
@@ -1904,19 +1911,32 @@ const productsLoadingMore =
 
             {/* RIGHT: Preview and history actions */}
             <div className="live-preview__toolbar-right">
-              <ButtonGroup variant="segmented">
-                <Button
-                  icon={DesktopIcon}
-                  accessibilityLabel="Desktop preview"
-                  variant="primary"
-                />
 
-                <Button
-                  icon={MobileIcon}
-                  accessibilityLabel="Mobile preview"
-                />
-              </ButtonGroup>
+              {/* MODE EDITOR / MODEL PREVIEW */}
+              <Tooltip content={isModelPreview ? "Mode editor" : "Toggle model preview"}>
+                <button
+                  type="button"
+                  className={`toolbar-icon-button ${isModelPreview ? "active" : ""}`}
+                  onClick={() => setIsModelPreview((prev) => !prev)}
+                  aria-label={isModelPreview ? "Mode editor" : "Toggle model preview"}
+                >
+                  <Icon source={CursorIcon} />
+                </button>
+              </Tooltip>
 
+              {/* MOBILE PREVIEW */}
+              <Tooltip content="Mobile preview">
+                <button
+                  type="button"
+                  className={`toolbar-icon-button ${isMobilePreview ? "active" : ""}`}
+                  onClick={() => setIsMobilePreview((prev) => !prev)}
+                  aria-label="Mobile preview"
+                >
+                  <Icon source={MobileIcon} />
+                </button>
+              </Tooltip>
+
+              {/* UNDO / REDO */}
               <ButtonGroup>
                 <Button
                   icon={UndoIcon}
@@ -1929,6 +1949,7 @@ const productsLoadingMore =
                   disabled
                 />
               </ButtonGroup>
+
             </div>
           </div>
 
@@ -1954,6 +1975,8 @@ const productsLoadingMore =
               onChangeElement={updateSelectedElement}
               products={shopifyProducts}
               productsLoading={productsLoading}
+                isMobilePreview={isMobilePreview}
+                 isModelPreview ={ isModelPreview}
             />
           </DndContext>
           {/* </Card> */}
