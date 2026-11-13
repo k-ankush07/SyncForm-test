@@ -7,7 +7,7 @@ import { Icon } from "@shopify/polaris";
 import createDOMPurify from "dompurify";
 import ReactCountryFlag from "react-country-flag";
 
-import ColorInput from "../components/RichTextEditor/ColorInput.jsx"
+import ColorInput from "../components/RichTextEditor/ColorInput.jsx";
 import {
   Text,
   Divider,
@@ -21,23 +21,33 @@ import {
   BlockStack,
 } from "@shopify/polaris";
 import { countries } from "../components/elementsettings/utils/countries.js";
-import FormProgressIndicator from './RichTextEditor/FormProgressIndicator';
+import FormProgressIndicator from "./RichTextEditor/FormProgressIndicator";
 
-export default function PreviewField({ element, field, pages = [], activePageId = null, products = [],  isModelPreview = false,
-  productsLoading = false, }) {
+export default function PreviewField({
+  element,
+  field,
+  pages = [],
+  activePageId = null,
+  products = [],
+  isModelPreview = false,
+  productsLoading = false,
+}) {
   const currentElement = element ?? field;
+  const isReadOnly = !isModelPreview;
+
   // console.log("PreviewField received:", currentElement);
   // console.log("PreviewField type:", currentElement?.type);
-  console.log(pages)
+  console.log(pages);
+
   const normalizedElement =
     typeof currentElement === "string"
       ? {
-        type: currentElement
-          .toLowerCase()
-          .trim()
-          .replace(/[\s-]+/g, "_"),
-        label: currentElement,
-      }
+          type: currentElement
+            .toLowerCase()
+            .trim()
+            .replace(/[\s-]+/g, "_"),
+          label: currentElement,
+        }
       : currentElement ?? {};
 
   const type = normalizedElement.type
@@ -55,7 +65,7 @@ export default function PreviewField({ element, field, pages = [], activePageId 
   const defaultValue = normalizedElement.defaultValue ?? "";
   const required = Boolean(normalizedElement.required);
 
-  //if icon is selected
+  // if icon is selected
   const selectedIcon = normalizedElement.selectIcon
     ? PolarisIcons[normalizedElement.selectIcon]
     : null;
@@ -74,9 +84,7 @@ export default function PreviewField({ element, field, pages = [], activePageId 
         {label}
       </Text>
       {required && (
-        <span style={{ color: "var(--p-color-text-critical)" }}>
-          *
-        </span>
+        <span style={{ color: "var(--p-color-text-critical)" }}>*</span>
       )}
     </div>
   );
@@ -86,6 +94,7 @@ export default function PreviewField({ element, field, pages = [], activePageId 
       ? normalizedElement.checkedByDefault ?? true
       : Boolean(normalizedElement.defaultValue)
   );
+
   const [selected, setSelected] = useState([]);
   const [value, setValue] = useState(defaultValue);
   const [confirmPasswordValue, setConfirmPasswordValue] = useState("");
@@ -93,14 +102,14 @@ export default function PreviewField({ element, field, pages = [], activePageId 
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [imagePreview, setImagePreview] = useState("");
   const [rangeValue, setRangeValue] = useState(50);
-  //const [colorValue, setColorValue] = useState("#563D7C");
+  // const [colorValue, setColorValue] = useState("#563D7C");
   const [rating, setRating] = useState(0);
 
   // Apply a changed default value when the element settings change.
   useEffect(() => {
     setValue(normalizedElement.defaultValue ?? "");
     setDateValue(normalizedElement.defaultValue ?? "");
-    setConfirmPasswordValue("")
+    setConfirmPasswordValue("");
   }, [normalizedElement.id, normalizedElement.defaultValue]);
 
   useEffect(() => {
@@ -116,31 +125,27 @@ export default function PreviewField({ element, field, pages = [], activePageId 
     normalizedElement.type,
   ]);
 
-  //switch values
+  // switch values
   const [switchValue, setSwitchValue] = useState(
     Boolean(normalizedElement.defaultChecked)
   );
+
   useEffect(() => {
     setSwitchValue(Boolean(normalizedElement.defaultChecked));
-  }, [
-    normalizedElement.id,
-    normalizedElement.defaultChecked,
-  ]);
+  }, [normalizedElement.id, normalizedElement.defaultChecked]);
 
-  //color pick show in prevuew
+  // color pick show in preview
   const [colorValue, setColorValue] = useState(
     normalizedElement.defaultColor || "#563D7C"
   );
+
   useEffect(() => {
     setColorValue(normalizedElement.defaultColor || "#563D7C");
-  }, [
-    normalizedElement.id,
-    normalizedElement.defaultColor,
-  ]);
+  }, [normalizedElement.id, normalizedElement.defaultColor]);
 
   const rawOptions = normalizedElement.options || [];
 
-  //for date and time
+  // for date and time
   const [dateValue, setDateValue] = useState(
     normalizedElement.defaultDate || ""
   );
@@ -148,7 +153,6 @@ export default function PreviewField({ element, field, pages = [], activePageId 
   React.useEffect(() => {
     setDateValue(normalizedElement.defaultDate || "");
   }, [normalizedElement.defaultDate]);
-
 
   const options = rawOptions.map((option, index) => {
     if (typeof option === "string") {
@@ -187,17 +191,17 @@ export default function PreviewField({ element, field, pages = [], activePageId 
     </Text>
   ) : null;
 
-  //get country from the country.js get the selected value 
+  // get country from the country.js get the selected value
   const selectedCountry = countries.find(
-    (country) =>
-      country.value === normalizedElement.defaultCountryCode
+    (country) => country.value === normalizedElement.defaultCountryCode
   );
 
-  //options per line for radio and checkbox
+  // options per line for radio and checkbox
   const optionsPerLine = Math.min(
     5,
     Math.max(1, Number(normalizedElement.optionsPerLine) || 1)
   );
+
   // to show option per line
   const choiceGridStyle = {
     display: "grid",
@@ -212,13 +216,10 @@ export default function PreviewField({ element, field, pages = [], activePageId 
     }
 
     const purifier = createDOMPurify(window);
-
     return purifier.sanitize(html);
   };
 
-
-
-  //cases to render duff inputs
+  // cases to render different inputs
   switch (type) {
     case "email":
       return (
@@ -228,7 +229,7 @@ export default function PreviewField({ element, field, pages = [], activePageId 
           autoComplete="email"
           value={value}
           onChange={setValue}
-         readOnly={!isModelPreview}
+          readOnly={isReadOnly}
         />
       );
 
@@ -240,7 +241,7 @@ export default function PreviewField({ element, field, pages = [], activePageId 
           autoComplete="given-name"
           value={value}
           onChange={setValue}
-          readOnly
+          readOnly={isReadOnly}
         />
       );
 
@@ -251,7 +252,7 @@ export default function PreviewField({ element, field, pages = [], activePageId 
           autoComplete="family-name"
           value={value}
           onChange={setValue}
-          readOnly
+          readOnly={isReadOnly}
         />
       );
 
@@ -278,11 +279,9 @@ export default function PreviewField({ element, field, pages = [], activePageId 
                       objectFit: "cover",
                     }}
                   />
-
                   <span>{selectedCountry.dialCode}</span>
                 </>
               )}
-
               <span>{label}</span>
             </div>
           )}
@@ -293,7 +292,7 @@ export default function PreviewField({ element, field, pages = [], activePageId 
             placeholder={placeholder || label}
             value={value}
             onChange={setValue}
-            readOnly
+            readOnly={isReadOnly}
           />
         </BlockStack>
       );
@@ -301,7 +300,6 @@ export default function PreviewField({ element, field, pages = [], activePageId 
     case "password":
       return (
         <BlockStack gap="300">
-
           {/* Original Password Field */}
           <TextField
             {...commonTextFieldProps}
@@ -309,7 +307,7 @@ export default function PreviewField({ element, field, pages = [], activePageId 
             autoComplete="new-password"
             value={value}
             onChange={setValue}
-            readOnly
+            readOnly={isReadOnly}
           />
 
           {/* Confirm Password Field */}
@@ -317,24 +315,21 @@ export default function PreviewField({ element, field, pages = [], activePageId 
             <TextField
               type="password"
               label={
-                normalizedElement.confirmPasswordLabel ||
-                "Confirm Password"
+                normalizedElement.confirmPasswordLabel || "Confirm Password"
               }
               placeholder={
                 normalizedElement.confirmPasswordPlaceholder ||
                 "Confirm your password"
               }
               helpText={
-                normalizedElement.confirmPasswordDescription ||
-                undefined
+                normalizedElement.confirmPasswordDescription || undefined
               }
               value={confirmPasswordValue}
               onChange={setConfirmPasswordValue}
               autoComplete="new-password"
-              readOnly
+              readOnly={isReadOnly}
             />
           )}
-
         </BlockStack>
       );
 
@@ -371,7 +366,6 @@ export default function PreviewField({ element, field, pages = [], activePageId 
                       }}
                     />
                   )}
-
                   <Text>{country.name}</Text>
                 </InlineStack>
               ))
@@ -399,17 +393,18 @@ export default function PreviewField({ element, field, pages = [], activePageId 
       return (
         <Select
           {...commonSelectProps}
-          options={[
-            { label: "Dropdown", value: "" },
-            ...options,
-          ]}
+          options={[{ label: "Dropdown", value: "" }, ...options]}
           value={value}
           onChange={setValue}
-          readOnly
+          disabled={isReadOnly}
         />
       );
+
     case "rating_level": {
-      const maxLevel = Math.min(10, Math.max(2, Number(normalizedElement.maxLevel) || 5));
+      const maxLevel = Math.min(
+        10,
+        Math.max(2, Number(normalizedElement.maxLevel) || 5)
+      );
 
       return (
         <BlockStack gap="200">
@@ -419,12 +414,13 @@ export default function PreviewField({ element, field, pages = [], activePageId 
               <button
                 key={n}
                 type="button"
+                disabled={isReadOnly}
                 onClick={() => setRating(n)}
                 style={{
                   width: "36px",
                   height: "36px",
                   borderRadius: "8px",
-                  cursor: "pointer",
+                  cursor: isReadOnly ? "not-allowed" : "pointer",
                   border: "1px solid #8c9196",
                   background: n <= rating ? "#303030" : "#fff",
                   color: n <= rating ? "#fff" : "#303030",
@@ -460,14 +456,14 @@ export default function PreviewField({ element, field, pages = [], activePageId 
                 key={`${option.value}-${index}`}
                 label={option.label}
                 checked={selected.includes(option.value)}
+                disabled={isReadOnly}
                 onChange={(isChecked) => {
                   setSelected((previous) =>
                     isChecked
                       ? [...previous, option.value]
                       : previous.filter(
-                        (selectedValue) =>
-                          selectedValue !== option.value
-                      )
+                          (selectedValue) => selectedValue !== option.value
+                        )
                   );
                 }}
               />
@@ -493,7 +489,7 @@ export default function PreviewField({ element, field, pages = [], activePageId 
                   display: "flex",
                   alignItems: "center",
                   gap: "8px",
-                  cursor: "pointer",
+                  cursor: isReadOnly ? "default" : "pointer",
                 }}
               >
                 <input
@@ -501,9 +497,9 @@ export default function PreviewField({ element, field, pages = [], activePageId 
                   name={`radio-${normalizedElement.id}`}
                   value={option.value}
                   checked={selected[0] === option.value}
+                  disabled={isReadOnly}
                   onChange={() => setSelected([option.value])}
                 />
-
                 <span>{option.label}</span>
               </label>
             ))}
@@ -523,12 +519,13 @@ export default function PreviewField({ element, field, pages = [], activePageId 
                 dangerouslySetInnerHTML={{
                   __html: sanitizeHTML(
                     normalizedElement.label ||
-                    "<p>I agree to terms and conditions.</p>"
+                      "<p>I agree to terms and conditions.</p>"
                   ),
                 }}
               />
             }
             checked={checked}
+            disabled={isReadOnly}
             onChange={setChecked}
           />
 
@@ -540,12 +537,13 @@ export default function PreviewField({ element, field, pages = [], activePageId 
       return (
         <InlineStack gap="200" align="center">
           {(normalizedElement.options || []).map((option) => (
-            <Button key={option.id}>
+            <Button key={option.id} disabled={isReadOnly}>
               {option.label}
             </Button>
           ))}
         </InlineStack>
       );
+
     case "url":
       return (
         <TextField
@@ -555,7 +553,7 @@ export default function PreviewField({ element, field, pages = [], activePageId 
           value={value}
           onChange={setValue}
           autoComplete="url"
-          readOnly
+          readOnly={isReadOnly}
           prefix={
             element.showIcon !== false ? (
               <Icon source={PolarisIcons.LinkIcon} />
@@ -570,10 +568,9 @@ export default function PreviewField({ element, field, pages = [], activePageId 
           {...commonTextFieldProps}
           value={dateValue}
           onChange={setDateValue}
-          readOnly
+          readOnly={isReadOnly}
         />
       );
-
 
     case "repeater":
       return (
@@ -588,19 +585,26 @@ export default function PreviewField({ element, field, pages = [], activePageId 
                 value={value}
                 onChange={setValue}
                 autoComplete="off"
+                readOnly={isReadOnly}
               />
             </div>
-            <Button icon={PolarisIcons.DeleteIcon} accessibilityLabel="Remove" />
+            <Button
+              icon={PolarisIcons.DeleteIcon}
+              accessibilityLabel="Remove"
+              disabled={isReadOnly}
+            />
           </InlineStack>
           <div>
-            <Button icon={PolarisIcons.PlusIcon}>
+            <Button
+              icon={PolarisIcons.PlusIcon}
+              disabled={isReadOnly}
+            >
               {normalizedElement.addButtonText || "Add more"}
             </Button>
           </div>
           {descriptionText}
         </BlockStack>
       );
-
 
     case "signature": {
       const canvasRef = useRef(null);
@@ -707,8 +711,9 @@ export default function PreviewField({ element, field, pages = [], activePageId 
                     display: "block",
                     width: "100%",
                     height: `${canvasHeight}px`,
-                    touchAction: "none",
-                    cursor: "crosshair",
+                    touchAction: isReadOnly ? "auto" : "none",
+                    cursor: isReadOnly ? "default" : "crosshair",
+                    pointerEvents: isReadOnly ? "none" : "auto",
                   }}
                 />
               </div>
@@ -718,6 +723,7 @@ export default function PreviewField({ element, field, pages = [], activePageId 
                   <Button
                     size="slim"
                     onClick={clearSignature}
+                    disabled={isReadOnly}
                   >
                     Clear signature
                   </Button>
@@ -752,7 +758,12 @@ export default function PreviewField({ element, field, pages = [], activePageId 
                   />
 
                   {normalizedElement.allowReplace !== false && (
-                    <label style={{ cursor: "pointer" }}>
+                    <label
+                      style={{
+                        cursor: isReadOnly ? "default" : "pointer",
+                        pointerEvents: isReadOnly ? "none" : "auto",
+                      }}
+                    >
                       <span
                         style={{
                           display: "inline-block",
@@ -767,6 +778,7 @@ export default function PreviewField({ element, field, pages = [], activePageId 
                         type="file"
                         accept="image/png,image/jpeg"
                         hidden
+                        disabled={isReadOnly}
                         onChange={handleSignatureUpload}
                       />
                     </label>
@@ -782,7 +794,8 @@ export default function PreviewField({ element, field, pages = [], activePageId 
                     flexDirection: "column",
                     alignItems: "center",
                     gap: "8px",
-                    cursor: "pointer",
+                    cursor: isReadOnly ? "default" : "pointer",
+                    pointerEvents: isReadOnly ? "none" : "auto",
                   }}
                 >
                   <Icon source={PolarisIcons.UploadIcon} />
@@ -797,6 +810,7 @@ export default function PreviewField({ element, field, pages = [], activePageId 
                     type="file"
                     accept="image/png,image/jpeg"
                     hidden
+                    disabled={isReadOnly}
                     onChange={handleSignatureUpload}
                   />
                 </label>
@@ -842,14 +856,13 @@ export default function PreviewField({ element, field, pages = [], activePageId 
           <div
             className="rich-text-preview"
             dangerouslySetInnerHTML={{
-              __html: sanitizeHTML(
-                normalizedElement.content || `<p>${label}</p>`
-              ),
+              __html: sanitizeHTML(normalizedElement.content || `<p>${label}</p>`),
             }}
           />
           {descriptionText}
         </BlockStack>
       );
+
     case "html":
       return (
         <BlockStack gap="200">
@@ -879,14 +892,15 @@ export default function PreviewField({ element, field, pages = [], activePageId 
         </BlockStack>
       );
 
-    // i use custom css here to style the divder preview
+    // i use custom css here to style the divider preview
     case "divider":
       return (
         <hr
           style={{
             border: "none",
-            borderTop: `2px ${element.dividerStyle || "solid"} ${element.dividerColor || "currentColor"
-              }`,
+            borderTop: `2px ${element.dividerStyle || "solid"} ${
+              element.dividerColor || "currentColor"
+            }`,
             display: element.hideDivider ? "none" : "block",
             width: "100%",
             margin: 0,
@@ -901,7 +915,7 @@ export default function PreviewField({ element, field, pages = [], activePageId 
           {...commonTextFieldProps}
           value={value}
           onChange={setValue}
-          readOnly
+          readOnly={isReadOnly}
         />
       );
 
@@ -912,7 +926,7 @@ export default function PreviewField({ element, field, pages = [], activePageId 
           multiline={3}
           value={value}
           onChange={setValue}
-          readOnly
+          readOnly={isReadOnly}
         />
       );
 
@@ -923,118 +937,120 @@ export default function PreviewField({ element, field, pages = [], activePageId 
           type="number"
           value={value}
           onChange={setValue}
-          readOnly
+          readOnly={isReadOnly}
         />
       );
 
-   case "quantity": {
-  const parsedMin = Number(normalizedElement.minValue);
-  const parsedMax = Number(normalizedElement.maxValue);
+    case "quantity": {
+      const parsedMin = Number(normalizedElement.minValue);
+      const parsedMax = Number(normalizedElement.maxValue);
 
-  const min = normalizedElement.setMinValue &&
-    Number.isFinite(parsedMin)
-    ? parsedMin
-    : 0;
+      const min =
+        normalizedElement.setMinValue && Number.isFinite(parsedMin)
+          ? parsedMin
+          : 0;
 
-  const max = normalizedElement.setMaxValue &&
-    normalizedElement.maxValue !== "" &&
-    Number.isFinite(parsedMax)
-    ? Math.max(min, parsedMax)
-    : Infinity;
+      const max =
+        normalizedElement.setMaxValue &&
+        normalizedElement.maxValue !== "" &&
+        Number.isFinite(parsedMax)
+          ? Math.max(min, parsedMax)
+          : Infinity;
 
-  const parsedValue = Number(value);
+      const parsedValue = Number(value);
 
-  const currentValue =
-    value === "" ||
-    value === null ||
-    value === undefined ||
-    !Number.isFinite(parsedValue)
-      ? min
-      : parsedValue;
+      const currentValue =
+        value === "" ||
+        value === null ||
+        value === undefined ||
+        !Number.isFinite(parsedValue)
+          ? min
+          : parsedValue;
 
-  const safeValue = Math.min(max, Math.max(min, currentValue));
+      const safeValue = Math.min(max, Math.max(min, currentValue));
 
-  const decreaseValue = () => {
-    setValue(String(Math.max(min, safeValue - 1)));
-  };
+      const decreaseValue = () => {
+        setValue(String(Math.max(min, safeValue - 1)));
+      };
 
-  const increaseValue = () => {
-    setValue(String(Math.min(max, safeValue + 1)));
-  };
+      const increaseValue = () => {
+        setValue(String(Math.min(max, safeValue + 1)));
+      };
 
-  return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        width: "100%",
-        minHeight: "54px",
-        padding: "0 14px",
-        background: "#eeeeee",
-        borderRadius: "9px",
-        boxSizing: "border-box",
-      }}
-    >
-      <button
-        type="button"
-        disabled={safeValue <= min}
-        onClick={decreaseValue}
-        style={{
-          border: "none",
-          background: "transparent",
-          color: safeValue <= min ? "#C9CCCF" : "#555",
-          fontSize: "20px",
-          cursor: safeValue <= min ? "not-allowed" : "pointer",
-        }}
-      >
-        −
-      </button>
+      return (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            width: "100%",
+            minHeight: "54px",
+            padding: "0 14px",
+            background: "#eeeeee",
+            borderRadius: "9px",
+            boxSizing: "border-box",
+          }}
+        >
+          <button
+            type="button"
+            disabled={isReadOnly || safeValue <= min}
+            onClick={decreaseValue}
+            style={{
+              border: "none",
+              background: "transparent",
+              color: safeValue <= min ? "#C9CCCF" : "#555",
+              fontSize: "20px",
+              cursor:
+                isReadOnly || safeValue <= min ? "not-allowed" : "pointer",
+            }}
+          >
+            −
+          </button>
 
-      <span
-        style={{
-          flex: 1,
-          marginLeft: "12px",
-          fontSize: "14px",
-          color: "#303030",
-        }}
-      >
-        {label || "Quantity"}
-      </span>
+          <span
+            style={{
+              flex: 1,
+              marginLeft: "12px",
+              fontSize: "14px",
+              color: "#303030",
+            }}
+          >
+            {label || "Quantity"}
+          </span>
 
-      <span
-        style={{
-          fontSize: "14px",
-          fontWeight: 500,
-          color: "#303030",
-          marginRight: "12px",
-        }}
-      >
-        {safeValue}
-      </span>
+          <span
+            style={{
+              fontSize: "14px",
+              fontWeight: 500,
+              color: "#303030",
+              marginRight: "12px",
+            }}
+          >
+            {safeValue}
+          </span>
 
-      <button
-        type="button"
-        disabled={safeValue >= max}
-        onClick={increaseValue}
-        style={{
-          border: "none",
-          background: "transparent",
-          color: safeValue >= max ? "#C9CCCF" : "#555",
-          fontSize: "20px",
-          cursor: safeValue >= max ? "not-allowed" : "pointer",
-        }}
-      >
-        +
-      </button>
-    </div>
-  );
-}
+          <button
+            type="button"
+            disabled={isReadOnly || safeValue >= max}
+            onClick={increaseValue}
+            style={{
+              border: "none",
+              background: "transparent",
+              color: safeValue >= max ? "#C9CCCF" : "#555",
+              fontSize: "20px",
+              cursor:
+                isReadOnly || safeValue >= max ? "not-allowed" : "pointer",
+            }}
+          >
+            +
+          </button>
+        </div>
+      );
+    }
 
     case "rating_star": {
       const customRatingIcon =
-        normalizedElement.useCustomRatingIcon &&
-          normalizedElement.ratingIcon
+        normalizedElement.useCustomRatingIcon && normalizedElement.ratingIcon
           ? PolarisIcons[normalizedElement.ratingIcon]
           : null;
 
@@ -1055,13 +1071,15 @@ export default function PreviewField({ element, field, pages = [], activePageId 
               >
                 <button
                   type="button"
+                  disabled={isReadOnly}
                   onClick={() => setRating(star)}
                   style={{
                     border: "none",
                     background: "transparent",
-                    cursor: "pointer",
+                    cursor: isReadOnly ? "default" : "pointer",
                     padding: 0,
-                    transform: "scale(2.3)", transformOrigin: "center",
+                    transform: "scale(2.3)",
+                    transformOrigin: "center",
                     color: star <= rating ? "#F5A623" : "#C9CCCF",
                   }}
                 >
@@ -1078,13 +1096,17 @@ export default function PreviewField({ element, field, pages = [], activePageId 
                       <Icon source={customRatingIcon} />
                     </span>
                   ) : (
-                    <span style={{
-                      display: "flex",
-                      width: "68px",
-                      height: "68px",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}>★</span>
+                    <span
+                      style={{
+                        display: "flex",
+                        width: "68px",
+                        height: "68px",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      ★
+                    </span>
                   )}
                 </button>
 
@@ -1115,8 +1137,6 @@ export default function PreviewField({ element, field, pages = [], activePageId 
       )
         ? normalizedElement.acceptedFileTypes
         : [];
-
-
 
       return (
         <BlockStack gap="200">
@@ -1174,8 +1194,6 @@ export default function PreviewField({ element, field, pages = [], activePageId 
             >
               {buttonText}
             </div>
-
-
           </div>
 
           {/* Description */}
@@ -1241,7 +1259,8 @@ export default function PreviewField({ element, field, pages = [], activePageId 
                 color: "#303030",
                 fontSize: "14px",
                 background: "#ffffff",
-                cursor: "pointer",
+                cursor: isReadOnly ? "default" : "pointer",
+                pointerEvents: isReadOnly ? "none" : "auto",
               }}
             >
               {imagePreview ? "Change image" : "Browse image"}
@@ -1250,6 +1269,7 @@ export default function PreviewField({ element, field, pages = [], activePageId 
                 type="file"
                 accept="image/*"
                 hidden
+                disabled={isReadOnly}
                 onChange={(event) => {
                   const file = event.target.files?.[0];
 
@@ -1288,6 +1308,7 @@ export default function PreviewField({ element, field, pages = [], activePageId 
                 key={`${color}-${index}`}
                 type="button"
                 aria-label={`Select ${color}`}
+                disabled={isReadOnly}
                 onClick={() => setColorValue(color)}
                 style={{
                   width: "32px",
@@ -1298,7 +1319,7 @@ export default function PreviewField({ element, field, pages = [], activePageId 
                     colorValue === color
                       ? "3px solid #202223"
                       : "1px solid #d2d5d8",
-                  cursor: "pointer",
+                  cursor: isReadOnly ? "default" : "pointer",
                 }}
               />
             ))}
@@ -1312,16 +1333,22 @@ export default function PreviewField({ element, field, pages = [], activePageId 
     case "color_picker":
       return (
         <BlockStack gap="200">
-          <ColorInput
-            label={hideLabel ? "" : label}
-            value={colorValue}
-            onChange={setColorValue}
-          />
+          <div
+            style={{
+              pointerEvents: isReadOnly ? "none" : "auto",
+              opacity: isReadOnly ? 0.6 : 1,
+            }}
+          >
+            <ColorInput
+              label={hideLabel ? "" : label}
+              value={colorValue}
+              onChange={setColorValue}
+            />
+          </div>
 
           {descriptionText}
         </BlockStack>
       );
-
 
     case "form_header": {
       const headingConfig = {
@@ -1352,10 +1379,7 @@ export default function PreviewField({ element, field, pages = [], activePageId 
               style={{
                 margin: 0,
                 color: normalizedElement.headingColor || "inherit",
-
-                // Use selected tag's font size
                 fontSize: `${config.fontSize}px`,
-
                 fontWeight: 600,
                 lineHeight: 1.3,
               }}
@@ -1368,15 +1392,15 @@ export default function PreviewField({ element, field, pages = [], activePageId 
             <div
               className="rich-text-preview"
               style={{
-                marginTop: normalizedElement.showHeader !== false
-                  ? "8px"
-                  : 0,
+                marginTop:
+                  normalizedElement.showHeader !== false ? "8px" : 0,
               }}
               dangerouslySetInnerHTML={{
                 __html: sanitizeHTML(normalizedElement.description),
               }}
             />
           )}
+
           <FormProgressIndicator
             pages={pages}
             activePageId={activePageId}
@@ -1384,6 +1408,7 @@ export default function PreviewField({ element, field, pages = [], activePageId 
         </div>
       );
     }
+
     case "hidden":
       return (
         <div
@@ -1399,7 +1424,6 @@ export default function PreviewField({ element, field, pages = [], activePageId 
             gap: "8px",
           }}
         >
-
           <Text as="span" variant="bodySm" tone="subdued">
             {value || "Hidden field"}
           </Text>
@@ -1408,7 +1432,6 @@ export default function PreviewField({ element, field, pages = [], activePageId 
           </Text>
         </div>
       );
-
 
     case "form_footer":
       return (
@@ -1465,7 +1488,10 @@ export default function PreviewField({ element, field, pages = [], activePageId 
                   width: normalizedElement.fullWidthButton ? "100%" : "auto",
                 }}
               >
-                <Button fullWidth={Boolean(normalizedElement.fullWidthButton)}>
+                <Button
+                  fullWidth={Boolean(normalizedElement.fullWidthButton)}
+                  disabled={isReadOnly}
+                >
                   {normalizedElement.previousText || "Previous"}
                 </Button>
               </div>
@@ -1478,7 +1504,10 @@ export default function PreviewField({ element, field, pages = [], activePageId 
                   width: normalizedElement.fullWidthButton ? "100%" : "auto",
                 }}
               >
-                <Button fullWidth={Boolean(normalizedElement.fullWidthButton)}>
+                <Button
+                  fullWidth={Boolean(normalizedElement.fullWidthButton)}
+                  disabled={isReadOnly}
+                >
                   {normalizedElement.nextText || "Next"}
                 </Button>
               </div>
@@ -1491,7 +1520,10 @@ export default function PreviewField({ element, field, pages = [], activePageId 
                   width: normalizedElement.fullWidthButton ? "100%" : "auto",
                 }}
               >
-                <Button fullWidth={Boolean(normalizedElement.fullWidthButton)}>
+                <Button
+                  fullWidth={Boolean(normalizedElement.fullWidthButton)}
+                  disabled={isReadOnly}
+                >
                   {normalizedElement.resetButtonText || "Reset"}
                 </Button>
               </div>
@@ -1500,6 +1532,7 @@ export default function PreviewField({ element, field, pages = [], activePageId 
             {/* Submit button */}
             <button
               type="button"
+              disabled={isReadOnly}
               style={{
                 width: normalizedElement.fullWidthButton ? "100%" : "auto",
                 backgroundColor:
@@ -1510,7 +1543,7 @@ export default function PreviewField({ element, field, pages = [], activePageId 
                 padding: "12px 20px",
                 fontSize: "14px",
                 fontWeight: 600,
-                cursor: "pointer",
+                cursor: isReadOnly ? "not-allowed" : "pointer",
               }}
             >
               {normalizedElement.submitText || "Submit"}
@@ -1530,10 +1563,7 @@ export default function PreviewField({ element, field, pages = [], activePageId 
 
       const safeDefault = Math.min(max, Math.max(min, defaultRangeValue));
 
-      const currentRangeValue = Math.min(
-        max,
-        Math.max(min, rangeValue)
-      );
+      const currentRangeValue = Math.min(max, Math.max(min, rangeValue));
 
       return (
         <BlockStack gap="200">
@@ -1545,6 +1575,7 @@ export default function PreviewField({ element, field, pages = [], activePageId 
             max={max}
             step={step}
             value={currentRangeValue}
+            disabled={isReadOnly}
             onChange={(event) =>
               setRangeValue(Number(event.target.value))
             }
@@ -1562,13 +1593,14 @@ export default function PreviewField({ element, field, pages = [], activePageId 
       );
     }
 
-
     case "matrix": {
       const toLabel = (x, i, p) =>
         typeof x === "string" ? x : x?.label || x?.value || `${p} ${i + 1}`;
 
       const matrixRows = (
-        normalizedElement.rows?.length ? normalizedElement.rows : ["Row 1", "Row 2"]
+        normalizedElement.rows?.length
+          ? normalizedElement.rows
+          : ["Row 1", "Row 2"]
       ).map((r, i) => toLabel(r, i, "Row"));
 
       const matrixCols = (
@@ -1583,12 +1615,23 @@ export default function PreviewField({ element, field, pages = [], activePageId 
         <BlockStack gap="200">
           {fieldLabelWithIcon}
           <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                fontSize: "13px",
+              }}
+            >
               <thead>
                 <tr>
                   <th />
                   {matrixCols.map((c) => (
-                    <th key={c} style={{ padding: "6px", fontWeight: 500 }}>{c}</th>
+                    <th
+                      key={c}
+                      style={{ padding: "6px", fontWeight: 500 }}
+                    >
+                      {c}
+                    </th>
                   ))}
                 </tr>
               </thead>
@@ -1602,6 +1645,7 @@ export default function PreviewField({ element, field, pages = [], activePageId 
                           type="radio"
                           name={`matrix-${normalizedElement.id}-${r}`}
                           checked={selected.includes(`${r}::${c}`)}
+                          disabled={isReadOnly}
                           onChange={() =>
                             setSelected((prev) => [
                               ...prev.filter((v) => !v.startsWith(`${r}::`)),
@@ -1620,9 +1664,13 @@ export default function PreviewField({ element, field, pages = [], activePageId 
         </BlockStack>
       );
     }
+
     case "feedback": {
       const emojis = ["😡", "🙁", "😐", "🙂", "😍"];
-      const items = options.length > 0 ? options : emojis.map((e) => ({ label: e, value: e }));
+      const items =
+        options.length > 0
+          ? options
+          : emojis.map((e) => ({ label: e, value: e }));
 
       return (
         <BlockStack gap="200">
@@ -1632,11 +1680,12 @@ export default function PreviewField({ element, field, pages = [], activePageId 
               <button
                 key={item.value}
                 type="button"
+                disabled={isReadOnly}
                 onClick={() => setSelected([item.value])}
                 style={{
                   fontSize: "26px",
                   background: "transparent",
-                  cursor: "pointer",
+                  cursor: isReadOnly ? "default" : "pointer",
                   padding: "4px 8px",
                   borderRadius: "8px",
                   border:
@@ -1653,6 +1702,7 @@ export default function PreviewField({ element, field, pages = [], activePageId 
         </BlockStack>
       );
     }
+
     case "switch":
       return (
         <BlockStack gap="200">
@@ -1663,6 +1713,7 @@ export default function PreviewField({ element, field, pages = [], activePageId 
               type="button"
               role="switch"
               aria-checked={switchValue}
+              disabled={isReadOnly}
               onClick={() => setSwitchValue((prev) => !prev)}
               className={`preview-switch ${switchValue ? "is-on" : "is-off"}`}
             >
@@ -1692,8 +1743,9 @@ export default function PreviewField({ element, field, pages = [], activePageId 
             options={[{ label: "Select an option", value: "" }, ...options]}
             value={value}
             onChange={setValue}
-            readOnly
+            disabled={isReadOnly}
           />
+
           {imageOptions.length > 0 && (
             <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
               {imageOptions.map((opt, i) => (
@@ -1701,13 +1753,17 @@ export default function PreviewField({ element, field, pages = [], activePageId 
                   key={opt.value || i}
                   src={opt.image}
                   alt={opt.label || ""}
-                  onClick={() => setValue(opt.value || opt.label)}
+                  onClick={() => {
+                    if (!isReadOnly) {
+                      setValue(opt.value || opt.label);
+                    }
+                  }}
                   style={{
                     width: "44px",
                     height: "44px",
                     objectFit: "cover",
                     borderRadius: "6px",
-                    cursor: "pointer",
+                    cursor: isReadOnly ? "default" : "pointer",
                     border:
                       value === (opt.value || opt.label)
                         ? "2px solid #303030"
@@ -1740,10 +1796,10 @@ export default function PreviewField({ element, field, pages = [], activePageId 
       // Apply search only when the search bar is enabled
       const filteredProducts = showSearch
         ? selectedProducts.filter((product) =>
-          (product.title || "")
-            .toLowerCase()
-            .includes((value || "").toLowerCase())
-        )
+            (product.title || "")
+              .toLowerCase()
+              .includes((value || "").toLowerCase())
+          )
         : selectedProducts;
 
       return (
@@ -1753,13 +1809,12 @@ export default function PreviewField({ element, field, pages = [], activePageId 
           {/* SEARCH BAR */}
           {showSearch && (
             <TextField
-              placeholder={
-                normalizedElement.placeholder || "Search products"
-              }
+              placeholder={normalizedElement.placeholder || "Search products"}
               prefix={<Icon source={PolarisIcons.SearchIcon} />}
               value={value}
               onChange={setValue}
               autoComplete="off"
+              readOnly={isReadOnly}
             />
           )}
 
@@ -1800,6 +1855,8 @@ export default function PreviewField({ element, field, pages = [], activePageId 
                       <div
                         key={product.id}
                         onClick={() => {
+                          if (isReadOnly) return;
+
                           if (normalizedElement.allowMultiple) {
                             setSelected((prev) =>
                               isSelected
@@ -1820,7 +1877,7 @@ export default function PreviewField({ element, field, pages = [], activePageId 
                             : "1px solid #e1e3e5",
                           borderRadius: "8px",
                           overflow: "hidden",
-                          cursor: "pointer",
+                          cursor: isReadOnly ? "default" : "pointer",
                           background: "#fff",
                           padding: isList ? "8px" : "0",
                           minWidth: 0,
@@ -1876,13 +1933,16 @@ export default function PreviewField({ element, field, pages = [], activePageId 
                           </Text>
 
                           {product.description && (
-                            <Text
-                              as="p"
-                              variant="bodySm"
-                              tone="subdued"
-                            >
-                              {product.description.trim().split(/\s+/).slice(0, 10).join(" ")}
-                              {product.description.trim().split(/\s+/).length > 10 ? "..." : ""}
+                            <Text as="p" variant="bodySm" tone="subdued">
+                              {product.description
+                                .trim()
+                                .split(/\s+/)
+                                .slice(0, 10)
+                                .join(" ")}
+                              {product.description.trim().split(/\s+/).length >
+                              10
+                                ? "..."
+                                : ""}
                             </Text>
                           )}
 
@@ -1916,7 +1976,7 @@ export default function PreviewField({ element, field, pages = [], activePageId 
           {...commonTextFieldProps}
           value={value}
           onChange={setValue}
-          readOnly
+          readOnly={isReadOnly}
         />
       );
   }
