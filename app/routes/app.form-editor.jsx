@@ -688,6 +688,202 @@ export default function FormEditor() {
   );
 
   // =========================================
+  // UNDO / REDO HISTORY
+  // Tracks changes to pages, header and footer.
+  // =========================================
+
+  const historyRef = useRef({
+    past: [],
+    present: null,
+    future: [],
+    lastChangeAt: 0,
+  });
+
+  const [historyStatus, setHistoryStatus] = useState({
+    canUndo: false,
+    canRedo: false,
+  });
+
+  const updateHistoryStatus = () => {
+    setHistoryStatus({
+      canUndo: historyRef.current.past.length > 0,
+      canRedo: historyRef.current.future.length > 0,
+    });
+  };
+
+  // Create an independent snapshot of form data.
+  const createFormSnapshot = () =>
+    structuredClone({
+      pages,
+      header,
+      footer,
+    });
+
+  // Automatically record form changes.
+  useEffect(() => {
+    const nextSnapshot = createFormSnapshot();
+    const history = historyRef.current;
+
+    // Save the initial form state.
+    if (!history.present) {
+      history.present = nextSnapshot;
+      updateHistoryStatus();
+      return;
+    }
+
+    // Ignore unchanged data.
+    if (
+      JSON.stringify(nextSnapshot) ===
+      JSON.stringify(history.present)
+    ) {
+      return;
+    }
+
+    const now = Date.now();
+
+    // Group rapid changes, such as typing in a text field,
+    // into one undo step.
+    const isSameEditingGroup =
+      now - history.lastChangeAt < 500;
+
+    if (!isSameEditingGroup) {
+      history.past.push(history.present);
+
+      // Keep a maximum of 50 undo steps.
+      if (history.past.length > 50) {
+        history.past.shift();
+      }
+    }
+
+    history.present = nextSnapshot;
+    history.future = [];
+    history.lastChangeAt = now;
+
+    updateHistoryStatus();
+  }, [pages, header, footer]);
+
+  // =========================================
+  // UNDO
+  // =========================================
+
+  const handleUndo = () => {
+    const history = historyRef.current;
+
+    if (history.past.length === 0) return;
+
+    const previousSnapshot = history.past.pop();
+
+    // Save the current state for Redo.
+    history.future.unshift(
+      structuredClone(history.present)
+    );
+
+    history.present = previousSnapshot;
+    history.lastChangeAt = 0;
+
+    // Restore the form data.
+    setPages(previousSnapshot.pages);
+    setHeader(previousSnapshot.header);
+    setFooter(previousSnapshot.footer);
+
+    // Clear selection because it may refer to an old element version.
+    setSelectedElement(null);
+
+    updateHistoryStatus();
+  };
+
+  // =========================================
+  // REDO
+  // =========================================
+
+  const handleRedo = () => {
+    const history = historyRef.current;
+
+    if (history.future.length === 0) return;
+
+    const nextSnapshot = history.future.shift();
+
+    // Save the current state for Undo.
+    history.past.push(
+      structuredClone(history.present)
+    );
+
+    history.present = nextSnapshot;
+    history.lastChangeAt = 0;
+
+    // Restore the form data.
+    setPages(nextSnapshot.pages);
+    setHeader(nextSnapshot.header);
+    setFooter(nextSnapshot.footer);
+
+    setSelectedElement(null);
+
+    updateHistoryStatus();
+  };
+
+  // =========================================
+  // KEYBOARD SHORTCUTS
+  // Ctrl + Z       = Undo
+  // Ctrl + Shift Z = Redo
+  // Ctrl + Y       = Redo
+  // =========================================
+
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      const isMac = navigator.platform
+        .toUpperCase()
+        .includes("MAC");
+
+      const modifierPressed = isMac
+        ? event.metaKey
+        : event.ctrlKey;
+
+      if (!modifierPressed) return;
+
+      // Preserve native undo/redo while editing text.
+      const target = event.target;
+
+      const isEditingText =
+        target instanceof HTMLElement &&
+        (
+          target.isContentEditable ||
+          ["INPUT", "TEXTAREA", "SELECT"].includes(
+            target.tagName
+          )
+        );
+
+      if (isEditingText) return;
+
+      // Undo: Ctrl/Cmd + Z
+      if (event.key.toLowerCase() === "z" && !event.shiftKey) {
+        event.preventDefault();
+        handleUndo();
+      }
+
+      // Redo: Ctrl/Cmd + Shift + Z
+      else if (
+        event.key.toLowerCase() === "z" &&
+        event.shiftKey
+      ) {
+        event.preventDefault();
+        handleRedo();
+      }
+
+      // Redo: Ctrl/Cmd + Y
+      else if (event.key.toLowerCase() === "y") {
+        event.preventDefault();
+        handleRedo();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [handleUndo, handleRedo]);
+
+  // =========================================
   // DRAG AND DROP SENSORS
   // =========================================
 
@@ -1938,16 +2134,23 @@ export default function FormEditor() {
 
               {/* UNDO / REDO */}
               <ButtonGroup>
-                <Button
-                  icon={UndoIcon}
-                  accessibilityLabel="Undo"
-                />
+                <Tooltip content="Undo (Ctrl + Z)">
+                  <Button
+                    icon={UndoIcon}
+                    accessibilityLabel="Undo"
+                    onClick={handleUndo}
+                    disabled={!historyStatus.canUndo}
+                  />
+                </Tooltip>
 
-                <Button
-                  icon={RedoIcon}
-                  accessibilityLabel="Redo"
-                  disabled
-                />
+                <Tooltip content="Redo (Ctrl + Shift + Z)">
+                  <Button
+                    icon={RedoIcon}
+                    accessibilityLabel="Redo"
+                    onClick={handleRedo}
+                    disabled={!historyStatus.canRedo}
+                  />
+                </Tooltip>
               </ButtonGroup>
 
             </div>
@@ -1975,8 +2178,8 @@ export default function FormEditor() {
               onChangeElement={updateSelectedElement}
               products={shopifyProducts}
               productsLoading={productsLoading}
-                isMobilePreview={isMobilePreview}
-                 isModelPreview ={ isModelPreview}
+              isMobilePreview={isMobilePreview}
+              isModelPreview={isModelPreview}
             />
           </DndContext>
           {/* </Card> */}

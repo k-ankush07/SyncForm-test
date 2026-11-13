@@ -252,7 +252,8 @@ function DraggablePreviewElement({
         cursor: isDragging ? "grabbing" : "default",
       }}
       className={[
-        "preview-element",
+         "preview-element",
+  element.customClass || "",
         isSelected ? "preview-element--selected" : "",
         isHidden ? "preview-element--hidden" : "",
         isDragging ? "preview-element--dragging" : "",
@@ -408,6 +409,7 @@ function FixedPreviewElement({
       className={[
         "preview-element",
         "preview-fixed-element",
+        element.customClass || "",
         isSelected ? "preview-element--selected" : "",
       ]
         .filter(Boolean)
