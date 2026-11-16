@@ -1,17 +1,51 @@
+// =====================================================================
+// LivePreview.jsx
+//
+// FLOW OVERVIEW
+// ---------------------------------------------------------------------
+// LivePreview draws the form exactly as visitors will see it, and lets
+// the user edit it directly inside the preview:
+//
+//   LivePreview (default export)
+//     |- FixedPreviewElement  -> shared Header (selectable, not draggable)
+//     |- For each open page:
+//     |    |- PreviewRootDropArea     -> drop target for standalone elements
+//     |         |- For each visible row:
+//     |         |    |- PreviewRowInsert (before)   -> "+" between rows
+//     |         |    |- standalone elements placed BEFORE this row
+//     |         |    |- row grid of DraggablePreviewElement items
+//     |         |    |- standalone elements placed AFTER this row
+//     |         |    |- PreviewRowInsert (after, last row only)
+//     |         |- Remaining standalone (root) elements, full width
+//     |- FixedPreviewElement  -> shared Footer (selectable, not draggable)
+//
+//   DraggablePreviewElement
+//     |- PreviewDropZone x2-4  -> top / bottom / left / right drop + "+"
+//     |- Floating toolbar      -> drag, width, duplicate, hide, delete
+//     |- PreviewField          -> the real rendered field
+//
+// All data changes are sent to the parent through callbacks
+// (onSelectElement, onChangeElement, onDeleteElement ...).
+// Drag & drop results are handled by the parent's DndContext.
+//
+// FILE ORDER
+//   1. Imports
+//   2. PreviewDropZone        (drop + insert around an element)
+//   3. PreviewRowInsert       (drop + insert between rows)
+//   4. DraggablePreviewElement
+//   5. FixedPreviewElement    (header / footer)
+//   6. PreviewRootDropArea    (drop area for standalone elements)
+//   7. LivePreview            (main component)
+// =====================================================================
+
+
+// =====================================================================
+// 1. IMPORTS
+// =====================================================================
 
 import React from "react";
 
-import {
-  Text,
-  Badge,
-  Button,
-  ButtonGroup,
-  InlineStack,
-  Box,
-  Divider,
-  BlockStack,
-  Icon,
-} from "@shopify/polaris";
+import { BlockStack, Icon } from "@shopify/polaris";
 
 import {
   DragHandleIcon,
@@ -28,10 +62,17 @@ import {
 } from "@dnd-kit/core";
 
 import PreviewField from "./PreviewField";
+import { getElementSettingsType } from "../components/elementsettings/utils/elementSettingsConfig";
 
+
+// =====================================================================
+// 2. PREVIEW DROP ZONE
 // Drop zones around an element.
-// top/bottom = insert a separate full-width row.
-// left/right = insert elements side by side.
+//   top / bottom = insert a separate full-width row
+//   left / right = insert elements side by side
+// Each zone also has a "+" button that opens the element picker.
+// =====================================================================
+
 function PreviewDropZone({
   pageId,
   rowId,
@@ -93,7 +134,14 @@ function PreviewDropZone({
     </div>
   );
 }
-// insert between rows
+
+
+// =====================================================================
+// 3. PREVIEW ROW INSERT
+// Drop zone + "+" button placed between rows
+// (placement is "before" or "after" the given row).
+// =====================================================================
+
 function PreviewRowInsert({
   pageId,
   rowId,
@@ -144,13 +192,17 @@ function PreviewRowInsert({
   );
 }
 
-// Each preview element has its own drag behavior.
+
+// =====================================================================
+// 4. DRAGGABLE PREVIEW ELEMENT
+// One element in the preview. It can be dragged, selected, and shows
+// a floating toolbar while selected.
+// =====================================================================
 
 function DraggablePreviewElement({
   element,
   pageId,
-  pages, // ADD THIS
-  activePageId, // ADD
+  pages,
   rowId,
   collection,
   selectedElementId,
@@ -159,7 +211,7 @@ function DraggablePreviewElement({
   onToggleElementVisibility,
   onDeleteElement,
   onOpenElementPicker,
-  onChangeElement, // ADD THIS
+  onChangeElement,
   products = [],
   productsLoading = false,
   isModelPreview = false,
@@ -167,6 +219,9 @@ function DraggablePreviewElement({
   const isSelected = element.id === selectedElementId;
   const isHidden = element.visible === false;
 
+  
+
+  // Drag behavior for this element.
   const {
     attributes,
     listeners,
@@ -186,9 +241,11 @@ function DraggablePreviewElement({
     },
   });
 
-  // =========================================
+  // ---------------------------------------------------------------
   // HANDLE DRAG FROM PREVIEW FIELD AND TOOLBAR
-  // =========================================
+  // Dragging starts from anywhere on the element, except from
+  // interactive controls (inputs, selects, buttons, dialogs ...).
+  // ---------------------------------------------------------------
 
   const handlePreviewPointerDown = (event) => {
     const target = event.target;
@@ -226,6 +283,11 @@ function DraggablePreviewElement({
     listeners?.onPointerDown?.(event);
   };
 
+  // ---------------------------------------------------------------
+  // STYLE
+  // Column width is clamped between 1% and 100%.
+  // ---------------------------------------------------------------
+
   const columnWidth = Math.min(
     100,
     Math.max(1, Number(element.columnWidth) || 100)
@@ -243,7 +305,6 @@ function DraggablePreviewElement({
     minWidth: 0,
     boxSizing: "border-box",
   };
-
 
   return (
     <div
@@ -266,7 +327,7 @@ function DraggablePreviewElement({
         .join(" ")}
       onClick={() => onSelectElement?.(element)}
     >
-      {/* Drop zones around the element */}
+      {/* ---------- DROP ZONES AROUND THE ELEMENT ---------- */}
 
       {/* Standalone/root elements can have top and bottom insertion. */}
       {rowId === null && (
@@ -310,8 +371,8 @@ function DraggablePreviewElement({
         onOpenElementPicker={onOpenElementPicker}
       />
 
+      {/* ---------- FLOATING TOOLBAR (selected element only) ---------- */}
 
-      {/* // toolbar */}
       {isSelected && (
         <div
           className="element-floating-toolbar"
@@ -330,7 +391,7 @@ function DraggablePreviewElement({
             <Icon source={DragHandleIcon} />
           </button>
 
-          {/* Toggle element width */}
+          {/* Toggle element width (50% <-> 100%) */}
           <button
             type="button"
             title={columnWidth === 50 ? "Set full width" : "Set half width"}
@@ -381,12 +442,26 @@ function DraggablePreviewElement({
         </div>
       )}
 
-      <PreviewField element={element} pages={pages} products={products}
-        productsLoading={productsLoading} isModelPreview={isModelPreview} />
+      {/* ---------- THE ACTUAL RENDERED FIELD ---------- */}
+
+      <PreviewField
+        element={element}
+        pages={pages}
+        products={products}
+        productsLoading={productsLoading}
+        isModelPreview={isModelPreview}
+      />
     </div>
   );
-
 }
+
+
+// =====================================================================
+// 5. FIXED PREVIEW ELEMENT
+// Used for the shared Header and Footer. They are selectable but
+// NOT draggable, and have no drop zones.
+// =====================================================================
+
 function FixedPreviewElement({
   element,
   pages = [],
@@ -427,13 +502,25 @@ function FixedPreviewElement({
         marginBottom: isHeader || isFooter ? "30px" : undefined,
       }}
     >
-      <PreviewField element={element} pages={pages} activePageId={activePageId} products={products}
-        productsLoading={productsLoading} isModelPreview={isModelPreview} />
+      <PreviewField
+        element={element}
+        pages={pages}
+        activePageId={activePageId}
+        products={products}
+        productsLoading={productsLoading}
+        isModelPreview={isModelPreview}
+      />
     </div>
   );
 }
 
-// The empty preview area is a drop target for root elements.
+
+// =====================================================================
+// 6. PREVIEW ROOT DROP AREA
+// The whole page content area is a drop target for root
+// (standalone, full-width) elements.
+// =====================================================================
+
 function PreviewRootDropArea({ pageId, children }) {
   const { setNodeRef, isOver } = useDroppable({
     id: `preview-root-drop-${pageId}`,
@@ -455,9 +542,12 @@ function PreviewRootDropArea({ pageId, children }) {
 }
 
 
+// =====================================================================
+// 7. LIVE PREVIEW (default export)
+// =====================================================================
+
 export default function LivePreview({
   pages = [],
-  templateTitle = "Untitled form",
   activePageId,
   header,
   footer,
@@ -468,22 +558,54 @@ export default function LivePreview({
   onToggleElementVisibility,
   onDeleteElement,
   onOpenElementPicker,
-  onChangeElement, // ADD THIS
+  onChangeElement,
   products = [],
   productsLoading = false,
   isMobilePreview = false,
   isModelPreview = false,
-
 }) {
-  const renderRootElement = (element, page) => (
+
+  //for debugging 
+    // DEBUG: Show currently selected element
+  const selectedElement = [
+    header,
+    footer,
+    ...pages.flatMap((page) => [
+      ...(page.rows ?? []).flatMap((row) => [
+        ...(row.fields ?? []),
+        ...(row.elements ?? []),
+      ]),
+      ...(page.rootElements ?? []),
+    ]),
+  ].find((element) => element?.id === selectedElementId);
+const selectedElementGroup = selectedElement
+  ? getElementSettingsType(selectedElement.type)
+  : null;
+
+console.log("========== SELECTED ELEMENT ==========");
+console.log("Element ID:", selectedElementId);
+console.log("Element Type:", selectedElement?.type);
+console.log("Element Group:", selectedElementGroup);
+console.log("Complete Element:", selectedElement);
+console.log("=======================================");
+
+  // Renders one draggable element. Used for both:
+  //   - elements inside a row   (rowId = row.id, collection = "fields" / "elements")
+  //   - standalone root elements (rowId = null,  collection = "rootElements")
+  const renderPreviewElement = ({
+    element,
+    page,
+    rowId,
+    collection,
+    key,
+  }) => (
     <DraggablePreviewElement
-      key={element.id}
+      key={key}
       element={element}
       pageId={page.id}
       pages={pages}
-      activePageId={activePageId}
-      rowId={null}
-      collection="rootElements"
+      rowId={rowId}
+      collection={collection}
       selectedElementId={selectedElementId}
       onSelectElement={onSelectElement}
       onDuplicateElement={onDuplicateElement}
@@ -496,6 +618,17 @@ export default function LivePreview({
       isModelPreview={isModelPreview}
     />
   );
+
+  // Standalone (root) element rendered at full width.
+  const renderRootElement = (element, page) =>
+    renderPreviewElement({
+      element,
+      page,
+      rowId: null,
+      collection: "rootElements",
+      key: element.id,
+    });
+
   return (
     <div
       className={[
@@ -505,35 +638,6 @@ export default function LivePreview({
         .filter(Boolean)
         .join(" ")}
     >
-      {/* <Box background="bg-surface" padding="300">
-        <InlineStack
-          align="space-between"
-          blockAlign="center"
-          gap="400"
-        >
-          <InlineStack blockAlign="center" gap="200">
-            <Text variant="bodyMd" fontWeight="semibold">
-              {templateTitle}
-            </Text>
-
-            <Badge>Draft</Badge>
-          </InlineStack>
-
-          <InlineStack blockAlign="center" gap="200">
-            <ButtonGroup>
-              <Button>Mobile</Button>
-              <Button variant="primary">Desktop</Button>
-            </ButtonGroup>
-
-            <Button>English</Button>
-            <Button disabled>Undo</Button>
-            <Button disabled>Redo</Button>
-          </InlineStack>
-        </InlineStack>
-      </Box>
-
-      <Divider /> */}
-
       <div className="live-preview__body">
         <div className="live-preview__form">
           <div className="live-preview__data">
@@ -564,7 +668,7 @@ export default function LivePreview({
                   PAGE CONTENT
                   Each page contains its own rows and
                   rootElements, but no separate header
-                  or footer.
+                  or footer. Only the open page is shown.
               ========================================= */}
 
               {pages
@@ -578,14 +682,15 @@ export default function LivePreview({
                     className="preview-page"
                   >
 
-                    {/* =========================================
-                        MIDDLE: Normal draggable form elements
-                    ========================================= */}
-
                     <PreviewRootDropArea pageId={page.id}>
                       <BlockStack gap="">
 
-                        {/* Render rows only when they contain visible elements. */}
+                        {/* =========================================
+                            ROWS
+                            Only rows that contain visible elements
+                            are rendered.
+                        ========================================= */}
+
                         {(page.rows ?? [])
 
                           // Hide the complete row when its visibility is false.
@@ -619,7 +724,6 @@ export default function LivePreview({
                           // This removes the empty row and its spacing.
                           .filter(({ rowItems }) => rowItems.length > 0)
 
-
                           .map(({ row, rowItems }, index, allRows) => (
                             <React.Fragment key={row.id}>
 
@@ -630,6 +734,7 @@ export default function LivePreview({
                                 placement="before"
                                 onOpenElementPicker={onOpenElementPicker}
                               />
+
                               {/* Standalone elements positioned before this row */}
                               {(page.rootElements ?? [])
                                 .filter(
@@ -639,7 +744,7 @@ export default function LivePreview({
                                 )
                                 .map((element) => renderRootElement(element, page))}
 
-                              {/* Existing row */}
+                              {/* The row itself (grid of elements) */}
                               <div className="preview-row">
                                 <div
                                   className="preview-row-grid"
@@ -647,29 +752,18 @@ export default function LivePreview({
                                     "--preview-column-count": rowItems.length,
                                   }}
                                 >
-                                  {rowItems.map(({ element, collection }) => (
-                                    <DraggablePreviewElement
-                                      key={`${collection}-${element.id}`}
-                                      element={element}
-                                      pageId={page.id}
-                                      pages={pages} // ADD THIS
-                                      activePageId={activePageId}
-                                      rowId={row.id}
-                                      collection={collection}
-                                      selectedElementId={selectedElementId}
-                                      onSelectElement={onSelectElement}
-                                      onDuplicateElement={onDuplicateElement}
-                                      onToggleElementVisibility={onToggleElementVisibility}
-                                      onDeleteElement={onDeleteElement}
-                                      onOpenElementPicker={onOpenElementPicker}
-                                      onChangeElement={onChangeElement}
-                                      products={products}
-                                      productsLoading={productsLoading}
-                                      isModelPreview={isModelPreview}
-                                    />
-                                  ))}
+                                  {rowItems.map(({ element, collection }) =>
+                                    renderPreviewElement({
+                                      element,
+                                      page,
+                                      rowId: row.id,
+                                      collection,
+                                      key: `${collection}-${element.id}`,
+                                    })
+                                  )}
                                 </div>
                               </div>
+
                               {/* Standalone elements positioned after this row */}
                               {(page.rootElements ?? [])
                                 .filter(
@@ -692,42 +786,12 @@ export default function LivePreview({
                             </React.Fragment>
                           ))}
 
+                        {/* =========================================
+                            ROOT ELEMENTS
+                            Standalone elements that are not tied to
+                            a row position. They remain full width.
+                        ========================================= */}
 
-                        {/* Root elements remain full width. */}
-                        {/* <BlockStack gap="300">
-                          {(page.rootElements ?? [])
-                            .filter(
-                              (element) =>
-                                element.visible !== false &&
-                                !element.insertBeforeRowId &&
-                                !element.insertAfterRowId
-                            )
-                            .map((element) => (
-                              <DraggablePreviewElement
-                                key={element.id}
-                                element={element}
-                                pages={pages} // ADD THIS
-                                activePageId={activePageId}
-                                pageId={page.id}
-                                rowId={null}
-                                collection="rootElements"
-                                selectedElementId={selectedElementId}
-                                onSelectElement={onSelectElement}
-                                onDuplicateElement={onDuplicateElement}
-                                onToggleElementVisibility={
-                                  onToggleElementVisibility
-                                }
-                                onDeleteElement={onDeleteElement}
-                                onOpenElementPicker={onOpenElementPicker}
-                                //here
-                                onChangeElement={onChangeElement}
-                                products={products}
-                                productsLoading={productsLoading}
-                                isModelPreview={isModelPreview}
-                              />
-                            ))}
-                        </BlockStack> */}
-                        {/* Root elements remain full width. */}
                         <BlockStack gap="300">
                           {(page.rootElements ?? [])
                             .filter(
@@ -738,18 +802,6 @@ export default function LivePreview({
                             )
                             .map((element) => renderRootElement(element, page))}
                         </BlockStack>
-
-                        {/* Existing submit button */}
-                        {/* {page.submitButton?.enabled && (
-                          <Box paddingBlockStart="400">
-                            <button
-                              type="button"
-                              className="Polaris-Button--primary end-btn"
-                            >
-                              {page.submitButton.label}
-                            </button>
-                          </Box>
-                        )} */}
 
                       </BlockStack>
                     </PreviewRootDropArea>
@@ -781,4 +833,3 @@ export default function LivePreview({
     </div>
   );
 }
-

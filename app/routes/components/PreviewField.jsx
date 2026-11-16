@@ -1,27 +1,294 @@
 
 import React, { useEffect, useState, useRef } from "react";
 import SignaturePad from "signature_pad";
-
+import "flag-icons/css/flag-icons.min.css";
 import * as PolarisIcons from "@shopify/polaris-icons";
-import { Icon } from "@shopify/polaris";
-import createDOMPurify from "dompurify";
-import ReactCountryFlag from "react-country-flag";
-
-import ColorInput from "../components/RichTextEditor/ColorInput.jsx";
 import {
+  Icon,
   Text,
-  Divider,
   TextField,
   Checkbox,
   Select,
   InlineStack,
-  ChoiceList,
-  DropZone,
   Button,
   BlockStack,
 } from "@shopify/polaris";
+
+import createDOMPurify from "dompurify";
+
+import ColorInput from "../components/RichTextEditor/ColorInput.jsx";
 import { countries } from "../components/elementsettings/utils/countries.js";
 import FormProgressIndicator from "./RichTextEditor/FormProgressIndicator";
+
+import {
+  isValidPhoneNumber,
+} from "libphonenumber-js";
+
+// =============================================================
+// SIGNATURE PREVIEW COMPONENT
+// Hooks must live inside a component, not inside a switch case.
+// =============================================================
+
+function SignaturePreview({
+  element,
+  label,
+  hideLabel,
+  required,
+  descriptionText,
+  isReadOnly,
+}) {
+  const canvasRef = useRef(null);
+  const signaturePadRef = useRef(null);
+
+  const [uploadedSignature, setUploadedSignature] = useState(null);
+
+  const showCanvas = element.showCanvas !== false;
+  const allowFileUpload = element.allowFileUpload === true;
+
+  const canvasHeight = Number(element.canvasHeight) || 150;
+  const penColor = element.penColor || "#000000";
+  const penWidth = Number(element.penWidth) || 2;
+
+  // Initialize and configure the signature canvas.
+  useEffect(() => {
+    if (!showCanvas || !canvasRef.current) return;
+
+    const canvas = canvasRef.current;
+
+    const signaturePad = new SignaturePad(canvas, {
+      penColor,
+      minWidth: penWidth,
+      maxWidth: penWidth,
+      backgroundColor: element.canvasBackground || "#ffffff",
+    });
+
+    signaturePadRef.current = signaturePad;
+
+    const resizeCanvas = () => {
+      const ratio = Math.max(window.devicePixelRatio || 1, 1);
+
+      const data = signaturePad.isEmpty()
+        ? null
+        : signaturePad.toData();
+
+      canvas.width = canvas.offsetWidth * ratio;
+      canvas.height = canvasHeight * ratio;
+
+      const context = canvas.getContext("2d");
+      context.setTransform(ratio, 0, 0, ratio, 0, 0);
+
+      signaturePad.clear();
+
+      if (data) {
+        signaturePad.fromData(data);
+      }
+    };
+
+    resizeCanvas();
+
+    // Keep canvas resolution correct when its size changes.
+    const resizeObserver =
+      typeof ResizeObserver !== "undefined"
+        ? new ResizeObserver(resizeCanvas)
+        : null;
+
+    resizeObserver?.observe(canvas);
+
+    return () => {
+      resizeObserver?.disconnect();
+      signaturePad.off();
+      signaturePadRef.current = null;
+    };
+  }, [
+    element.id,
+    showCanvas,
+    canvasHeight,
+    penColor,
+    penWidth,
+    element.canvasBackground,
+  ]);
+
+  // Clear the signature drawing.
+  const clearSignature = () => {
+    signaturePadRef.current?.clear();
+  };
+
+  // Validate and preview an uploaded signature image.
+  const handleSignatureUpload = (event) => {
+    const file = event.target.files?.[0];
+
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      event.target.value = "";
+      return;
+    }
+
+    setUploadedSignature((previous) => {
+      if (previous) URL.revokeObjectURL(previous);
+      return URL.createObjectURL(file);
+    });
+  };
+
+  // Release the uploaded image URL when the component unmounts.
+  useEffect(() => {
+    return () => {
+      if (uploadedSignature) {
+        URL.revokeObjectURL(uploadedSignature);
+      }
+    };
+  }, [uploadedSignature]);
+
+  return (
+    <BlockStack gap="200">
+      {!hideLabel && (
+        <Text as="p" variant="bodyMd">
+          {label}
+          {required && (
+            <span style={{ color: "var(--p-color-text-critical)" }}>
+              {" "}*
+            </span>
+          )}
+        </Text>
+      )}
+
+      {/* Signature drawing canvas. */}
+      {showCanvas && (
+        <BlockStack gap="200">
+          <div
+            style={{
+              border: "1px dashed #8c9196",
+              borderRadius: "8px",
+              overflow: "hidden",
+              background: element.canvasBackground || "#ffffff",
+            }}
+          >
+            <canvas
+              ref={canvasRef}
+              style={{
+                display: "block",
+                width: "100%",
+                height: `${canvasHeight}px`,
+                touchAction: isReadOnly ? "auto" : "none",
+                cursor: isReadOnly ? "default" : "crosshair",
+                pointerEvents: isReadOnly ? "none" : "auto",
+              }}
+            />
+          </div>
+
+          {element.allowClear !== false && (
+            <InlineStack align="end">
+              <Button
+                size="slim"
+                onClick={clearSignature}
+                disabled={isReadOnly}
+              >
+                Clear signature
+              </Button>
+            </InlineStack>
+          )}
+        </BlockStack>
+      )}
+
+      {/* Separator when both drawing and uploading are enabled. */}
+      {showCanvas && allowFileUpload && (
+        <Text as="p" variant="bodySm" tone="subdued">
+          OR
+        </Text>
+      )}
+
+      {/* Signature image upload. */}
+      {allowFileUpload && (
+        <BlockStack gap="200">
+          {uploadedSignature ? (
+            <BlockStack gap="200">
+              <img
+                src={uploadedSignature}
+                alt="Uploaded signature"
+                style={{
+                  maxWidth: "100%",
+                  maxHeight: "150px",
+                  objectFit: "contain",
+                  border: "1px solid #e1e3e5",
+                  borderRadius: "8px",
+                  padding: "8px",
+                }}
+              />
+
+              {element.allowReplace !== false && (
+                <label
+                  style={{
+                    cursor: isReadOnly ? "default" : "pointer",
+                    pointerEvents: isReadOnly ? "none" : "auto",
+                  }}
+                >
+                  <span
+                    style={{
+                      display: "inline-block",
+                      padding: "7px 14px",
+                      border: "1px solid #8c9196",
+                      borderRadius: "6px",
+                    }}
+                  >
+                    Replace signature
+                  </span>
+
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg"
+                    hidden
+                    disabled={isReadOnly}
+                    onChange={handleSignatureUpload}
+                  />
+                </label>
+              )}
+            </BlockStack>
+          ) : (
+            <label
+              style={{
+                border: "1px dashed #8c9196",
+                borderRadius: "8px",
+                padding: "24px",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: "8px",
+                cursor: isReadOnly ? "default" : "pointer",
+                pointerEvents: isReadOnly ? "none" : "auto",
+              }}
+            >
+              <Icon source={PolarisIcons.UploadIcon} />
+
+              <Text as="span" variant="bodyMd">
+                {element.uploadButtonText || "Upload signature"}
+              </Text>
+
+              <Text as="span" variant="bodySm" tone="subdued">
+                {element.acceptedFileTypes || "PNG, JPG, JPEG"}
+              </Text>
+
+              <input
+                type="file"
+                accept="image/png,image/jpeg"
+                hidden
+                disabled={isReadOnly}
+                onChange={handleSignatureUpload}
+              />
+            </label>
+          )}
+        </BlockStack>
+      )}
+
+      {descriptionText}
+    </BlockStack>
+  );
+}
+
+
+
+// =============================================================
+// MAIN PREVIEW FIELD COMPONENT
+// =============================================================
 
 export default function PreviewField({
   element,
@@ -32,22 +299,22 @@ export default function PreviewField({
   isModelPreview = false,
   productsLoading = false,
 }) {
+  // =========================================================
+  // 1. ELEMENT DATA
+  // =========================================================
+
   const currentElement = element ?? field;
   const isReadOnly = !isModelPreview;
-
-  // console.log("PreviewField received:", currentElement);
-  // console.log("PreviewField type:", currentElement?.type);
-  console.log(pages);
 
   const normalizedElement =
     typeof currentElement === "string"
       ? {
-          type: currentElement
-            .toLowerCase()
-            .trim()
-            .replace(/[\s-]+/g, "_"),
-          label: currentElement,
-        }
+        type: currentElement
+          .toLowerCase()
+          .trim()
+          .replace(/[\s-]+/g, "_"),
+        label: currentElement,
+      }
       : currentElement ?? {};
 
   const type = normalizedElement.type
@@ -65,7 +332,10 @@ export default function PreviewField({
   const defaultValue = normalizedElement.defaultValue ?? "";
   const required = Boolean(normalizedElement.required);
 
-  // if icon is selected
+  // =========================================================
+  // 2. LABEL AND ICON
+  // =========================================================
+
   const selectedIcon = normalizedElement.selectIcon
     ? PolarisIcons[normalizedElement.selectIcon]
     : null;
@@ -79,39 +349,168 @@ export default function PreviewField({
         marginBottom: "6px",
       }}
     >
-      {selectedIcon && <Icon source={selectedIcon} />}
       <Text as="label" variant="bodyMd">
         {label}
       </Text>
+
       {required && (
         <span style={{ color: "var(--p-color-text-critical)" }}>*</span>
       )}
     </div>
   );
 
+  const descriptionText = description ? (
+    <Text as="p" variant="bodySm" tone="subdued">
+      {description}
+    </Text>
+  ) : null;
+
+  // =========================================================
+  // 3. FIELD STATES
+  // =========================================================
+
+  const [value, setValue] = useState(String(defaultValue));
+  const [nameError, setNameError] = useState("");
+  const [numberError, setNumberError] = useState("");
+
+  const [selected, setSelected] = useState([]);
+
   const [checked, setChecked] = useState(
     normalizedElement.type === "consent"
       ? normalizedElement.checkedByDefault ?? true
       : Boolean(normalizedElement.defaultValue)
   );
-
-  const [selected, setSelected] = useState([]);
-  const [value, setValue] = useState(defaultValue);
+  //passwords
   const [confirmPasswordValue, setConfirmPasswordValue] = useState("");
-  // const [dateValue, setDateValue] = useState(defaultValue);
-  const [uploadedFiles, setUploadedFiles] = useState([]);
-  const [imagePreview, setImagePreview] = useState("");
-  const [rangeValue, setRangeValue] = useState(50);
-  // const [colorValue, setColorValue] = useState("#563D7C");
-  const [rating, setRating] = useState(0);
+  const [confirmEmailValue, setConfirmEmailValue] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // Apply a changed default value when the element settings change.
+  const [passwordValidationTriggered, setPasswordValidationTriggered] =
+    useState(false);
+
+  // Phone states.
+  const [phoneCountry, setPhoneCountry] = useState(
+    (
+      normalizedElement.defaultCountryCode &&
+        normalizedElement.defaultCountryCode !== "auto"
+        ? normalizedElement.defaultCountryCode
+        : "in"
+    ).toLowerCase()
+  );
+
+  const [phoneError, setPhoneError] = useState("");
+  //country satae
+  const [countryDropdownOpen, setCountryDropdownOpen] = useState(false);
+  // Country dropdown states
+  const [countrySearch, setCountrySearch] = useState("");
+  const [selectedCountry, setSelectedCountry] = useState("");
+
+  // Date and time.
+  const [dateValue, setDateValue] = useState(
+    normalizedElement.defaultDate || ""
+  );
+
+  // File and image previews.
+  const [imagePreview, setImagePreview] = useState("");
+
+  // Rating and range values.
+  const [rating, setRating] = useState(0);
+  const [rangeValue, setRangeValue] = useState(50);
+
+  // Switch state.
+  const [switchValue, setSwitchValue] = useState(
+    Boolean(normalizedElement.defaultChecked)
+  );
+
+  // Color picker state.
+  const [colorValue, setColorValue] = useState(
+    normalizedElement.defaultColor || "#563D7C"
+  );
+
+  // =========================================================
+  // 4. FIELD CHANGE HANDLERS
+  // =========================================================
+
+  // Name validation and optional numbers-only setting.
+  const handleNameChange = (newValue) => {
+    const input = String(newValue ?? "");
+
+    if (normalizedElement.numbersOnly) {
+      setValue(input.replace(/[^0-9]/g, ""));
+      setNameError("");
+      return;
+    }
+
+    setValue(input);
+
+    if (
+      normalizedElement.nameValidation !== false &&
+      input
+    ) {
+      const validName = /^[\p{L}\p{M}\s'.-]+$/u.test(input);
+
+      setNameError(
+        validName ? "" : "Please enter a valid name."
+      );
+
+      return;
+    }
+
+    setNameError("");
+  };
+
+  // Number input: accept digits only and show an error for other characters.
+  const handleNumberChange = (newValue) => {
+    const input = String(newValue ?? "");
+
+    if (input !== "" && !/^\d+$/.test(input)) {
+      setValue(input);
+      setNumberError("Please enter numbers only.");
+      return;
+    }
+
+    setValue(input);
+    setNumberError("");
+  };
+
+  // =========================================================
+  // 5. EFFECTS
+  // =========================================================
+
+  // Update common input and confirmation values when the element changes.
   useEffect(() => {
-    setValue(normalizedElement.defaultValue ?? "");
+    setValue(String(normalizedElement.defaultValue ?? ""));
     setDateValue(normalizedElement.defaultValue ?? "");
     setConfirmPasswordValue("");
+    setPasswordValidationTriggered(false);
+    setShowPassword(false);
+    setShowConfirmPassword(false);
+    setConfirmEmailValue("");
+    setNameError("");
+    setNumberError("");
   }, [normalizedElement.id, normalizedElement.defaultValue]);
 
+  // Reset phone country and value when phone settings change.
+  useEffect(() => {
+    const configuredCountry = normalizedElement.defaultCountryCode;
+
+    setPhoneCountry(
+      configuredCountry && configuredCountry !== "auto"
+        ? configuredCountry.toLowerCase()
+        : "in"
+    );
+
+    setValue(String(normalizedElement.defaultValue ?? ""));
+    setPhoneError("");
+    setCountryDropdownOpen(false);
+  }, [
+    normalizedElement.id,
+    normalizedElement.defaultCountryCode,
+    normalizedElement.defaultValue,
+  ]);
+
+  // Update checkbox and consent defaults.
   useEffect(() => {
     setChecked(
       normalizedElement.type === "consent"
@@ -125,38 +524,45 @@ export default function PreviewField({
     normalizedElement.type,
   ]);
 
-  // switch values
-  const [switchValue, setSwitchValue] = useState(
-    Boolean(normalizedElement.defaultChecked)
-  );
-
+  // Update switch default.
   useEffect(() => {
     setSwitchValue(Boolean(normalizedElement.defaultChecked));
   }, [normalizedElement.id, normalizedElement.defaultChecked]);
 
-  // color pick show in preview
-  const [colorValue, setColorValue] = useState(
-    normalizedElement.defaultColor || "#563D7C"
-  );
-
+  // Update color default.
   useEffect(() => {
     setColorValue(normalizedElement.defaultColor || "#563D7C");
   }, [normalizedElement.id, normalizedElement.defaultColor]);
 
-  const rawOptions = normalizedElement.options || [];
+  // Reset country selection when the element changes.
+  useEffect(() => {
+    setSelectedCountry(
+      typeof normalizedElement.defaultValue === "string"
+        ? normalizedElement.defaultValue
+        : ""
+    );
 
-  // for date and time
-  const [dateValue, setDateValue] = useState(
-    normalizedElement.defaultDate || ""
-  );
+    setCountrySearch("");
+    setCountryDropdownOpen(false);
+  }, [normalizedElement.id, normalizedElement.defaultValue]);
 
-  React.useEffect(() => {
+  // Update date default.
+  useEffect(() => {
     setDateValue(normalizedElement.defaultDate || "");
   }, [normalizedElement.defaultDate]);
 
+  // =========================================================
+  // 6. OPTIONS AND COMMON FIELD PROPS
+  // =========================================================
+
+  const rawOptions = normalizedElement.options || [];
+
   const options = rawOptions.map((option, index) => {
     if (typeof option === "string") {
-      return { label: option, value: option };
+      return {
+        label: option,
+        value: option,
+      };
     }
 
     return {
@@ -167,48 +573,165 @@ export default function PreviewField({
 
   if (!currentElement) return null;
 
-  const fieldLabel = hideLabel ? "" : label;
-
   const commonTextFieldProps = {
-    label: fieldLabelWithIcon,
+    label: hideLabel ? "" : label,
     labelHidden: hideLabel,
     placeholder: placeholder || undefined,
     helpText: description || undefined,
     requiredIndicator: required,
     autoComplete: "off",
+
+    prefix: selectedIcon ? (
+      <div
+        style={{
+          width: "32px",
+          height: "32px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "#F1F1F1",
+          border: "1px solid #8A8A8A",
+          borderRadius: "4px",
+          padding: 0,
+          margin: 0,
+          boxSizing: "border-box",
+        }}
+      >
+        <Icon source={selectedIcon} />
+      </div>
+    ) : undefined,
   };
 
   const commonSelectProps = {
-    label: fieldLabelWithIcon,
+    label: label,
     labelHidden: hideLabel,
     helpText: description || undefined,
-    requiredIndicator: required,
   };
 
-  const descriptionText = description ? (
-    <Text as="p" variant="bodySm" tone="subdued">
-      {description}
-    </Text>
-  ) : null;
+  // Phone country data.
+  const phoneCountryList = countries;
 
-  // get country from the country.js get the selected value
-  const selectedCountry = countries.find(
-    (country) => country.value === normalizedElement.defaultCountryCode
-  );
+  const currentPhoneCountry =
+    phoneCountryList.find(
+      (country) => country.value.toLowerCase() === phoneCountry
+    ) || phoneCountryList.find((country) => country.value === "in");
 
-  // options per line for radio and checkbox
+  // Show flag and country code if either setting is enabled.
+  const showPhoneCountry =
+    normalizedElement.phoneValidation !== false ||
+    normalizedElement.showCountryCode !== false;
+
+  // Validate only when validation is enabled.
+  const validatePhone =
+    normalizedElement.phoneValidation !== false;
+
+  // Change selected phone country.
+  const handlePhoneCountryChange = (countryCode) => {
+    setPhoneCountry(countryCode.toLowerCase());
+    setPhoneError("");
+  };
+
+  // Handle phone input and detect international calling codes.
+  const handlePhoneChange = (newValue) => {
+    const input = String(newValue ?? "");
+
+    if (input.startsWith("+") || input.startsWith("00")) {
+      const internationalInput = input.startsWith("00")
+        ? `+${input.slice(2)}`
+        : input;
+
+      const digits = internationalInput.slice(1).replace(/\D/g, "");
+
+      const matches = phoneCountryList
+        .filter((country) => {
+          const dialCode = country.dialCode.replace(/\D/g, "");
+          return digits.startsWith(dialCode);
+        })
+        .sort(
+          (a, b) =>
+            b.dialCode.replace(/\D/g, "").length -
+            a.dialCode.replace(/\D/g, "").length
+        );
+
+      if (matches.length > 0) {
+        const longestCode = matches[0].dialCode;
+
+        const sameCodeMatches = matches.filter(
+          (country) => country.dialCode === longestCode
+        );
+
+        const matchedCountry =
+          sameCodeMatches.find(
+            (country) => country.value.toLowerCase() === phoneCountry
+          ) || sameCodeMatches[0];
+
+        const dialDigits =
+          matchedCountry.dialCode.replace(/\D/g, "");
+
+        setPhoneCountry(matchedCountry.value.toLowerCase());
+        setValue(digits.slice(dialDigits.length));
+        setPhoneError("");
+
+        return;
+      }
+
+      // Preserve an incomplete international number while typing.
+      setValue(internationalInput);
+      setPhoneError("");
+      return;
+    }
+
+    // National phone number: digits only.
+    setValue(input.replace(/\D/g, ""));
+    setPhoneError("");
+  };
+
+  // Validate the current phone number.
+  const validatePhoneNumber = () => {
+    if (!String(value).trim()) {
+      if (required) {
+        setPhoneError(
+          normalizedElement.requiredMessage ||
+          `${label} is required`
+        );
+
+        return false;
+      }
+
+      setPhoneError("");
+      return true;
+    }
+
+    if (validatePhone) {
+      const fullNumber =
+        `${currentPhoneCountry?.dialCode || ""}${value}`;
+
+      if (!isValidPhoneNumber(fullNumber)) {
+        setPhoneError("Please enter a valid phone number.");
+        return false;
+      }
+    }
+
+    setPhoneError("");
+    return true;
+  };
+
+  // Limit radio and checkbox columns to a maximum of five.
   const optionsPerLine = Math.min(
     5,
     Math.max(1, Number(normalizedElement.optionsPerLine) || 1)
   );
 
-  // to show option per line
   const choiceGridStyle = {
     display: "grid",
     gridTemplateColumns: `repeat(${optionsPerLine}, minmax(0, 1fr))`,
     gap: "12px",
     width: "100%",
   };
+
+  // =========================================================
+  // 7. HTML SANITIZATION
+  // =========================================================
 
   const sanitizeHTML = (html) => {
     if (typeof window === "undefined") {
@@ -219,103 +742,488 @@ export default function PreviewField({
     return purifier.sanitize(html);
   };
 
-  // cases to render different inputs
+  // password valiadtions
+  const getPasswordError = () => {
+    const password = String(value || "");
+
+    if (required && !password.trim()) {
+      return `${label} is required.`;
+    }
+
+    // Optional character limits, if enabled in your settings.
+    if (normalizedElement.limitCharacters) {
+      const min = normalizedElement.minCharacters !== ""
+        ? Number(normalizedElement.minCharacters)
+        : null;
+
+      const max = normalizedElement.maxCharacters !== ""
+        ? Number(normalizedElement.maxCharacters)
+        : null;
+
+      if (min !== null && password.length < min) {
+        return `Password must contain at least ${min} characters.`;
+      }
+
+      if (max !== null && password.length > max) {
+        return `Password cannot exceed ${max} characters.`;
+      }
+    }
+
+    // Apply the selected password validation rule.
+    const validationRule = normalizedElement.passwordValidation;
+
+    if (validationRule && validationRule !== "none") {
+      const regexString =
+        validationRule === "advancedValidateRule"
+          ? normalizedElement.advancedPasswordValidation
+          : validationRule;
+
+      if (regexString) {
+        try {
+          const regex = new RegExp(regexString);
+
+          if (!regex.test(password)) {
+            return "Password does not meet the required conditions.";
+          }
+        } catch (error) {
+          return "The password validation rule is invalid.";
+        }
+      }
+    }
+
+    // Confirm password validation.
+    if (
+      normalizedElement.confirmPassword &&
+      password !== confirmPasswordValue
+    ) {
+      return "Passwords do not match.";
+    }
+
+    return "";
+  };
+
+  // This function will be called by the future Submit handler.
+  const validatePassword = () => {
+    setPasswordValidationTriggered(true);
+
+    return getPasswordError() === "";
+  };
+
+  // =========================================================
+  // 8. ELEMENT RENDERING
+  // =========================================================
+
   switch (type) {
+    // -------------------------------------------------------
+    // EMAIL
+    // -------------------------------------------------------
+
     case "email":
       return (
-        <TextField
-          {...commonTextFieldProps}
-          type="email"
-          autoComplete="email"
-          value={value}
-          onChange={setValue}
-          readOnly={isReadOnly}
-        />
+        <BlockStack gap="300">
+          <TextField
+            {...commonTextFieldProps}
+            type="email"
+            autoComplete="email"
+            value={value}
+            onChange={setValue}
+            readOnly={isReadOnly}
+            minLength={
+              normalizedElement.limitCharacters &&
+                normalizedElement.minCharacters !== ""
+                ? Number(normalizedElement.minCharacters)
+                : undefined
+            }
+            maxLength={
+              normalizedElement.limitCharacters &&
+                normalizedElement.maxCharacters !== ""
+                ? Number(normalizedElement.maxCharacters)
+                : undefined
+            }
+          />
+
+          {normalizedElement.confirmEmail && (
+            <TextField
+              label={normalizedElement.confirmEmailLabel || "Confirm email"}
+              labelHidden={hideLabel}
+              prefix={commonTextFieldProps.prefix}
+              placeholder={
+                normalizedElement.confirmEmailPlaceholder ||
+                "Confirm your email"
+              }
+              helpText={
+                normalizedElement.confirmEmailDescription || undefined
+              }
+              type="email"
+              autoComplete="email"
+              value={confirmEmailValue}
+              onChange={setConfirmEmailValue}
+              readOnly={isReadOnly}
+              requiredIndicator={required}
+            />
+          )}
+        </BlockStack>
       );
+
+    // -------------------------------------------------------
+    // NAME
+    // -------------------------------------------------------
 
     case "name":
     case "first_name":
+    case "last_name":
       return (
         <TextField
           {...commonTextFieldProps}
           autoComplete="given-name"
           value={value}
-          onChange={setValue}
+          onChange={handleNameChange}
           readOnly={isReadOnly}
+          error={nameError || undefined}
+
+          minLength={
+            normalizedElement.limitCharacters &&
+              normalizedElement.minCharacters !== ""
+              ? Number(normalizedElement.minCharacters)
+              : undefined
+          }
+          maxLength={
+            normalizedElement.limitCharacters &&
+              normalizedElement.maxCharacters !== ""
+              ? Number(normalizedElement.maxCharacters)
+              : undefined
+          }
         />
       );
 
-    case "last_name":
-      return (
-        <TextField
-          {...commonTextFieldProps}
-          autoComplete="family-name"
-          value={value}
-          onChange={setValue}
-          readOnly={isReadOnly}
-        />
-      );
-
+    // -------------------------------------------------------
+    // PHONE
+    // -------------------------------------------------------
     case "phone":
       return (
-        <BlockStack gap="400">
+        <BlockStack gap="200">
           {!hideLabel && (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                width: "fit-content",
-              }}
-            >
-              {selectedCountry && (
-                <>
-                  <ReactCountryFlag
-                    countryCode={selectedCountry.value.toUpperCase()}
-                    svg
-                    style={{
-                      width: "20px",
-                      height: "15px",
-                      objectFit: "cover",
-                    }}
-                  />
-                  <span>{selectedCountry.dialCode}</span>
-                </>
+            <Text as="label" variant="bodyMd">
+              {label}
+              {required && (
+                <span style={{ color: "var(--p-color-text-critical)" }}>
+                  {" "}*
+                </span>
               )}
-              <span>{label}</span>
-            </div>
+            </Text>
           )}
 
-          <TextField
-            type="tel"
-            labelHidden
-            placeholder={placeholder || label}
-            value={value}
-            onChange={setValue}
-            readOnly={isReadOnly}
-          />
+          <div
+            style={{
+              display: "flex",
+              width: "100%",
+              alignItems: "stretch",
+            }}
+          >
+            {showPhoneCountry ? (
+              <div style={{ position: "relative", flexShrink: 0 }}>
+                {/* Selected country button */}
+                <button
+                  type="button"
+                  disabled={isReadOnly}
+                  onClick={() =>
+                    setCountryDropdownOpen((previous) => !previous)
+                  }
+                  style={{
+                    minWidth: "100px",
+                    height: "100%",
+                    minHeight: "40px",
+                    padding: "0 10px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "7px",
+                    background: "#F1F1F1",
+                    border: "1px solid #8A8A8A",
+                    borderRight: 0,
+                    borderRadius: "6px 0 0 6px",
+                    cursor: isReadOnly ? "default" : "pointer",
+                    boxSizing: "border-box",
+                  }}
+                >
+                  <span
+                    className={`fi fi-${currentPhoneCountry?.value || "in"}`}
+                    style={{
+                      width: "24px",
+                      height: "18px",
+                      display: "inline-block",
+                      flexShrink: 0,
+                      backgroundSize: "cover",
+                      backgroundPosition: "center",
+                      borderRadius: "2px",
+                    }}
+                  />
+
+                  <span
+                    style={{
+                      fontSize: "13px",
+                      fontWeight: 500,
+                      color: "#303030",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {currentPhoneCountry?.nativeName || "भारत"}
+                  </span>
+
+                  <span
+                    style={{
+                      fontSize: "13px",
+                      color: "var(--p-color-text-secondary)",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {currentPhoneCountry?.dialCode || "+91"}
+                  </span>
+
+                  {!isReadOnly && (
+                    <span
+                      style={{
+                        fontSize: "10px",
+                        color: "var(--p-color-text-secondary)",
+                      }}
+                    >
+                      ▾
+                    </span>
+                  )}
+                </button>
+
+                {/* Country dropdown */}
+                {countryDropdownOpen && !isReadOnly && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: "calc(100% + 4px)",
+                      left: 0,
+                      width: "280px",
+                      maxHeight: "260px",
+                      overflowY: "auto",
+                      overflowX: "hidden",
+                      backgroundColor: "#FFFFFF",
+                      border: "1px solid #E1E3E5",
+                      borderRadius: "8px",
+                      boxShadow: "0 4px 16px rgba(0, 0, 0, 0.12)",
+                      zIndex: 10000,
+                      padding: "4px",
+                      boxSizing: "border-box",
+                    }}
+                  >
+                    {phoneCountryList.map((country) => {
+                      const isSelected = phoneCountry === country.value;
+
+                      return (
+                        <button
+                          key={country.value}
+                          type="button"
+                          onClick={() => {
+                            handlePhoneCountryChange(country.value);
+                            setCountryDropdownOpen(false);
+                          }}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            width: "100%",
+                            minHeight: "42px",
+                            padding: "8px 10px",
+                            gap: "10px",
+                            border: "none",
+                            borderRadius: "5px",
+                            backgroundColor: isSelected
+                              ? "#F1F2F3"
+                              : "#FFFFFF",
+                            cursor: "pointer",
+                            textAlign: "left",
+                            boxSizing: "border-box",
+                            transition: "background-color 0.15s ease",
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!isSelected) {
+                              e.currentTarget.style.backgroundColor = "#F6F6F7";
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = isSelected
+                              ? "#F1F2F3"
+                              : "#FFFFFF";
+                          }}
+                        >
+                          {/* Country flag */}
+                          <span
+                            className={`fi fi-${country.value}`}
+                            style={{
+                              width: "24px",
+                              height: "18px",
+                              display: "inline-block",
+                              flexShrink: 0,
+                              backgroundSize: "cover",
+                              backgroundPosition: "center",
+                              borderRadius: "2px",
+                            }}
+                          />
+
+
+                          {/* English country name + native name */}
+                          <span
+                            style={{
+                              flex: 1,
+                              minWidth: 0,
+                              fontSize: "13px",
+                              fontWeight: isSelected ? 600 : 400,
+                              color: "#303030",
+                              whiteSpace: "nowrap",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                            }}
+                          >
+                            {country.name}
+                            {country.nativeName &&
+                              country.nativeName !== country.name &&
+                              ` (${country.nativeName})`}
+                          </span>
+
+                          {/* Dial code */}
+                          <span
+                            style={{
+                              fontSize: "13px",
+                              fontWeight: 500,
+                              color: "var(--p-color-text-secondary)",
+                              flexShrink: 0,
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {country.dialCode}
+                          </span>
+
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            ) : selectedIcon ? (
+              <div
+                style={{
+                  width: "32px",
+                  minWidth: "32px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  background: "#F1F1F1",
+                  border: "1px solid #8A8A8A",
+                  borderRight: 0,
+                  borderRadius: "6px 0 0 6px",
+                  boxSizing: "border-box",
+                }}
+              >
+                <Icon source={selectedIcon} />
+              </div>
+            ) : null}
+
+            {/* Phone number input */}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <TextField
+                labelHidden
+                label={label}
+                type="tel"
+                placeholder={
+                  placeholder ||
+                  (phoneCountry === "in" ? "7876153428" : "Phone number")
+                }
+                value={value}
+                onChange={handlePhoneChange}
+                readOnly={isReadOnly}
+                error={phoneError || undefined}
+                autoComplete="tel-national"
+              />
+            </div>
+          </div>
+
+          {descriptionText}
         </BlockStack>
       );
 
-    case "password":
+    // -------------------------------------------------------
+    // PASSWORD
+    // -------------------------------------------------------
+
+
+    case "password": {
+      const passwordError = passwordValidationTriggered
+        ? getPasswordError()
+        : "";
+
+      const confirmPasswordError =
+        passwordValidationTriggered &&
+          normalizedElement.confirmPassword &&
+          value !== confirmPasswordValue
+          ? "Passwords do not match."
+          : "";
+
       return (
         <BlockStack gap="300">
-          {/* Original Password Field */}
+
+          {/* Password input */}
           <TextField
             {...commonTextFieldProps}
-            type="password"
+            type={showPassword ? "text" : "password"}
             autoComplete="new-password"
             value={value}
-            onChange={setValue}
+            onChange={(newValue) => {
+              setValue(newValue);
+            }}
             readOnly={isReadOnly}
+            error={passwordError || undefined}
+            minLength={
+              normalizedElement.limitCharacters &&
+                normalizedElement.minCharacters !== ""
+                ? Number(normalizedElement.minCharacters)
+                : undefined
+            }
+            maxLength={
+              normalizedElement.limitCharacters &&
+                normalizedElement.maxCharacters !== ""
+                ? Number(normalizedElement.maxCharacters)
+                : undefined
+            }
+            suffix={
+              <button
+                type="button"
+                disabled={isReadOnly}
+                onClick={() =>
+                  setShowPassword((previous) => !previous)
+                }
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                style={{
+                  border: "none",
+                  background: "transparent",
+                  padding: "4px",
+                  display: "flex",
+                  alignItems: "center",
+                  cursor: isReadOnly ? "default" : "pointer",
+                }}
+              >
+                <Icon
+                  source={
+                    showPassword
+                      ? PolarisIcons.HideIcon
+                      : PolarisIcons.ViewIcon
+                  }
+                />
+              </button>
+            }
           />
 
-          {/* Confirm Password Field */}
+          {/* Confirm password */}
           {normalizedElement.confirmPassword && (
             <TextField
-              type="password"
+              type={showConfirmPassword ? "text" : "password"}
               label={
-                normalizedElement.confirmPasswordLabel || "Confirm Password"
+                normalizedElement.confirmPasswordLabel ||
+                "Confirm Password"
               }
               placeholder={
                 normalizedElement.confirmPasswordPlaceholder ||
@@ -328,65 +1236,345 @@ export default function PreviewField({
               onChange={setConfirmPasswordValue}
               autoComplete="new-password"
               readOnly={isReadOnly}
+              // show icon with styling
+              prefix={commonTextFieldProps.prefix}
+              minLength={
+                normalizedElement.limitCharacters &&
+                  normalizedElement.minCharacters !== ""
+                  ? Number(normalizedElement.minCharacters)
+                  : undefined
+              }
+              maxLength={
+                normalizedElement.limitCharacters &&
+                  normalizedElement.maxCharacters !== ""
+                  ? Number(normalizedElement.maxCharacters)
+                  : undefined
+              }
+              error={confirmPasswordError || undefined}
+              suffix={
+                <button
+                  type="button"
+                  disabled={isReadOnly}
+                  onClick={() =>
+                    setShowConfirmPassword((previous) => !previous)
+                  }
+                  aria-label={
+                    showConfirmPassword
+                      ? "Hide confirm password"
+                      : "Show confirm password"
+                  }
+                  style={{
+                    border: "none",
+                    background: "transparent",
+                    padding: "4px",
+                    display: "flex",
+                    alignItems: "center",
+                    cursor: isReadOnly ? "default" : "pointer",
+                  }}
+                >
+                  <Icon
+                    source={
+                      showConfirmPassword
+                        ? PolarisIcons.HideIcon
+                        : PolarisIcons.ViewIcon
+                    }
+                  />
+                </button>
+              }
             />
           )}
-        </BlockStack>
-      );
 
-    case "country": {
-      const selectedCountries = Array.isArray(normalizedElement.defaultValue)
-        ? normalizedElement.defaultValue
-        : normalizedElement.defaultValue
-          ? [normalizedElement.defaultValue]
-          : [];
-
-      const selectedCountryDetails = countries.filter((country) =>
-        selectedCountries.includes(country.value)
-      );
-
-      return (
-        <BlockStack gap="200">
-          {fieldLabelWithIcon}
-
-          <BlockStack gap="200">
-            {selectedCountryDetails.length > 0 ? (
-              selectedCountryDetails.map((country) => (
-                <InlineStack
-                  key={country.value}
-                  gap="200"
-                  blockAlign="center"
-                >
-                  {normalizedElement.showFlags && (
-                    <ReactCountryFlag
-                      countryCode={country.value.toUpperCase()}
-                      svg
-                      style={{
-                        width: "20px",
-                        height: "15px",
-                      }}
-                    />
-                  )}
-                  <Text>{country.name}</Text>
-                </InlineStack>
-              ))
-            ) : (
-              <TextField
-                label=""
-                labelHidden
-                value=""
-                placeholder={
-                  normalizedElement.placeholder || "Select a country"
-                }
-                disabled
-                autoComplete="off"
-              />
-            )}
-          </BlockStack>
-
-          {descriptionText}
         </BlockStack>
       );
     }
+
+
+    // -------------------------------------------------------
+    // COUNTRY
+    // -------------------------------------------------------
+
+   case "country": {
+  const selectedCountryDetails = countries.find(
+    (country) => country.value === selectedCountry
+  );
+
+  const filteredCountries = countries.filter((country) => {
+    const search = countrySearch.toLowerCase();
+
+    return (
+      country.name.toLowerCase().includes(search) ||
+      (country.nativeName || "").toLowerCase().includes(search)
+    );
+  });
+
+  const handleCountrySelect = (country) => {
+    setSelectedCountry(country.value);
+    setValue(country.value);
+    setCountryDropdownOpen(false);
+    setCountrySearch("");
+  };
+
+  return (
+    <BlockStack gap="200">
+      {fieldLabelWithIcon}
+
+      <div style={{ position: "relative", width: "100%" }}>
+
+        {/* SELECTED COUNTRY / DROPDOWN BUTTON */}
+        <button
+          type="button"
+          disabled={isReadOnly}
+          onClick={() =>
+            setCountryDropdownOpen((previous) => !previous)
+          }
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "10px",
+            width: "100%",
+            minHeight: "40px",
+            padding: "8px 12px",
+            background: "#FFFFFF",
+            border: "1px solid #8A8A8A",
+            borderRadius: "6px",
+            cursor: isReadOnly ? "default" : "pointer",
+            textAlign: "left",
+          }}
+        >
+          <span
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "9px",
+              minWidth: 0,
+            }}
+          >
+            {/* SELECTED ICON */}
+            {selectedIcon && (
+              <span
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: "24px",
+                  height: "24px",
+                  flexShrink: 0,
+                }}
+              >
+                <Icon source={selectedIcon} />
+              </span>
+            )}
+
+            {/* COUNTRY FLAG */}
+            {normalizedElement.showFlags &&
+              selectedCountryDetails && (
+                <span
+                  className={`fi fi-${selectedCountryDetails.value.toLowerCase()}`}
+                  aria-label={`${selectedCountryDetails.name} flag`}
+                  style={{
+                    display: "inline-block",
+                    width: "24px",
+                    height: "18px",
+                    flexShrink: 0,
+                    backgroundSize: "cover",
+                    backgroundPosition: "center",
+                    borderRadius: "2px",
+                  }}
+                />
+              )}
+
+            {/* COUNTRY NAME / PLACEHOLDER */}
+            <span
+              style={{
+                color: selectedCountryDetails
+                  ? "#303030"
+                  : "#8C9196",
+                fontSize: "14px",
+              }}
+            >
+              {selectedCountryDetails?.name ||
+                normalizedElement.placeholder ||
+                "Please select a country"}
+            </span>
+          </span>
+
+          {/* DROPDOWN ARROW */}
+          <span
+            style={{
+              color: "#6D7175",
+              display: "inline-block",
+              transition: "transform 250ms ease",
+              transform: countryDropdownOpen
+                ? "rotate(180deg)"
+                : "rotate(0deg)",
+            }}
+          >
+            ▾
+          </span>
+        </button>
+
+        {/* COUNTRY DROPDOWN WITH SMOOTH ANIMATION */}
+        {!isReadOnly && (
+          <div
+            style={{
+              position: "absolute",
+              top: "calc(100% + 4px)",
+              left: 0,
+              width: "100%",
+              maxHeight: countryDropdownOpen ? "280px" : "0px",
+              opacity: countryDropdownOpen ? 1 : 0,
+              visibility: countryDropdownOpen
+                ? "visible"
+                : "hidden",
+              transform: countryDropdownOpen
+                ? "translateY(0)"
+                : "translateY(-8px)",
+              background: "#FFFFFF",
+              border: countryDropdownOpen
+                ? "1px solid #E1E3E5"
+                : "1px solid transparent",
+              borderRadius: "8px",
+              boxShadow: countryDropdownOpen
+                ? "0 4px 16px rgba(0,0,0,0.12)"
+                : "none",
+              zIndex: 10000,
+              boxSizing: "border-box",
+              overflow: "hidden",
+              transition:
+                "max-height 250ms ease, opacity 200ms ease, transform 250ms ease, visibility 250ms ease, border-color 250ms ease",
+              pointerEvents: countryDropdownOpen ? "auto" : "none",
+            }}
+          >
+
+            {/* SEARCH INPUT */}
+            {normalizedElement.enableSearch && (
+              <div
+                style={{
+                  padding: "8px",
+                  borderBottom: "1px solid #E1E3E5",
+                }}
+              >
+                <input
+                  type="text"
+                  value={countrySearch}
+                  onChange={(event) =>
+                    setCountrySearch(event.target.value)
+                  }
+                  placeholder="Search countries..."
+                  autoComplete="off"
+                  style={{
+                    width: "100%",
+                    height: "36px",
+                    padding: "0 10px",
+                    border: "1px solid #8A8A8A",
+                    borderRadius: "5px",
+                    outline: "none",
+                    fontSize: "13px",
+                    boxSizing: "border-box",
+                  }}
+                />
+              </div>
+            )}
+
+            {/* COUNTRY LIST */}
+            <div
+              style={{
+                maxHeight: "220px",
+                overflowY: "auto",
+                padding: "4px",
+              }}
+            >
+              {filteredCountries.length > 0 ? (
+                filteredCountries.map((country) => {
+                  const isSelected =
+                    selectedCountry === country.value;
+
+                  return (
+                    <button
+                      key={country.value}
+                      type="button"
+                      onClick={() => handleCountrySelect(country)}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "10px",
+                        width: "100%",
+                        minHeight: "40px",
+                        padding: "8px 10px",
+                        border: "none",
+                        borderRadius: "5px",
+                        background: isSelected
+                          ? "#F1F2F3"
+                          : "#FFFFFF",
+                        cursor: "pointer",
+                        textAlign: "left",
+                      }}
+                    >
+                      {/* COUNTRY FLAG */}
+                      {normalizedElement.showFlags && (
+                        <span
+                          className={`fi fi-${country.value.toLowerCase()}`}
+                          aria-label={`${country.name} flag`}
+                          style={{
+                            display: "inline-block",
+                            width: "24px",
+                            height: "18px",
+                            flexShrink: 0,
+                            backgroundSize: "cover",
+                            backgroundPosition: "center",
+                            borderRadius: "2px",
+                          }}
+                        />
+                      )}
+
+                      {/* COUNTRY NAME */}
+                      <span
+                        style={{
+                          flex: 1,
+                          fontSize: "13px",
+                          color: "#303030",
+                          fontWeight: isSelected ? 600 : 400,
+                        }}
+                      >
+                        {country.name}
+                      </span>
+
+                      {/* SELECTED CHECK ICON */}
+                      {isSelected && (
+                        <Icon source={PolarisIcons.CheckIcon} />
+                      )}
+                    </button>
+                  );
+                })
+              ) : (
+                <div
+                  style={{
+                    padding: "14px",
+                    textAlign: "center",
+                  }}
+                >
+                  <Text
+                    as="p"
+                    variant="bodySm"
+                    tone="subdued"
+                  >
+                    No countries found.
+                  </Text>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {descriptionText}
+    </BlockStack>
+  );
+}
+    // -------------------------------------------------------
+    // DROPDOWN AND SELECT
+    // -------------------------------------------------------
 
     case "dropdown":
     case "select":
@@ -400,48 +1588,9 @@ export default function PreviewField({
         />
       );
 
-    case "rating_level": {
-      const maxLevel = Math.min(
-        10,
-        Math.max(2, Number(normalizedElement.maxLevel) || 5)
-      );
-
-      return (
-        <BlockStack gap="200">
-          {fieldLabelWithIcon}
-          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-            {Array.from({ length: maxLevel }, (_, i) => i + 1).map((n) => (
-              <button
-                key={n}
-                type="button"
-                disabled={isReadOnly}
-                onClick={() => setRating(n)}
-                style={{
-                  width: "36px",
-                  height: "36px",
-                  borderRadius: "8px",
-                  cursor: isReadOnly ? "not-allowed" : "pointer",
-                  border: "1px solid #8c9196",
-                  background: n <= rating ? "#303030" : "#fff",
-                  color: n <= rating ? "#fff" : "#303030",
-                }}
-              >
-                {n}
-              </button>
-            ))}
-          </div>
-          <InlineStack align="space-between">
-            <Text as="span" variant="bodySm" tone="subdued">
-              {normalizedElement.lowLabel || "Low"}
-            </Text>
-            <Text as="span" variant="bodySm" tone="subdued">
-              {normalizedElement.highLabel || "High"}
-            </Text>
-          </InlineStack>
-          {descriptionText}
-        </BlockStack>
-      );
-    }
+    // -------------------------------------------------------
+    // CHECKBOX
+    // -------------------------------------------------------
 
     case "checkbox":
     case "checkboxes":
@@ -462,8 +1611,9 @@ export default function PreviewField({
                     isChecked
                       ? [...previous, option.value]
                       : previous.filter(
-                          (selectedValue) => selectedValue !== option.value
-                        )
+                        (selectedValue) =>
+                          selectedValue !== option.value
+                      )
                   );
                 }}
               />
@@ -473,6 +1623,10 @@ export default function PreviewField({
           {descriptionText}
         </BlockStack>
       );
+
+    // -------------------------------------------------------
+    // RADIO
+    // -------------------------------------------------------
 
     case "radio":
     case "radio_button":
@@ -500,6 +1654,7 @@ export default function PreviewField({
                   disabled={isReadOnly}
                   onChange={() => setSelected([option.value])}
                 />
+
                 <span>{option.label}</span>
               </label>
             ))}
@@ -508,6 +1663,10 @@ export default function PreviewField({
           {descriptionText}
         </BlockStack>
       );
+
+    // -------------------------------------------------------
+    // CONSENT
+    // -------------------------------------------------------
 
     case "consent":
       return (
@@ -519,7 +1678,7 @@ export default function PreviewField({
                 dangerouslySetInnerHTML={{
                   __html: sanitizeHTML(
                     normalizedElement.label ||
-                      "<p>I agree to terms and conditions.</p>"
+                    "<p>I agree to terms and conditions.</p>"
                   ),
                 }}
               />
@@ -533,16 +1692,27 @@ export default function PreviewField({
         </BlockStack>
       );
 
+    // -------------------------------------------------------
+    // BUTTON
+    // -------------------------------------------------------
+
     case "button":
       return (
         <InlineStack gap="200" align="center">
-          {(normalizedElement.options || []).map((option) => (
-            <Button key={option.id} disabled={isReadOnly}>
+          {(normalizedElement.options || []).map((option, index) => (
+            <Button
+              key={option.id || index}
+              disabled={isReadOnly}
+            >
               {option.label}
             </Button>
           ))}
         </InlineStack>
       );
+
+    // -------------------------------------------------------
+    // URL
+    // -------------------------------------------------------
 
     case "url":
       return (
@@ -555,12 +1725,16 @@ export default function PreviewField({
           autoComplete="url"
           readOnly={isReadOnly}
           prefix={
-            element.showIcon !== false ? (
+            normalizedElement.showIcon !== false ? (
               <Icon source={PolarisIcons.LinkIcon} />
             ) : undefined
           }
         />
       );
+
+    // -------------------------------------------------------
+    // DATE
+    // -------------------------------------------------------
 
     case "date":
       return (
@@ -572,341 +1746,9 @@ export default function PreviewField({
         />
       );
 
-    case "repeater":
-      return (
-        <BlockStack gap="200">
-          {fieldLabelWithIcon}
-          <InlineStack gap="200" blockAlign="end" wrap={false}>
-            <div style={{ flex: 1 }}>
-              <TextField
-                label=""
-                labelHidden
-                placeholder={placeholder || "Repeater preview"}
-                value={value}
-                onChange={setValue}
-                autoComplete="off"
-                readOnly={isReadOnly}
-              />
-            </div>
-            <Button
-              icon={PolarisIcons.DeleteIcon}
-              accessibilityLabel="Remove"
-              disabled={isReadOnly}
-            />
-          </InlineStack>
-          <div>
-            <Button
-              icon={PolarisIcons.PlusIcon}
-              disabled={isReadOnly}
-            >
-              {normalizedElement.addButtonText || "Add more"}
-            </Button>
-          </div>
-          {descriptionText}
-        </BlockStack>
-      );
-
-    case "signature": {
-      const canvasRef = useRef(null);
-      const signaturePadRef = useRef(null);
-
-      const [uploadedSignature, setUploadedSignature] = useState(null);
-
-      const showCanvas = normalizedElement.showCanvas !== false;
-      const allowFileUpload = normalizedElement.allowFileUpload === true;
-
-      const canvasHeight = Number(normalizedElement.canvasHeight) || 150;
-      const penColor = normalizedElement.penColor || "#000000";
-      const penWidth = Number(normalizedElement.penWidth) || 2;
-
-      useEffect(() => {
-        if (!showCanvas || !canvasRef.current) return;
-
-        const canvas = canvasRef.current;
-        const signaturePad = new SignaturePad(canvas, {
-          penColor,
-          minWidth: penWidth,
-          maxWidth: penWidth,
-          backgroundColor: normalizedElement.canvasBackground || "#ffffff",
-        });
-
-        signaturePadRef.current = signaturePad;
-
-        const resizeCanvas = () => {
-          const ratio = Math.max(window.devicePixelRatio || 1, 1);
-          const data = signaturePad.isEmpty() ? null : signaturePad.toData();
-
-          canvas.width = canvas.offsetWidth * ratio;
-          canvas.height = canvasHeight * ratio;
-
-          const context = canvas.getContext("2d");
-          context.scale(ratio, ratio);
-
-          signaturePad.clear();
-
-          if (data) {
-            signaturePad.fromData(data);
-          }
-        };
-
-        resizeCanvas();
-
-        return () => {
-          signaturePad.off();
-          signaturePadRef.current = null;
-        };
-      }, [
-        normalizedElement.id,
-        showCanvas,
-        canvasHeight,
-        penColor,
-        penWidth,
-        normalizedElement.canvasBackground,
-      ]);
-
-      const clearSignature = () => {
-        signaturePadRef.current?.clear();
-      };
-
-      const handleSignatureUpload = (event) => {
-        const file = event.target.files?.[0];
-
-        if (!file) return;
-
-        if (!file.type.startsWith("image/")) {
-          event.target.value = "";
-          return;
-        }
-
-        setUploadedSignature(URL.createObjectURL(file));
-      };
-
-      return (
-        <BlockStack gap="200">
-          {!hideLabel && (
-            <Text as="p" variant="bodyMd">
-              {label}
-              {required && (
-                <span style={{ color: "var(--p-color-text-critical)" }}>
-                  {" "}*
-                </span>
-              )}
-            </Text>
-          )}
-
-          {/* DRAW SIGNATURE */}
-          {showCanvas && (
-            <BlockStack gap="200">
-              <div
-                style={{
-                  border: "1px dashed #8c9196",
-                  borderRadius: "8px",
-                  overflow: "hidden",
-                  background: normalizedElement.canvasBackground || "#ffffff",
-                }}
-              >
-                <canvas
-                  ref={canvasRef}
-                  style={{
-                    display: "block",
-                    width: "100%",
-                    height: `${canvasHeight}px`,
-                    touchAction: isReadOnly ? "auto" : "none",
-                    cursor: isReadOnly ? "default" : "crosshair",
-                    pointerEvents: isReadOnly ? "none" : "auto",
-                  }}
-                />
-              </div>
-
-              {normalizedElement.allowClear !== false && (
-                <InlineStack align="end">
-                  <Button
-                    size="slim"
-                    onClick={clearSignature}
-                    disabled={isReadOnly}
-                  >
-                    Clear signature
-                  </Button>
-                </InlineStack>
-              )}
-            </BlockStack>
-          )}
-
-          {/* OR SEPARATOR */}
-          {showCanvas && allowFileUpload && (
-            <Text as="p" variant="bodySm" tone="subdued">
-              OR
-            </Text>
-          )}
-
-          {/* UPLOAD SIGNATURE */}
-          {allowFileUpload && (
-            <BlockStack gap="200">
-              {uploadedSignature ? (
-                <BlockStack gap="200">
-                  <img
-                    src={uploadedSignature}
-                    alt="Uploaded signature"
-                    style={{
-                      maxWidth: "100%",
-                      maxHeight: "150px",
-                      objectFit: "contain",
-                      border: "1px solid #e1e3e5",
-                      borderRadius: "8px",
-                      padding: "8px",
-                    }}
-                  />
-
-                  {normalizedElement.allowReplace !== false && (
-                    <label
-                      style={{
-                        cursor: isReadOnly ? "default" : "pointer",
-                        pointerEvents: isReadOnly ? "none" : "auto",
-                      }}
-                    >
-                      <span
-                        style={{
-                          display: "inline-block",
-                          padding: "7px 14px",
-                          border: "1px solid #8c9196",
-                          borderRadius: "6px",
-                        }}
-                      >
-                        Replace signature
-                      </span>
-                      <input
-                        type="file"
-                        accept="image/png,image/jpeg"
-                        hidden
-                        disabled={isReadOnly}
-                        onChange={handleSignatureUpload}
-                      />
-                    </label>
-                  )}
-                </BlockStack>
-              ) : (
-                <label
-                  style={{
-                    border: "1px dashed #8c9196",
-                    borderRadius: "8px",
-                    padding: "24px",
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    gap: "8px",
-                    cursor: isReadOnly ? "default" : "pointer",
-                    pointerEvents: isReadOnly ? "none" : "auto",
-                  }}
-                >
-                  <Icon source={PolarisIcons.UploadIcon} />
-                  <Text as="span" variant="bodyMd">
-                    {normalizedElement.uploadButtonText || "Upload signature"}
-                  </Text>
-                  <Text as="span" variant="bodySm" tone="subdued">
-                    {normalizedElement.acceptedFileTypes || "PNG, JPG, JPEG"}
-                  </Text>
-
-                  <input
-                    type="file"
-                    accept="image/png,image/jpeg"
-                    hidden
-                    disabled={isReadOnly}
-                    onChange={handleSignatureUpload}
-                  />
-                </label>
-              )}
-            </BlockStack>
-          )}
-
-          {descriptionText}
-        </BlockStack>
-      );
-    }
-
-    case "heading": {
-      const headingConfig = {
-        h1: { tag: "h1", variant: "heading2xl" },
-        h2: { tag: "h2", variant: "headingXl" },
-        h3: { tag: "h3", variant: "headingLg" },
-        h4: { tag: "h4", variant: "headingMd" },
-        h5: { tag: "h5", variant: "headingSm" },
-        h6: { tag: "h6", variant: "headingXs" },
-      };
-
-      const config = headingConfig[element.headingTag] || headingConfig.h2;
-
-      return (
-        <BlockStack gap="200">
-          <Text as={config.tag} variant={config.variant}>
-            {element.content || "Heading"}
-          </Text>
-
-          {element.description && (
-            <Text as="p" variant="bodyMd">
-              {element.description}
-            </Text>
-          )}
-        </BlockStack>
-      );
-    }
-
-    case "paragraph":
-      return (
-        <BlockStack gap="200">
-          <div
-            className="rich-text-preview"
-            dangerouslySetInnerHTML={{
-              __html: sanitizeHTML(normalizedElement.content || `<p>${label}</p>`),
-            }}
-          />
-          {descriptionText}
-        </BlockStack>
-      );
-
-    case "html":
-      return (
-        <BlockStack gap="200">
-          {!hideLabel && fieldLabelWithIcon}
-          {normalizedElement.customCode?.trim() ? (
-            <div
-              className="rich-text-preview"
-              dangerouslySetInnerHTML={{
-                __html: sanitizeHTML(normalizedElement.customCode),
-              }}
-            />
-          ) : (
-            <div
-              style={{
-                border: "1px dashed #8c9196",
-                borderRadius: "8px",
-                padding: "16px",
-                textAlign: "center",
-              }}
-            >
-              <Text as="p" variant="bodySm" tone="subdued">
-                Custom HTML (add code in settings)
-              </Text>
-            </div>
-          )}
-          {descriptionText}
-        </BlockStack>
-      );
-
-    // i use custom css here to style the divider preview
-    case "divider":
-      return (
-        <hr
-          style={{
-            border: "none",
-            borderTop: `2px ${element.dividerStyle || "solid"} ${
-              element.dividerColor || "currentColor"
-            }`,
-            display: element.hideDivider ? "none" : "block",
-            width: "100%",
-            margin: 0,
-          }}
-        />
-      );
+    // -------------------------------------------------------
+    // TEXT
+    // -------------------------------------------------------
 
     case "text":
     case "short_text":
@@ -919,6 +1761,10 @@ export default function PreviewField({
         />
       );
 
+    // -------------------------------------------------------
+    // TEXTAREA
+    // -------------------------------------------------------
+
     case "textarea":
       return (
         <TextField
@@ -930,30 +1776,41 @@ export default function PreviewField({
         />
       );
 
+    // -------------------------------------------------------
+    // NUMBER
+    // -------------------------------------------------------
+
     case "number":
       return (
         <TextField
           {...commonTextFieldProps}
-          type="number"
+          type="text"
+          inputMode="numeric"
           value={value}
-          onChange={setValue}
+          onChange={handleNumberChange}
           readOnly={isReadOnly}
+          error={numberError || undefined}
         />
       );
+
+    // -------------------------------------------------------
+    // QUANTITY
+    // -------------------------------------------------------
 
     case "quantity": {
       const parsedMin = Number(normalizedElement.minValue);
       const parsedMax = Number(normalizedElement.maxValue);
 
       const min =
-        normalizedElement.setMinValue && Number.isFinite(parsedMin)
+        normalizedElement.setMinValue &&
+          Number.isFinite(parsedMin)
           ? parsedMin
           : 0;
 
       const max =
         normalizedElement.setMaxValue &&
-        normalizedElement.maxValue !== "" &&
-        Number.isFinite(parsedMax)
+          normalizedElement.maxValue !== "" &&
+          Number.isFinite(parsedMax)
           ? Math.max(min, parsedMax)
           : Infinity;
 
@@ -961,13 +1818,16 @@ export default function PreviewField({
 
       const currentValue =
         value === "" ||
-        value === null ||
-        value === undefined ||
-        !Number.isFinite(parsedValue)
+          value === null ||
+          value === undefined ||
+          !Number.isFinite(parsedValue)
           ? min
           : parsedValue;
 
-      const safeValue = Math.min(max, Math.max(min, currentValue));
+      const safeValue = Math.min(
+        max,
+        Math.max(min, currentValue)
+      );
 
       const decreaseValue = () => {
         setValue(String(Math.max(min, safeValue - 1)));
@@ -1001,7 +1861,9 @@ export default function PreviewField({
               color: safeValue <= min ? "#C9CCCF" : "#555",
               fontSize: "20px",
               cursor:
-                isReadOnly || safeValue <= min ? "not-allowed" : "pointer",
+                isReadOnly || safeValue <= min
+                  ? "not-allowed"
+                  : "pointer",
             }}
           >
             −
@@ -1039,7 +1901,9 @@ export default function PreviewField({
               color: safeValue >= max ? "#C9CCCF" : "#555",
               fontSize: "20px",
               cursor:
-                isReadOnly || safeValue >= max ? "not-allowed" : "pointer",
+                isReadOnly || safeValue >= max
+                  ? "not-allowed"
+                  : "pointer",
             }}
           >
             +
@@ -1048,117 +1912,427 @@ export default function PreviewField({
       );
     }
 
- case "rating_star": {
-  const customRatingIcon =
-    normalizedElement.useCustomRatingIcon && normalizedElement.ratingIcon
-      ? PolarisIcons[normalizedElement.ratingIcon]
-      : null;
+    // -------------------------------------------------------
+    // REPEATER
+    // -------------------------------------------------------
 
-  return (
-    <BlockStack gap="200">
-      {fieldLabelWithIcon}
+    case "repeater":
+      return (
+        <BlockStack gap="200">
+          {fieldLabelWithIcon}
 
-      <div
-        style={{
-          width: "100%",
-          maxWidth: "100%",
-          minWidth: 0,
-          containerType: "inline-size",
-          containerName: "rating-container",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            width: "100%",
-            maxWidth: "100%",
-            gap: "clamp(2px, 2cqw, 9px)",
-            alignItems: "center",
-            justifyContent: "flex-start",
-            boxSizing: "border-box",
-            minWidth: 0,
-          }}
-        >
-          {[1, 2, 3, 4, 5].map((star) => (
-            <div
-              key={star}
-              style={{
-                flex: "1 1 0",
-                minWidth: 0,
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: "8px",
-              }}
+          <InlineStack gap="200" blockAlign="end" wrap={false}>
+            <div style={{ flex: 1 }}>
+              <TextField
+                label=""
+                labelHidden
+                placeholder={placeholder || "Repeater preview"}
+                value={value}
+                onChange={setValue}
+                autoComplete="off"
+                readOnly={isReadOnly}
+              />
+            </div>
+
+            <Button
+              icon={PolarisIcons.DeleteIcon}
+              accessibilityLabel="Remove"
+              disabled={isReadOnly}
+            />
+          </InlineStack>
+
+          <div>
+            <Button
+              icon={PolarisIcons.PlusIcon}
+              disabled={isReadOnly}
             >
+              {normalizedElement.addButtonText || "Add more"}
+            </Button>
+          </div>
+
+          {descriptionText}
+        </BlockStack>
+      );
+
+    // -------------------------------------------------------
+    // RATING LEVEL
+    // -------------------------------------------------------
+
+    case "rating_level": {
+      const maxLevel = Math.min(
+        10,
+        Math.max(2, Number(normalizedElement.maxLevel) || 5)
+      );
+
+      return (
+        <BlockStack gap="200">
+          {fieldLabelWithIcon}
+
+          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+            {Array.from({ length: maxLevel }, (_, i) => i + 1).map((n) => (
               <button
+                key={n}
                 type="button"
-                 className="rating-star-button"
                 disabled={isReadOnly}
-                onClick={() => setRating(star)}
+                onClick={() => setRating(n)}
                 style={{
-                  width: "100%",
-                  aspectRatio: "1 / 1",
-                  maxWidth: "90px",
-                  minWidth: 0,
-                  border: "none",
-                  background: "transparent",
-                  cursor: isReadOnly ? "default" : "pointer",
-                  padding: "2px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: star <= rating ? "#F5A623" : "#C9CCCF",
-                  fontSize: "clamp(18px, 12cqw, 54px)",
-                  lineHeight: 1,
-                  boxSizing: "border-box",
-                  overflow: "hidden",
+                  width: "36px",
+                  height: "36px",
+                  borderRadius: "8px",
+                  cursor: isReadOnly ? "not-allowed" : "pointer",
+                  border: "1px solid #8c9196",
+                  background: n <= rating ? "#303030" : "#fff",
+                  color: n <= rating ? "#fff" : "#303030",
                 }}
               >
-                {customRatingIcon ? (
-                  <span
+                {n}
+              </button>
+            ))}
+          </div>
+
+          <InlineStack align="space-between">
+            <Text as="span" variant="bodySm" tone="subdued">
+              {normalizedElement.lowLabel || "Low"}
+            </Text>
+
+            <Text as="span" variant="bodySm" tone="subdued">
+              {normalizedElement.highLabel || "High"}
+            </Text>
+          </InlineStack>
+
+          {descriptionText}
+        </BlockStack>
+      );
+    }
+
+    // -------------------------------------------------------
+    // STAR RATING
+    // -------------------------------------------------------
+
+    case "rating_star": {
+      const customRatingIcon =
+        normalizedElement.useCustomRatingIcon &&
+          normalizedElement.ratingIcon
+          ? PolarisIcons[normalizedElement.ratingIcon]
+          : null;
+
+      return (
+        <BlockStack gap="200">
+          {fieldLabelWithIcon}
+
+          <div
+            style={{
+              width: "100%",
+              maxWidth: "100%",
+              minWidth: 0,
+              containerType: "inline-size",
+              containerName: "rating-container",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                width: "100%",
+                gap: "clamp(2px, 2cqw, 9px)",
+                alignItems: "center",
+                justifyContent: "flex-start",
+                boxSizing: "border-box",
+                minWidth: 0,
+              }}
+            >
+              {[1, 2, 3, 4, 5].map((star) => (
+                <div
+                  key={star}
+                  style={{
+                    flex: "1 1 0",
+                    minWidth: 0,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: "8px",
+                  }}
+                >
+                  <button
+                    type="button"
+                    className="rating-star-button"
+                    disabled={isReadOnly}
+                    onClick={() => setRating(star)}
                     style={{
                       width: "100%",
-                      height: "100%",
+                      aspectRatio: "1 / 1",
+                      maxWidth: "90px",
+                      minWidth: 0,
+                      border: "none",
+                      background: "transparent",
+                      cursor: isReadOnly ? "default" : "pointer",
+                      padding: "2px",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
+                      color: star <= rating ? "#F5A623" : "#C9CCCF",
+                      fontSize: "clamp(18px, 12cqw, 54px)",
+                      lineHeight: 1,
+                      boxSizing: "border-box",
+                      overflow: "hidden",
                     }}
                   >
-                    <Icon source={customRatingIcon} />
-                  </span>
-                ) : (
-                  "★"
-                )}
-              </button>
+                    {customRatingIcon ? (
+                      <span
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <Icon source={customRatingIcon} />
+                      </span>
+                    ) : (
+                      "★"
+                    )}
+                  </button>
 
-              {normalizedElement.showNumberUnderIcon && (
-                <span
+                  {normalizedElement.showNumberUnderIcon && (
+                    <span style={{ fontSize: "14px", color: "#6D7175" }}>
+                      {star}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {descriptionText}
+        </BlockStack>
+      );
+    }
+
+    // -------------------------------------------------------
+    // FEEDBACK
+    // -------------------------------------------------------
+
+    case "feedback": {
+      const emojis = ["😡", "🙁", "😐", "🙂", "😍"];
+
+      const items =
+        options.length > 0
+          ? options
+          : emojis.map((emoji) => ({
+            label: emoji,
+            value: emoji,
+          }));
+
+      return (
+        <BlockStack gap="200">
+          {fieldLabelWithIcon}
+
+          <div
+            style={{
+              width: "100%",
+              maxWidth: "100%",
+              minWidth: 0,
+              containerType: "inline-size",
+              containerName: "feedback-container",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                width: "100%",
+                gap: "clamp(2px, 2cqw, 9px)",
+                alignItems: "center",
+                justifyContent: "flex-start",
+                boxSizing: "border-box",
+                minWidth: 0,
+              }}
+            >
+              {items.map((item) => (
+                <div
+                  key={item.value}
                   style={{
-                    fontSize: "14px",
-                    color: "#6D7175",
+                    flex: "1 1 0",
+                    minWidth: 0,
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
                   }}
                 >
-                  {star}
-                </span>
-              )}
+                  <button
+                    type="button"
+                    disabled={isReadOnly}
+                    onClick={() => setSelected([item.value])}
+                    style={{
+                      width: "100%",
+                      aspectRatio: "1 / 1",
+                      maxWidth: "90px",
+                      minWidth: 0,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: "clamp(18px, 12cqw, 54px)",
+                      lineHeight: 1,
+                      background: "transparent",
+                      cursor: isReadOnly ? "default" : "pointer",
+                      padding: "2px",
+                      boxSizing: "border-box",
+                      overflow: "hidden",
+                      borderRadius: "8px",
+                      border:
+                        selected[0] === item.value
+                          ? "2px solid #303030"
+                          : "1px solid transparent",
+                    }}
+                  >
+                    {item.label}
+                  </button>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-      </div>
+          </div>
 
-      {descriptionText}
-    </BlockStack>
-  );
-}
+          {descriptionText}
+        </BlockStack>
+      );
+    }
+
+    // -------------------------------------------------------
+    // SIGNATURE
+    // The hooks are now inside SignaturePreview.
+    // -------------------------------------------------------
+
+    case "signature":
+      return (
+        <SignaturePreview
+          element={normalizedElement}
+          label={label}
+          hideLabel={hideLabel}
+          required={required}
+          descriptionText={descriptionText}
+          isReadOnly={isReadOnly}
+        />
+      );
+
+    // -------------------------------------------------------
+    // HEADING
+    // -------------------------------------------------------
+
+    case "heading": {
+      const headingConfig = {
+        h1: { tag: "h1", variant: "heading2xl" },
+        h2: { tag: "h2", variant: "headingXl" },
+        h3: { tag: "h3", variant: "headingLg" },
+        h4: { tag: "h4", variant: "headingMd" },
+        h5: { tag: "h5", variant: "headingSm" },
+        h6: { tag: "h6", variant: "headingXs" },
+      };
+
+      const config =
+        headingConfig[normalizedElement.headingTag] ||
+        headingConfig.h2;
+
+      return (
+        <BlockStack gap="200">
+          <Text as={config.tag} variant={config.variant}>
+            {normalizedElement.content || "Heading"}
+          </Text>
+
+          {normalizedElement.description && (
+            <Text as="p" variant="bodyMd">
+              {normalizedElement.description}
+            </Text>
+          )}
+        </BlockStack>
+      );
+    }
+
+    // -------------------------------------------------------
+    // PARAGRAPH
+    // -------------------------------------------------------
+
+    case "paragraph":
+      return (
+        <BlockStack gap="200">
+          <div
+            className="rich-text-preview"
+            dangerouslySetInnerHTML={{
+              __html: sanitizeHTML(
+                normalizedElement.content || `<p>${label}</p>`
+              ),
+            }}
+          />
+
+          {descriptionText}
+        </BlockStack>
+      );
+
+    // -------------------------------------------------------
+    // CUSTOM HTML
+    // -------------------------------------------------------
+
+    case "html":
+      return (
+        <BlockStack gap="200">
+          {!hideLabel && fieldLabelWithIcon}
+
+          {normalizedElement.customCode?.trim() ? (
+            <div
+              className="rich-text-preview"
+              dangerouslySetInnerHTML={{
+                __html: sanitizeHTML(normalizedElement.customCode),
+              }}
+            />
+          ) : (
+            <div
+              style={{
+                border: "1px dashed #8c9196",
+                borderRadius: "8px",
+                padding: "16px",
+                textAlign: "center",
+              }}
+            >
+              <Text as="p" variant="bodySm" tone="subdued">
+                Custom HTML (add code in settings)
+              </Text>
+            </div>
+          )}
+
+          {descriptionText}
+        </BlockStack>
+      );
+
+    // -------------------------------------------------------
+    // DIVIDER
+    // -------------------------------------------------------
+
+    case "divider":
+      return (
+        <hr
+          style={{
+            border: "none",
+            borderTop: `2px ${normalizedElement.dividerStyle || "solid"
+              } ${normalizedElement.dividerColor || "currentColor"
+              }`,
+            display: normalizedElement.hideDivider ? "none" : "block",
+            width: "100%",
+            margin: 0,
+          }}
+        />
+      );
+
+    // -------------------------------------------------------
+    // FILE UPLOAD
+    // -------------------------------------------------------
 
     case "file_upload": {
-      const buttonText = normalizedElement.buttonText || "Browse file";
+      const buttonText =
+        normalizedElement.buttonText || "Browse file";
 
-      const placeholder =
+      const filePlaceholder =
         normalizedElement.placeholder || "Choose file or drag here";
 
-      const hint = normalizedElement.hint || "PNG, GIF, SVG.";
+      const hint =
+        normalizedElement.hint || "PNG, GIF, SVG.";
 
       const acceptedFileTypes = Array.isArray(
         normalizedElement.acceptedFileTypes
@@ -1168,7 +2342,6 @@ export default function PreviewField({
 
       return (
         <BlockStack gap="200">
-          {/* Field label */}
           {!hideLabel && (
             <Text as="p" variant="bodyMd">
               {label || "Attachments"}
@@ -1180,7 +2353,6 @@ export default function PreviewField({
             </Text>
           )}
 
-          {/* Upload preview */}
           <div
             style={{
               width: "100%",
@@ -1197,19 +2369,18 @@ export default function PreviewField({
               boxSizing: "border-box",
             }}
           >
-            {/* Placeholder */}
             <Text as="p" variant="bodyMd">
-              {placeholder}
+              {filePlaceholder}
             </Text>
 
-            {/* Hint */}
             <Text as="p" variant="bodySm" tone="subdued">
               {acceptedFileTypes.length > 0
-                ? `Supported formats: ${acceptedFileTypes.join(", ").toUpperCase()}`
+                ? `Supported formats: ${acceptedFileTypes
+                  .join(", ")
+                  .toUpperCase()}`
                 : hint}
             </Text>
 
-            {/* Browse button */}
             <div
               style={{
                 padding: "7px 14px",
@@ -1224,16 +2395,18 @@ export default function PreviewField({
             </div>
           </div>
 
-          {/* Description */}
           {descriptionText}
         </BlockStack>
       );
     }
 
-    case "image_options": {
+    // -------------------------------------------------------
+    // IMAGE OPTIONS
+    // -------------------------------------------------------
+
+    case "image_options":
       return (
         <BlockStack gap="200">
-          {/* Field label */}
           {!hideLabel && (
             <Text as="p" variant="bodyMd">
               {label}
@@ -1245,7 +2418,6 @@ export default function PreviewField({
             </Text>
           )}
 
-          {/* Image upload */}
           <div
             style={{
               width: "100%",
@@ -1302,18 +2474,23 @@ export default function PreviewField({
                   const file = event.target.files?.[0];
 
                   if (file && file.type.startsWith("image/")) {
-                    setImagePreview(URL.createObjectURL(file));
+                    setImagePreview((previous) => {
+                      if (previous) URL.revokeObjectURL(previous);
+                      return URL.createObjectURL(file);
+                    });
                   }
                 }}
               />
             </label>
           </div>
 
-          {/* Description */}
           {descriptionText}
         </BlockStack>
       );
-    }
+
+    // -------------------------------------------------------
+    // COLOR SWATCH
+    // -------------------------------------------------------
 
     case "color_swatch": {
       const colors = Array.isArray(normalizedElement.colors)
@@ -1324,13 +2501,7 @@ export default function PreviewField({
         <BlockStack gap="200">
           {fieldLabelWithIcon}
 
-          <div
-            style={{
-              display: "flex",
-              flexWrap: "wrap",
-              gap: "10px",
-            }}
-          >
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
             {colors.map((color, index) => (
               <button
                 key={`${color}-${index}`}
@@ -1358,6 +2529,10 @@ export default function PreviewField({
       );
     }
 
+    // -------------------------------------------------------
+    // COLOR PICKER
+    // -------------------------------------------------------
+
     case "color_picker":
       return (
         <BlockStack gap="200">
@@ -1378,105 +2553,88 @@ export default function PreviewField({
         </BlockStack>
       );
 
-  case "form_header": {
-  const headingConfig = {
-    h1: { tag: "h1", fontSize: 36 },
-    h2: { tag: "h2", fontSize: 30 },
-    h3: { tag: "h3", fontSize: 24 },
-    h4: { tag: "h4", fontSize: 20 },
-    h5: { tag: "h5", fontSize: 18 },
-    h6: { tag: "h6", fontSize: 16 },
-  };
+    // -------------------------------------------------------
+    // FORM HEADER
+    // -------------------------------------------------------
 
-  const headingTag = String(
-    normalizedElement.headingTag || "h2"
-  ).toLowerCase();
+    case "form_header": {
+      const headingConfig = {
+        h1: { tag: "h1", fontSize: 36 },
+        h2: { tag: "h2", fontSize: 30 },
+        h3: { tag: "h3", fontSize: 24 },
+        h4: { tag: "h4", fontSize: 20 },
+        h5: { tag: "h5", fontSize: 18 },
+        h6: { tag: "h6", fontSize: 16 },
+      };
 
-  const config = headingConfig[headingTag] || headingConfig.h2;
-  const HeadingTag = config.tag;
+      const headingTag = String(
+        normalizedElement.headingTag || "h2"
+      ).toLowerCase();
 
-  // Use the selected heading tag's default size
-  // when no custom font size has been entered.
-  const headingFontSize =
-    normalizedElement.headingFontSize !== undefined &&
-    normalizedElement.headingFontSize !== ""
-      ? Number(normalizedElement.headingFontSize)
-      : config.fontSize;
+      const config =
+        headingConfig[headingTag] || headingConfig.h2;
 
-  return (
-    <div
-      style={{
-        width: "100%",
-        textAlign: normalizedElement.alignment || "left",
-      }}
-    >
-      {normalizedElement.showHeader !== false && (
-        <HeadingTag
-          style={{
-            margin: 0,
-            color: normalizedElement.headingColor || "inherit",
-            fontSize: `${headingFontSize}px`,
-            fontWeight: 100,
-            lineHeight: 1.3,
-          }}
-        >
-          {normalizedElement.title || "Contact us"}
-        </HeadingTag>
-      )}
+      const HeadingTag = config.tag;
 
-      {normalizedElement.description && (
-        <div
-          className="rich-text-preview"
-          style={{
-            marginTop:
-              normalizedElement.showHeader !== false ? "8px" : 0,
-          }}
-          dangerouslySetInnerHTML={{
-            __html: sanitizeHTML(normalizedElement.description),
-          }}
-        />
-      )}
+      const headingFontSize =
+        normalizedElement.headingFontSize !== undefined &&
+          normalizedElement.headingFontSize !== ""
+          ? Number(normalizedElement.headingFontSize)
+          : config.fontSize;
 
-      <FormProgressIndicator
-        pages={pages}
-        activePageId={activePageId}
-      />
-    </div>
-  );
-}
-    case "hidden":
       return (
         <div
           style={{
-            border: "1px dashed #8c9196",
-            borderRadius: "8px",
-            padding: "10px 24px",
-            background: "#f7f7f7",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: "8px",
+            width: "100%",
+            textAlign: normalizedElement.alignment || "left",
           }}
         >
-          <Text as="span" variant="bodySm" tone="subdued">
-            {value || "Hidden field"}
-          </Text>
-          <Text as="p" variant="bodySm" tone="subdued">
-            This field will not be visible to customers on the published form.
-          </Text>
+          {normalizedElement.showHeader !== false && (
+            <HeadingTag
+              style={{
+                margin: 0,
+                color: normalizedElement.headingColor || "inherit",
+                fontSize: `${headingFontSize}px`,
+                fontWeight: 100,
+                lineHeight: 1.3,
+              }}
+            >
+              {normalizedElement.title || "Contact us"}
+            </HeadingTag>
+          )}
+
+          {normalizedElement.description && (
+            <div
+              className="rich-text-preview"
+              style={{
+                marginTop:
+                  normalizedElement.showHeader !== false ? "8px" : 0,
+              }}
+              dangerouslySetInnerHTML={{
+                __html: sanitizeHTML(normalizedElement.description),
+              }}
+            />
+          )}
+
+          <FormProgressIndicator
+            pages={pages}
+            activePageId={activePageId}
+          />
         </div>
       );
+    }
+
+    // -------------------------------------------------------
+    // FORM FOOTER
+    // -------------------------------------------------------
 
     case "form_footer":
       return (
         <BlockStack gap="300">
-          {/* Footer text */}
           {normalizedElement.text && (
             <Text as="p">{normalizedElement.text}</Text>
           )}
 
-          {/* Rich text content */}
           {normalizedElement.content && (
             <div
               className="rich-text-preview"
@@ -1486,7 +2644,6 @@ export default function PreviewField({
             />
           )}
 
-          {/* Description at the bottom */}
           {normalizedElement.showDescriptionAtBottom &&
             normalizedElement.bottomDescription && (
               <Text as="p" variant="bodySm" tone="subdued">
@@ -1494,7 +2651,6 @@ export default function PreviewField({
               </Text>
             )}
 
-          {/* Footer buttons */}
           <div
             style={{
               display: "flex",
@@ -1516,11 +2672,12 @@ export default function PreviewField({
               width: "100%",
             }}
           >
-            {/* Previous button */}
             {normalizedElement.showPreviousButton && (
               <div
                 style={{
-                  width: normalizedElement.fullWidthButton ? "100%" : "auto",
+                  width: normalizedElement.fullWidthButton
+                    ? "100%"
+                    : "auto",
                 }}
               >
                 <Button
@@ -1532,11 +2689,12 @@ export default function PreviewField({
               </div>
             )}
 
-            {/* Next button */}
             {normalizedElement.showNextButton && (
               <div
                 style={{
-                  width: normalizedElement.fullWidthButton ? "100%" : "auto",
+                  width: normalizedElement.fullWidthButton
+                    ? "100%"
+                    : "auto",
                 }}
               >
                 <Button
@@ -1548,11 +2706,12 @@ export default function PreviewField({
               </div>
             )}
 
-            {/* Reset button */}
             {normalizedElement.showResetButton && (
               <div
                 style={{
-                  width: normalizedElement.fullWidthButton ? "100%" : "auto",
+                  width: normalizedElement.fullWidthButton
+                    ? "100%"
+                    : "auto",
                 }}
               >
                 <Button
@@ -1564,15 +2723,17 @@ export default function PreviewField({
               </div>
             )}
 
-            {/* Submit button */}
             <button
               type="button"
               disabled={isReadOnly}
               style={{
-                width: normalizedElement.fullWidthButton ? "100%" : "auto",
+                width: normalizedElement.fullWidthButton
+                  ? "100%"
+                  : "auto",
                 backgroundColor:
                   normalizedElement.buttonBackgroundColor || "#303030",
-                color: normalizedElement.buttonTextColor || "#ffffff",
+                color:
+                  normalizedElement.buttonTextColor || "#ffffff",
                 border: "none",
                 borderRadius: "6px",
                 padding: "12px 20px",
@@ -1587,18 +2748,51 @@ export default function PreviewField({
         </BlockStack>
       );
 
+    // -------------------------------------------------------
+    // HIDDEN FIELD
+    // -------------------------------------------------------
+
+    case "hidden":
+      return (
+        <div
+          style={{
+            border: "1px dashed #8c9196",
+            borderRadius: "8px",
+            padding: "10px 24px",
+            background: "#f7f7f7",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "8px",
+          }}
+        >
+          <Text as="span" variant="bodySm" tone="subdued">
+            {value || "Hidden field"}
+          </Text>
+
+          <Text as="p" variant="bodySm" tone="subdued">
+            This field will not be visible to customers on the published form.
+          </Text>
+        </div>
+      );
+
+    // -------------------------------------------------------
+    // RANGE SLIDER
+    // -------------------------------------------------------
+
     case "range_slider": {
       const min = Number(normalizedElement.min ?? 0);
       const max = Number(normalizedElement.max ?? 100);
-      const step = Math.max(0.000001, Number(normalizedElement.step) || 1);
-
-      const defaultRangeValue = Number(
-        normalizedElement.defaultValue ?? min
+      const step = Math.max(
+        0.000001,
+        Number(normalizedElement.step) || 1
       );
 
-      const safeDefault = Math.min(max, Math.max(min, defaultRangeValue));
-
-      const currentRangeValue = Math.min(max, Math.max(min, rangeValue));
+      const currentRangeValue = Math.min(
+        max,
+        Math.max(min, rangeValue)
+      );
 
       return (
         <BlockStack gap="200">
@@ -1628,15 +2822,21 @@ export default function PreviewField({
       );
     }
 
+    // -------------------------------------------------------
+    // MATRIX
+    // -------------------------------------------------------
+
     case "matrix": {
-      const toLabel = (x, i, p) =>
-        typeof x === "string" ? x : x?.label || x?.value || `${p} ${i + 1}`;
+      const toLabel = (item, index, prefix) =>
+        typeof item === "string"
+          ? item
+          : item?.label || item?.value || `${prefix} ${index + 1}`;
 
       const matrixRows = (
         normalizedElement.rows?.length
           ? normalizedElement.rows
           : ["Row 1", "Row 2"]
-      ).map((r, i) => toLabel(r, i, "Row"));
+      ).map((row, index) => toLabel(row, index, "Row"));
 
       const matrixCols = (
         normalizedElement.columns?.length
@@ -1644,11 +2844,14 @@ export default function PreviewField({
           : options.length
             ? options
             : ["Poor", "Good", "Great"]
-      ).map((c, i) => toLabel(c, i, "Column"));
+      ).map((column, index) =>
+        toLabel(column, index, "Column")
+      );
 
       return (
         <BlockStack gap="200">
           {fieldLabelWithIcon}
+
           <div style={{ overflowX: "auto" }}>
             <table
               style={{
@@ -1660,31 +2863,46 @@ export default function PreviewField({
               <thead>
                 <tr>
                   <th />
-                  {matrixCols.map((c) => (
+
+                  {matrixCols.map((column) => (
                     <th
-                      key={c}
+                      key={column}
                       style={{ padding: "6px", fontWeight: 500 }}
                     >
-                      {c}
+                      {column}
                     </th>
                   ))}
                 </tr>
               </thead>
+
               <tbody>
-                {matrixRows.map((r) => (
-                  <tr key={r} style={{ borderTop: "1px solid #e1e3e5" }}>
-                    <td style={{ padding: "8px 6px" }}>{r}</td>
-                    {matrixCols.map((c) => (
-                      <td key={c} style={{ textAlign: "center" }}>
+                {matrixRows.map((row) => (
+                  <tr
+                    key={row}
+                    style={{ borderTop: "1px solid #e1e3e5" }}
+                  >
+                    <td style={{ padding: "8px 6px" }}>
+                      {row}
+                    </td>
+
+                    {matrixCols.map((column) => (
+                      <td
+                        key={column}
+                        style={{ textAlign: "center" }}
+                      >
                         <input
                           type="radio"
-                          name={`matrix-${normalizedElement.id}-${r}`}
-                          checked={selected.includes(`${r}::${c}`)}
+                          name={`matrix-${normalizedElement.id}-${row}`}
+                          checked={selected.includes(
+                            `${row}::${column}`
+                          )}
                           disabled={isReadOnly}
                           onChange={() =>
-                            setSelected((prev) => [
-                              ...prev.filter((v) => !v.startsWith(`${r}::`)),
-                              `${r}::${c}`,
+                            setSelected((previous) => [
+                              ...previous.filter(
+                                (item) => !item.startsWith(`${row}::`)
+                              ),
+                              `${row}::${column}`,
                             ])
                           }
                         />
@@ -1695,93 +2913,15 @@ export default function PreviewField({
               </tbody>
             </table>
           </div>
+
           {descriptionText}
         </BlockStack>
       );
     }
 
-    case "feedback": {
-  const emojis = ["😡", "🙁", "😐", "🙂", "😍"];
-
-  const items =
-    options.length > 0
-      ? options
-      : emojis.map((e) => ({ label: e, value: e }));
-
-  return (
-    <BlockStack gap="200">
-      {fieldLabelWithIcon}
-
-      {/* Responsive feedback container */}
-      <div
-        style={{
-          width: "100%",
-          maxWidth: "100%",
-          minWidth: 0,
-          containerType: "inline-size",
-          containerName: "feedback-container",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            width: "100%",
-            maxWidth: "100%",
-            gap: "clamp(2px, 2cqw, 9px)",
-            alignItems: "center",
-            justifyContent: "flex-start",
-            boxSizing: "border-box",
-            minWidth: 0,
-          }}
-        >
-          {items.map((item) => (
-            <div
-              key={item.value}
-              style={{
-                flex: "1 1 0",
-                minWidth: 0,
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
-              }}
-            >
-              <button
-                type="button"
-                disabled={isReadOnly}
-                onClick={() => setSelected([item.value])}
-                style={{
-                  width: "100%",
-                  aspectRatio: "1 / 1",
-                  maxWidth: "90px",
-                  minWidth: 0,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: "clamp(18px, 12cqw, 54px)",
-                  lineHeight: 1,
-                  background: "transparent",
-                  cursor: isReadOnly ? "default" : "pointer",
-                  padding: "2px",
-                  boxSizing: "border-box",
-                  overflow: "hidden",
-                  borderRadius: "8px",
-                  border:
-                    selected[0] === item.value
-                      ? "2px solid #303030"
-                      : "1px solid transparent",
-                }}
-              >
-                {item.label}
-              </button>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {descriptionText}
-    </BlockStack>
-  );
-}
+    // -------------------------------------------------------
+    // SWITCH
+    // -------------------------------------------------------
 
     case "switch":
       return (
@@ -1794,8 +2934,9 @@ export default function PreviewField({
               role="switch"
               aria-checked={switchValue}
               disabled={isReadOnly}
-              onClick={() => setSwitchValue((prev) => !prev)}
-              className={`preview-switch ${switchValue ? "is-on" : "is-off"}`}
+              onClick={() => setSwitchValue((previous) => !previous)}
+              className={`preview-switch ${switchValue ? "is-on" : "is-off"
+                }`}
             >
               <span className="preview-switch__thumb" />
             </button>
@@ -1811,31 +2952,45 @@ export default function PreviewField({
         </BlockStack>
       );
 
+    // -------------------------------------------------------
+    // IMAGE DROPDOWN
+    // -------------------------------------------------------
+
     case "image_dropdown": {
       const imageOptions = rawOptions.filter(
-        (opt) => typeof opt === "object" && opt?.image
+        (option) =>
+          typeof option === "object" && option?.image
       );
 
       return (
         <BlockStack gap="200">
           <Select
             {...commonSelectProps}
-            options={[{ label: "Select an option", value: "" }, ...options]}
+            options={[
+              { label: "Select an option", value: "" },
+              ...options,
+            ]}
             value={value}
             onChange={setValue}
             disabled={isReadOnly}
           />
 
           {imageOptions.length > 0 && (
-            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-              {imageOptions.map((opt, i) => (
+            <div
+              style={{
+                display: "flex",
+                gap: "8px",
+                flexWrap: "wrap",
+              }}
+            >
+              {imageOptions.map((option, index) => (
                 <img
-                  key={opt.value || i}
-                  src={opt.image}
-                  alt={opt.label || ""}
+                  key={option.value || index}
+                  src={option.image}
+                  alt={option.label || ""}
                   onClick={() => {
                     if (!isReadOnly) {
-                      setValue(opt.value || opt.label);
+                      setValue(option.value || option.label);
                     }
                   }}
                   style={{
@@ -1845,7 +3000,7 @@ export default function PreviewField({
                     borderRadius: "6px",
                     cursor: isReadOnly ? "default" : "pointer",
                     border:
-                      value === (opt.value || opt.label)
+                      value === (option.value || option.label)
                         ? "2px solid #303030"
                         : "1px solid #d2d5d8",
                   }}
@@ -1857,15 +3012,17 @@ export default function PreviewField({
       );
     }
 
+    // -------------------------------------------------------
+    // PRODUCT
+    // -------------------------------------------------------
+
     case "product": {
-      // Products received from LivePreview props
       const selectedProductIds = Array.isArray(
         normalizedElement.selectedProductIds
       )
         ? normalizedElement.selectedProductIds
         : [];
 
-      // Only display products selected in Product Settings
       const selectedProducts = products.filter((product) =>
         selectedProductIds.includes(product.id)
       );
@@ -1873,23 +3030,23 @@ export default function PreviewField({
       const isList = normalizedElement.productLayout === "list";
       const showSearch = normalizedElement.showSearchBar !== false;
 
-      // Apply search only when the search bar is enabled
       const filteredProducts = showSearch
         ? selectedProducts.filter((product) =>
-            (product.title || "")
-              .toLowerCase()
-              .includes((value || "").toLowerCase())
-          )
+          (product.title || "")
+            .toLowerCase()
+            .includes(String(value || "").toLowerCase())
+        )
         : selectedProducts;
 
       return (
         <BlockStack gap="300">
           {fieldLabelWithIcon}
 
-          {/* SEARCH BAR */}
           {showSearch && (
             <TextField
-              placeholder={normalizedElement.placeholder || "Search products"}
+              placeholder={
+                normalizedElement.placeholder || "Search products"
+              }
               prefix={<Icon source={PolarisIcons.SearchIcon} />}
               value={value}
               onChange={setValue}
@@ -1898,14 +3055,12 @@ export default function PreviewField({
             />
           )}
 
-          {/* LOADING */}
           {productsLoading && (
             <Text as="p" tone="subdued" variant="bodySm">
               Loading Shopify products...
             </Text>
           )}
 
-          {/* PRODUCT DISPLAY */}
           {!productsLoading && (
             <>
               {selectedProductIds.length === 0 ? (
@@ -1938,13 +3093,17 @@ export default function PreviewField({
                           if (isReadOnly) return;
 
                           if (normalizedElement.allowMultiple) {
-                            setSelected((prev) =>
+                            setSelected((previous) =>
                               isSelected
-                                ? prev.filter((id) => id !== product.id)
-                                : [...prev, product.id]
+                                ? previous.filter(
+                                  (id) => id !== product.id
+                                )
+                                : [...previous, product.id]
                             );
                           } else {
-                            setSelected(isSelected ? [] : [product.id]);
+                            setSelected(
+                              isSelected ? [] : [product.id]
+                            );
                           }
                         }}
                         style={{
@@ -1963,7 +3122,6 @@ export default function PreviewField({
                           minWidth: 0,
                         }}
                       >
-                        {/* PRODUCT IMAGE */}
                         {normalizedElement.showProductImage !== false && (
                           <div
                             style={{
@@ -1996,7 +3154,6 @@ export default function PreviewField({
                           </div>
                         )}
 
-                        {/* PRODUCT DETAILS */}
                         <div
                           style={{
                             padding: isList ? "4px" : "10px",
@@ -2020,13 +3177,12 @@ export default function PreviewField({
                                 .slice(0, 10)
                                 .join(" ")}
                               {product.description.trim().split(/\s+/).length >
-                              10
+                                10
                                 ? "..."
                                 : ""}
                             </Text>
                           )}
 
-                          {/* PRODUCT PRICE */}
                           {normalizedElement.showProductPrice !== false && (
                             <Text
                               as="p"
@@ -2049,6 +3205,10 @@ export default function PreviewField({
         </BlockStack>
       );
     }
+
+    // -------------------------------------------------------
+    // DEFAULT FIELD
+    // -------------------------------------------------------
 
     default:
       return (

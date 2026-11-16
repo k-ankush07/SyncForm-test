@@ -1,10 +1,45 @@
+// =====================================================================
+// ElementSettings.jsx
+//
+// FLOW OVERVIEW
+// ---------------------------------------------------------------------
+// ElementSettings is the settings panel shown when an element is
+// selected in the form editor. It is built from these parts:
+//
+//   ElementSettings (controller, default export)
+//     |- SelectIcon screen   -> opened for "selectIcon" / "ratingIcon"
+//     |- Fixed header        -> back button + title
+//     |- Scrollable content
+//     |    |- CommonSettings   -> settings shared by all elements
+//     |    |    |- HeaderFooterSettings (only for header / footer)
+//     |    |    |- Choice options (add, edit, bulk add, drag to sort)
+//     |    |         |- SortableOptionRow
+//     |    |- GroupComponent   -> settings for the element's group
+//     |    |                      (contact, text, choice, number ...)
+//     |    |- Options per line -> choice elements only
+//     |    |- LayoutSettings   -> column width + custom CSS class
+//     |- Fixed footer        -> "Remove element" button
+//
+// Every change calls onChange({ ...element, [key]: value }) so the
+// parent (FormEditor) stays the single source of truth.
+//
+// FILE ORDER
+//   1. Imports
+//   2. Constants + small helpers
+//   3. SortableOptionRow
+//   4. CommonSettings
+//   5. LayoutSettings
+//   6. ElementSettings (controller)
+// =====================================================================
+
+
+// =====================================================================
+// 1. IMPORTS
+// =====================================================================
 
 import React, { useState } from "react";
-import SelectIcon from "./SelectIcon";
-import { Icon } from "@shopify/polaris";
-import * as PolarisIcons from "@shopify/polaris-icons";
-import { countries } from "../components/elementsettings/utils/countries.js";
-import { ArrowLeftIcon } from "@shopify/polaris-icons";
+
+// Shopify Polaris UI components
 import {
     BlockStack,
     TextField,
@@ -15,9 +50,31 @@ import {
     InlineStack,
     Button,
     Select,
-    ButtonGroup
+    ButtonGroup,
+    Icon,
 } from "@shopify/polaris";
+import * as PolarisIcons from "@shopify/polaris-icons";
 
+// Drag & drop (used to reorder choice options)
+import {
+    DndContext,
+    PointerSensor,
+    closestCenter,
+    useSensor,
+    useSensors,
+} from "@dnd-kit/core";
+import {
+    SortableContext,
+    useSortable,
+    verticalListSortingStrategy,
+    arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+
+// Project components
+import SelectIcon from "./SelectIcon";
+
+// Settings groups (one component per element group)
 import ContactSettings from "./elementsettings/groups/ContactSettings";
 import TextSettings from "./elementsettings/groups/TextSettings";
 import ChoiceSettings from "./elementsettings/groups/ChoiceSettings";
@@ -28,9 +85,8 @@ import StaticTextSettings from "./elementsettings/groups/StaticTextSettings";
 import RatingStarSettings from "./elementsettings/groups/RatingStarSettings";
 import HeaderFooterSettings from "./elementsettings/groups/HeaderFooterSettings";
 import ButtonSettings from "./elementsettings/groups/ButtonSettings";
-import { getElementSettingsType } from "./elementsettings/utils/elementSettingsConfig";
-// all the advance settings in one file 
 
+// All the advanced settings live in one file
 import {
     ImageChoiceSettings,
     SwitchSettings,
@@ -48,23 +104,60 @@ import {
     UrlSettings,
 } from "./elementsettings/groups/AdvancedElementSettings";
 
-import {
-    DndContext,
-    PointerSensor,
-    closestCenter,
-    useSensor,
-    useSensors,
-} from "@dnd-kit/core";
+// Project utilities / data
+import { countries } from "../components/elementsettings/utils/countries.js";
+import { getElementSettingsType } from "./elementsettings/utils/elementSettingsConfig";
 
-import {
-    SortableContext,
-    useSortable,
-    verticalListSortingStrategy,
-    arrayMove,
-} from "@dnd-kit/sortable";
 
-import { CSS } from "@dnd-kit/utilities";
+// =====================================================================
+// 2. CONSTANTS + SMALL HELPERS
+// =====================================================================
 
+// Maps a settings "group type" (from getElementSettingsType)
+// to the component that renders that group's settings.
+const settingsGroups = {
+    contact: ContactSettings,
+    text: TextSettings,
+    choice: ChoiceSettings,
+    button: ButtonSettings,
+    number: NumberSettings,
+    date: DateSettings,
+    file: FileSettings,
+    static: StaticTextSettings,
+    rating: RatingStarSettings,
+
+    // Advanced element settings
+    imageChoice: ImageChoiceSettings,
+    switch: SwitchSettings,
+    color: ColorSettings,
+    ratingLevel: RatingLevelSettings,
+    range: RangeSliderSettings,
+    product: ProductSettings,
+    matrix: MatrixSettings,
+    feedback: FeedbackSettings,
+    repeater: RepeaterSettings,
+    signature: SignatureSettings,
+    html: CustomHtmlSettings,
+    consent: ConsentSettings,
+    url: UrlSettings,
+    hidden: HiddenSettings,
+};
+
+// Normalizes an element type, e.g. "Date Time" / "date-time" -> "date_time".
+const normalizeType = (element) =>
+    String(element.type || "")
+        .toLowerCase()
+        .replace(/[\s-]+/g, "_");
+
+// Header and Footer are shared form parts with their own settings.
+const isHeaderFooterType = (type) =>
+    ["form_header", "form_footer"].includes(type);
+
+
+// =====================================================================
+// 3. SORTABLE OPTION ROW
+// One draggable row for a choice option (label + value + delete).
+// =====================================================================
 
 function SortableOptionRow({
     option,
@@ -150,16 +243,25 @@ function SortableOptionRow({
         </div>
     );
 }
-/* =========================================
-   COMMON SETTINGS - ALL ELEMENTS
-========================================= */
+
+
+// =====================================================================
+// 4. COMMON SETTINGS - ALL ELEMENTS
+// Label, options, placeholder, default value, description,
+// limits, hide label, required and icon settings.
+// =====================================================================
 
 function CommonSettings({ element, onChange, onOpenSelectIcon }) {
+
+    // ---------------------------------------------------------------
+    // STATE
+    // ---------------------------------------------------------------
 
     const [optionsExpanded, setOptionsExpanded] = useState(true);
     const [bulkAddOpen, setBulkAddOpen] = useState(false);
     const [bulkOptionsText, setBulkOptionsText] = useState("");
 
+    // Sensors for option drag & drop (drag starts after 5px).
     const sensors = useSensors(
         useSensor(PointerSensor, {
             activationConstraint: {
@@ -168,7 +270,7 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
         })
     );
 
-    // UPDATE ELEMENT
+    // Update a single property of the element.
     const update = (key, value) => {
         onChange({
             ...element,
@@ -176,22 +278,16 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
         });
     };
 
-    // NORMALIZE ELEMENT TYPE
-    const type = String(element.type || "")
-        .toLowerCase()
-        .replace(/[\s-]+/g, "_");
+    // ---------------------------------------------------------------
+    // HEADER / FOOTER
+    // They have their own settings. The parent ElementSettings
+    // already provides the wrapper and scrollable area, so no extra
+    // wrapper is created here.
+    // ---------------------------------------------------------------
 
-    // Check whether the selected element is Header or Footer.
-    const isHeaderFooter = [
-        "form_header",
-        "form_footer",
-    ].includes(type);
+    const type = normalizeType(element);
 
-    // Header and Footer have their own settings.
-    // The parent ElementSettings component already provides
-    // the main wrapper and scrollable content area.
-    // Therefore, do not create another wrapper here.
-    if (isHeaderFooter) {
+    if (isHeaderFooterType(type)) {
         return (
             <BlockStack gap="400">
                 <HeaderFooterSettings
@@ -201,6 +297,10 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
             </BlockStack>
         );
     }
+
+    // ---------------------------------------------------------------
+    // ELEMENT TYPE FLAGS
+    // ---------------------------------------------------------------
 
     // CONTACT TYPES
     const isName = ["name", "first_name", "last_name"].includes(type);
@@ -222,7 +322,6 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
         "checkboxes",
     ].includes(type);
 
-    //is button
     const isButton = type === "button";
 
     const isChoiceInput =
@@ -233,15 +332,13 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
     const isParagraph = type === "paragraph";
     const isDivider = type === "divider";
 
-    // TEXT and Textarea
     const isStaticText = [
         "heading",
         "paragraph",
         "divider",
     ].includes(type);
 
-    // URL and FILE
-    const isFileUpload = type === "file_upload";
+    // URL
     const isUrl = type === "url";
 
     // STAR RATING
@@ -263,9 +360,10 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
         "time",
     ].includes(type);
 
+    // ---------------------------------------------------------------
+    // CONDITIONAL SETTINGS (which controls to show)
+    // ---------------------------------------------------------------
 
-
-    // CONDITIONAL SETTINGS
     const showDefaultValue =
         isName || isEmail || isPhone || isChoiceInput || isCountry;
 
@@ -284,7 +382,12 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
     const showOtherOption = isRadio || isCheckbox;
     const showLimitSelections = isCheckbox;
 
+    // ---------------------------------------------------------------
     // CHOICE OPTIONS DATA
+    // Options may be plain strings or objects. Normalize them all to
+    // { id, label, value } objects.
+    // ---------------------------------------------------------------
+
     const options = (Array.isArray(element.options) ? element.options : [])
         .map((option, index) => ({
             ...(
@@ -294,6 +397,10 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
             ),
             id: option?.id || `option-${element.id || type}-${index}`,
         }));
+
+    // ---------------------------------------------------------------
+    // CHOICE OPTION ACTIONS
+    // ---------------------------------------------------------------
 
     // ADD OPTION
     const addOption = () => {
@@ -308,11 +415,7 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
         update("options", [...options, newOption]);
     };
 
-
-    // =========================================
     // UPDATE OPTION LABEL
-    // =========================================
-
     const updateOptionLabel = (index, value) => {
         const updatedOptions = options.map((option, i) =>
             i === index
@@ -326,11 +429,7 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
         update("options", updatedOptions);
     };
 
-
-    // =========================================
     // UPDATE OPTION VALUE
-    // =========================================
-
     const updateOptionValue = (index, value) => {
         const updatedOptions = options.map((option, i) =>
             i === index
@@ -344,7 +443,6 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
         update("options", updatedOptions);
     };
 
-
     // DELETE OPTION
     const deleteOption = (index) => {
         const updatedOptions = options.filter(
@@ -354,7 +452,7 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
         update("options", updatedOptions);
     };
 
-    // REORDER OPTIONS
+    // REORDER OPTIONS (drag & drop)
     const handleOptionDragEnd = (event) => {
         const { active, over } = event;
 
@@ -378,7 +476,8 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
 
         update("options", reorderedOptions);
     };
-    // BULK ADD OPTIONS
+
+    // BULK ADD OPTIONS (one option per line)
     const bulkAddOptions = () => {
         const newOptions = bulkOptionsText
             .split("\n")
@@ -398,8 +497,11 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
         setBulkAddOpen(false);
     };
 
+    // ---------------------------------------------------------------
+    // CHOICE SETTINGS UI
+    // Options list, "Other" option and selection limits.
+    // ---------------------------------------------------------------
 
-    // CHOICE SETTINGS
     const renderChoiceSettings = () => {
         if (!isChoiceInput) return null;
 
@@ -673,9 +775,10 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
         );
     };
 
-
-
+    // ---------------------------------------------------------------
     // COMMON SETTINGS UI
+    // ---------------------------------------------------------------
+
     return (
         <BlockStack gap="300">
 
@@ -829,12 +932,13 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
                     {element.required && (
                         <TextField
                             label="Required error message"
-                            value={element.requiredMessage || ""}
-                            onChange={(value) =>
-                                update("requiredMessage", value)
+                            value={
+                                element.requiredMessage ||
+                                `${element.label || "This field"} is required`
                             }
+                            onChange={(value) => update("requiredMessage", value)}
                             autoComplete="off"
-                            helpText="Shown when this field is required and left empty on submit."
+                            helpText="Customize the message shown when this required field is empty."
                         />
                     )}
 
@@ -912,14 +1016,14 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
 }
 
 
-/* =========================================
-   LAYOUT SETTINGS
-   ALWAYS SHOWN AT THE BOTTOM
-   EXCEPT HEADER AND FOOTER
-========================================= */
+// =====================================================================
+// 5. LAYOUT SETTINGS
+// Always shown at the bottom, except for header and footer.
+// =====================================================================
 
-function LayoutSettings({ element, onChange, onDelete }) {
+function LayoutSettings({ element, onChange }) {
 
+    // Update a single property of the element.
     const update = (key, value) => {
         onChange({
             ...element,
@@ -927,11 +1031,7 @@ function LayoutSettings({ element, onChange, onDelete }) {
         });
     };
 
-    const type = String(element.type || "")
-        .toLowerCase()
-        .replace(/[\s-]+/g, "_");
-
-    const isDivider = type === "divider";
+    const isDivider = normalizeType(element) === "divider";
 
     return (
         <BlockStack gap="400">
@@ -974,33 +1074,17 @@ function LayoutSettings({ element, onChange, onDelete }) {
                 autoComplete="off"
             />
 
-            {/* REMOVE ELEMENT */}
-
-            {/* {onDelete && (
-                <>
-                    <Divider />
-
-                    <Button
-                        variant="plain"
-                        tone="critical"
-                        icon={PolarisIcons.DeleteIcon}
-                        onClick={onDelete}
-                        accessibilityLabel="Remove element"
-                        className="remove-element-btn"
-                    >
-                        Remove element
-                    </Button>
-                </>
-            )} */}
-
         </BlockStack>
     );
 }
 
 
-/* =========================================
-   ELEMENT SETTINGS CONTROLLER
-========================================= */
+// =====================================================================
+// 6. ELEMENT SETTINGS CONTROLLER (default export)
+// Decides what to show:
+//   - Icon picker screen (selectIcon / ratingIcon), or
+//   - The main settings panel.
+// =====================================================================
 
 export default function ElementSettings({
     element,
@@ -1008,27 +1092,30 @@ export default function ElementSettings({
     onClose,
     onDelete,
     products,
-    productsLoading, hasMoreProducts = false,
+    productsLoading,
+    hasMoreProducts = false,
     productsLoadingMore = false,
-    onLoadMoreProducts, pages = [], }) {
+    onLoadMoreProducts,
+    pages = [],
+}) {
 
+    // Which screen is open: "main", "selectIcon" or "ratingIcon".
     const [activeSection, setActiveSection] = useState("main");
 
     if (!element) return null;
 
+    // ---------------------------------------------------------------
+    // DERIVED VALUES
+    // ---------------------------------------------------------------
+
+    // Group the element belongs to (contact, text, choice ...).
     const groupType = getElementSettingsType(element.type);
 
+    const type = normalizeType(element);
 
-    const type = String(element.type || "")
-        .toLowerCase()
-        .replace(/[\s-]+/g, "_");
+    const isHeaderFooter = isHeaderFooterType(type);
 
-    // Identify Header and Footer.
-    const isHeaderFooter = [
-        "form_header",
-        "form_footer",
-    ].includes(type);
-
+    // Show "Number of options per line" for these choice types only.
     const showOptionsPerLine =
         groupType === "choice" &&
         [
@@ -1041,58 +1128,24 @@ export default function ElementSettings({
             "select"
         ].includes(type);
 
-    console.log("========== ELEMENT SETTINGS ==========");
-    console.log("Element:", element);
-    console.log("Element type:", element.type);
-    console.log("Settings group:", groupType);
-    console.log("======================================");
-    // console.log("Choice types:", CHOICE_TYPES);
-
-    const settingsGroups = {
-        contact: ContactSettings,
-        text: TextSettings,
-        choice: ChoiceSettings,
-        button: ButtonSettings,
-        number: NumberSettings,
-        date: DateSettings,
-        file: FileSettings,
-        static: StaticTextSettings,
-        rating: RatingStarSettings,
-        // New element settings
-        imageChoice: ImageChoiceSettings,
-        switch: SwitchSettings,
-        color: ColorSettings,
-        ratingLevel: RatingLevelSettings,
-        range: RangeSliderSettings,
-        product: ProductSettings,
-        matrix: MatrixSettings,
-        feedback: FeedbackSettings,
-        repeater: RepeaterSettings,
-        signature: SignatureSettings,
-        html: CustomHtmlSettings,
-        consent: ConsentSettings,
-        url: UrlSettings,
-        hidden: HiddenSettings
-    };
-
+    // Settings component for this element's group.
     const GroupComponent = settingsGroups[groupType];
-    console.log("Element type:", element?.type);
-console.log("Group type:", groupType);
-console.log("Group component:", GroupComponent);
-console.log("GroupComponent:", GroupComponent);
-console.log("Is function:", typeof GroupComponent === "function");
 
-    // SELECT ICON SECTION
+    // ---------------------------------------------------------------
+    // ICON PICKER SCREEN
+    // "selectIcon" saves to element.selectIcon,
+    // "ratingIcon" saves to element.ratingIcon.
+    // ---------------------------------------------------------------
 
-    if (activeSection === "selectIcon") {
+    if (activeSection === "selectIcon" || activeSection === "ratingIcon") {
         return (
             <div className="element-settings">
                 <SelectIcon
-                    value={element.selectIcon || ""}
+                    value={element[activeSection] || ""}
                     onChange={(value) =>
                         onChange({
                             ...element,
-                            selectIcon: value,
+                            [activeSection]: value,
                         })
                     }
                     onBack={() => setActiveSection("main")}
@@ -1101,25 +1154,9 @@ console.log("Is function:", typeof GroupComponent === "function");
         );
     }
 
-    // RATING ICON SECTION
-
-    if (activeSection === "ratingIcon") {
-        return (
-            <div className="element-settings">
-                <SelectIcon
-                    value={element.ratingIcon || ""}
-                    onChange={(value) =>
-                        onChange({
-                            ...element,
-                            ratingIcon: value,
-                        })
-                    }
-                    onBack={() => setActiveSection("main")}
-                />
-            </div>
-        );
-    }
-
+    // ---------------------------------------------------------------
+    // MAIN SETTINGS PANEL
+    // ---------------------------------------------------------------
 
     return (
         <div className="element-settings">
@@ -1158,6 +1195,7 @@ console.log("Is function:", typeof GroupComponent === "function");
             <div className="element-settings__content">
                 <BlockStack gap="400">
 
+                    {/* Settings shared by all elements */}
                     <CommonSettings
                         element={element}
                         onChange={onChange}
@@ -1166,6 +1204,7 @@ console.log("Is function:", typeof GroupComponent === "function");
                         }
                     />
 
+                    {/* Settings for this element's group */}
                     {!isHeaderFooter && GroupComponent && (
                         <GroupComponent
                             pages={pages}
@@ -1180,9 +1219,9 @@ console.log("Is function:", typeof GroupComponent === "function");
                                 setActiveSection("ratingIcon")
                             }
                         />
-                        
                     )}
 
+                    {/* Number of options per line (choice elements) */}
                     {!isHeaderFooter && showOptionsPerLine && (
                         <BlockStack gap="200">
                             <Text variant="bodyMd">
@@ -1211,6 +1250,7 @@ console.log("Is function:", typeof GroupComponent === "function");
                         </BlockStack>
                     )}
 
+                    {/* Column width + custom CSS class */}
                     {!isHeaderFooter && (
                         <LayoutSettings
                             element={element}

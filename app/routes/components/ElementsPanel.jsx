@@ -1,6 +1,10 @@
 
 import React, { useState } from "react";
 
+// ======================================================
+// 1. DRAG AND DROP IMPORTS
+// ======================================================
+
 import {
     DndContext,
     closestCenter,
@@ -20,25 +24,15 @@ import {
 
 import { CSS } from "@dnd-kit/utilities";
 
+// ======================================================
+// 2. SHOPIFY POLARIS IMPORTS
+// ======================================================
+
 import {
     Divider,
     Text,
     Icon,
-    Modal,
-    Button,
-    InlineGrid,
-    BlockStack,
-    InlineStack
 } from "@shopify/polaris";
-
-import { ELEMENT_TYPES } from "../../utils/elementsConfig.js";
-
-// Import the create element config helper.
-import { createElementConfig } from "../../utils/elementHelpers.js";
-
-import "../../ElementsPanel.css";
-// import ElementPickerPopover from "./ElementPickerPopover.jsx";
-import ElementActions from "./ElementActions.jsx";
 
 import {
     PlusCircleIcon,
@@ -51,52 +45,74 @@ import {
     DragHandleIcon,
 } from "@shopify/polaris-icons";
 
+// ======================================================
+// 3. PROJECT IMPORTS
+// ======================================================
 
-//helper 
-// Get the actual Polaris icon for an element based on its type.
+import { ELEMENT_TYPES } from "../../utils/elementsConfig.js";
+import ElementActions from "./ElementActions.jsx";
+
+import { createElementConfig } from "../../utils/elementHelpers.js";
+
+import "../../ElementsPanel.css";
+
+// ======================================================
+// 4. HELPER FUNCTIONS
+// ======================================================
+
+// Get the Polaris icon associated with an element type.
 const getElementIcon = (type) => {
     const elementConfig = ELEMENT_TYPES.find(
         (item) => item.type === type
     );
 
-    // If no matching icon is found, use FileIcon as the fallback.
+    // Use FileIcon if no matching icon exists.
     return elementConfig?.icon || FileIcon;
 };
 
+// Get the unique drag ID for a field.
+const getDragItemId = (item, index) => {
+    return typeof item === "object" && item?.id != null
+        ? `field-${item.id}`
+        : `field-index-${index}`;
+};
+
 // ======================================================
-// MAIN COMPONENT
-// Manages pages and provides drag-and-drop handlers.
+// 5. MAIN COMPONENT: ELEMENTS PANEL
+// Manages pages, rows, elements, and drag-and-drop.
 // ======================================================
 
 export default function ElementsPanel({
     pages,
     setPages,
-    // Header and footer settings
+
+    // Shared header and footer settings.
     header,
     footer,
-    onSelectElement,
-    // elementPickerOpen,
-    // setElementPickerOpen,
-    // elementTarget,
-    // setElementTarget,
-    // elementPickerPosition,
-    // setElementPickerPosition,
 
-    // Element toolbox actions from FormEditor
+    // Element selection.
+    onSelectElement,
+
+    // Element toolbox actions.
     onToggleElementVisibility,
     onDuplicateElement,
     onDeleteElement,
+
+    // Element picker.
     openElementPicker,
+
+    // Row toolbox actions.
     onToggleRowVisibility,
     onDuplicateRow,
     onDeleteRow,
+
+    // Page toolbox action.
     onDuplicatePage,
 }) {
-    //state to store the drag item data 
+    // Stores information about the currently dragged item.
     const [activeDragItem, setActiveDragItem] = useState(null);
 
-    // Configure the pointer sensor.
-    // The user must move the pointer 5px before dragging starts.
+    // Configure drag activation after a 5px pointer movement.
     const sensors = useSensors(
         useSensor(PointerSensor, {
             activationConstraint: {
@@ -104,27 +120,9 @@ export default function ElementsPanel({
             },
         })
     );
-    // to drag and drop options
-    const handleOptionDragEnd = ({ active, over }) => {
-        if (!over || active.id === over.id) return;
-
-        const oldIndex = options.findIndex(
-            (option) => option.id === active.id
-        );
-
-        const newIndex = options.findIndex(
-            (option) => option.id === over.id
-        );
-
-        if (oldIndex === -1 || newIndex === -1) return;
-
-        const updatedOptions = arrayMove(options, oldIndex, newIndex);
-
-        update("options", updatedOptions);
-    };
 
     // ======================================================
-    // FUNCTION: REORDER ELEMENTS INSIDE THE ROWS AND ROOT ELEMENTS
+    // 5.1. MOVE ELEMENTS BETWEEN ROWS AND PAGES
     // ======================================================
 
     const handlePageContentDragEnd = (event) => {
@@ -137,10 +135,8 @@ export default function ElementsPanel({
 
         if (!activeData || !overData) return;
 
-        // Keep row reordering separate
-        if (activeData.type === "row") {
-            return;
-        }
+        // Row dragging is handled separately.
+        if (activeData.type === "row") return;
 
         const targetRowId = overData.rowId ?? null;
         const targetPageId = overData.pageId;
@@ -150,18 +146,18 @@ export default function ElementsPanel({
         setPages((previousPages) => {
             let draggedItem = null;
 
-            // First remove the dragged item from its original page
+            // First remove the dragged item from its source.
             const updatedPages = previousPages.map((page) => {
-
-                // Only remove the item from its actual source page.
                 if (page.id !== activeData.pageId) return page;
 
+                // Create copies so the existing state is not mutated.
                 const rows = (page.rows || []).map((row) => ({
                     ...row,
                     fields: [...(row.fields || [])],
                     elements: [...(row.elements || [])],
                 }));
 
+                // Find and remove the original field.
                 if (activeData.type === "field") {
                     const sourceRow = rows.find(
                         (row) => row.id === activeData.rowId
@@ -180,6 +176,7 @@ export default function ElementsPanel({
                     }
                 }
 
+                // Find and remove the created element.
                 if (activeData.type === "element") {
                     const sourceRow = rows.find(
                         (row) => row.id === activeData.rowId
@@ -196,6 +193,7 @@ export default function ElementsPanel({
                     }
                 }
 
+                // Find and remove a standalone page element.
                 if (activeData.type === "rootElement") {
                     draggedItem = (page.rootElements || []).find(
                         (item) => `element-${item.id}` === activeData.itemId
@@ -205,6 +203,7 @@ export default function ElementsPanel({
                 return {
                     ...page,
                     rows,
+
                     rootElements: (page.rootElements || []).filter(
                         (item) =>
                             activeData.type !== "rootElement" ||
@@ -213,13 +212,14 @@ export default function ElementsPanel({
                 };
             });
 
+            // Stop if the dragged item could not be found.
             if (!draggedItem) return previousPages;
 
-            // Then add the item to the target page and row
+            // Then insert the item into its destination.
             return updatedPages.map((page) => {
                 if (page.id !== targetPageId) return page;
 
-                // If the target is a page header, add the item to root elements.
+                // No row means the item belongs directly to the page.
                 if (targetRowId == null) {
                     return {
                         ...page,
@@ -230,6 +230,7 @@ export default function ElementsPanel({
                     };
                 }
 
+                // Otherwise insert the item into the selected row.
                 return {
                     ...page,
                     rows: page.rows.map((row) => {
@@ -253,13 +254,7 @@ export default function ElementsPanel({
     };
 
     // ======================================================
-    // FUNCTION: REORDER PAGES
-    // Moves the dragged page to the position of the target.
-    // ======================================================
-
-    // ======================================================
-    // FUNCTION: REORDER PAGES
-    // Moves the dragged page to the position of the target.
+    // 5.2. REORDER PAGES
     // ======================================================
 
     const handlePageDragEnd = (event) => {
@@ -267,7 +262,7 @@ export default function ElementsPanel({
 
         if (!over) return;
 
-        // Get actual page IDs from drag data.
+        // Get page IDs from the drag data.
         const activePageId = active.data.current?.pageId;
         const overPageId = over.data.current?.pageId;
 
@@ -280,12 +275,10 @@ export default function ElementsPanel({
         }
 
         setPages((previousPages) => {
-            // Find the original position of the dragged page.
             const oldIndex = previousPages.findIndex(
                 (page) => page.id === activePageId
             );
 
-            // Find the position where the page was dropped.
             const newIndex = previousPages.findIndex(
                 (page) => page.id === overPageId
             );
@@ -294,18 +287,13 @@ export default function ElementsPanel({
                 return previousPages;
             }
 
-            // Move the complete page to its new position.
+            // Move the complete page to the new position.
             return arrayMove(previousPages, oldIndex, newIndex);
         });
     };
-    // ======================================================
-    // FUNCTION: REORDER ROWS
-    // Moves a row within its own page.
-    // ======================================================
 
     // ======================================================
-    // FUNCTION: REORDER ROWS
-    // Moves a row within its own page.
+    // 5.3. REORDER ROWS
     // ======================================================
 
     const handleRowDragEnd = (event, pageId) => {
@@ -313,12 +301,9 @@ export default function ElementsPanel({
 
         if (!over) return;
 
-        // Get the actual row IDs from the drag data.
         const activeRowId = active.data.current?.rowId;
         const overRowId = over.data.current?.rowId;
 
-        // Stop if either row ID is missing or the row is dropped
-        // back onto its original position.
         if (
             activeRowId == null ||
             overRowId == null ||
@@ -332,12 +317,10 @@ export default function ElementsPanel({
                 // Only update the page containing the dragged row.
                 if (page.id !== pageId) return page;
 
-                // Find the original position of the dragged row.
                 const oldIndex = page.rows.findIndex(
                     (row) => row.id === activeRowId
                 );
 
-                // Find the position where the row was dropped.
                 const newIndex = page.rows.findIndex(
                     (row) => row.id === overRowId
                 );
@@ -346,7 +329,7 @@ export default function ElementsPanel({
                     return page;
                 }
 
-                // Move the complete row to its new position.
+                // Move the complete row.
                 return {
                     ...page,
                     rows: arrayMove(page.rows, oldIndex, newIndex),
@@ -356,8 +339,7 @@ export default function ElementsPanel({
     };
 
     // ======================================================
-    // FUNCTION: REORDER FIELDS
-    // Moves a field within its own row.
+    // 5.4. REORDER FIELDS INSIDE A ROW
     // ======================================================
 
     const handleFieldDragEnd = (event, pageId, rowId) => {
@@ -374,6 +356,7 @@ export default function ElementsPanel({
                     rows: (page.rows || []).map((row) => {
                         if (row.id !== rowId) return row;
 
+                        // Get the unique ID for each field.
                         const getFieldId = (field, index) =>
                             typeof field === "object" && field?.id != null
                                 ? `field-${field.id}`
@@ -393,6 +376,7 @@ export default function ElementsPanel({
                             return row;
                         }
 
+                        // Reorder the fields.
                         return {
                             ...row,
                             fields: arrayMove(
@@ -408,8 +392,7 @@ export default function ElementsPanel({
     };
 
     // ======================================================
-    // FUNCTION: REORDER CREATED ELEMENTS
-    // Reorders elements either inside a row or outside rows.
+    // 5.5. REORDER CREATED ELEMENTS
     // ======================================================
 
     const handleElementDragEnd = (event, pageId, rowId = null) => {
@@ -421,7 +404,7 @@ export default function ElementsPanel({
             previousPages.map((page) => {
                 if (page.id !== pageId) return page;
 
-                // CASE 1: Element belongs inside a row.
+                // CASE 1: Reorder elements inside a row.
                 if (rowId !== null) {
                     return {
                         ...page,
@@ -452,7 +435,7 @@ export default function ElementsPanel({
                     };
                 }
 
-                // CASE 2: Element belongs directly to the page.
+                // CASE 2: Reorder standalone page elements.
                 const rootElements = page.rootElements || [];
 
                 const oldIndex = rootElements.findIndex(
@@ -480,8 +463,7 @@ export default function ElementsPanel({
     };
 
     // ======================================================
-    // FUNCTION: HANDLE ALL DRAG END EVENTS
-    // Determines whether a page, row, or element was dragged.
+    // 5.6. HANDLE ALL DRAG END EVENTS
     // ======================================================
 
     const handleAllDragEnd = (event) => {
@@ -489,31 +471,35 @@ export default function ElementsPanel({
 
         if (!activeData) return;
 
+        // Handle page reordering.
         if (activeData.type === "page") {
             handlePageDragEnd(event);
             return;
         }
 
+        // Handle row reordering.
         if (activeData.type === "row") {
             handleRowDragEnd(event, activeData.pageId);
             return;
         }
 
+        // Handle fields and created elements.
         handlePageContentDragEnd(event);
     };
 
     // ======================================================
-    // FUNCTION: ADD A PAGE
-    // Adds a new page and closes the previously open pages.
+    // 5.7. ADD A NEW PAGE
     // ======================================================
 
     const addPage = () => {
         setPages((previousPages) => [
+            // Close all previously opened pages.
             ...previousPages.map((page) => ({
                 ...page,
                 open: false,
             })),
 
+            // Create the new page.
             {
                 id: Date.now(),
                 label: `Page ${previousPages.length + 1}`,
@@ -525,8 +511,7 @@ export default function ElementsPanel({
     };
 
     // ======================================================
-    // FUNCTION: TOGGLE A PAGE
-    // Opens the selected page and closes the others.
+    // 5.8. TOGGLE PAGE OPEN/CLOSED
     // ======================================================
 
     const togglePage = (pageId) => {
@@ -539,56 +524,13 @@ export default function ElementsPanel({
     };
 
     // ======================================================
-    // FUNCTION: ADD ELEMENT TO A ROW
-    // Adds a new element to the selected row.
-    // ======================================================
-
-    const addRowElement = (pageId, rowId, item) => {
-        if (!item?.type) return;
-
-        const newElement = createElementConfig(item);
-
-        setPages((previousPages) =>
-            previousPages.map((page) =>
-                page.id !== pageId
-                    ? page
-                    : {
-                        ...page,
-                        rows: (page.rows || []).map((row) =>
-                            row.id !== rowId
-                                ? row
-                                : {
-                                    ...row,
-                                    elements: [
-                                        ...(row.elements || []),
-                                        newElement,
-                                    ],
-                                }
-                        ),
-                    }
-            )
-        );
-    };
-
-    // ======================================================
-    // FUNCTION: ADD ROOT ELEMENT
-    // Opens the picker to add an element directly to the page.
-    // ======================================================
-
-    const addRootElement = (pageId) => {
-        openElementPicker(pageId);
-    };
-
-    // ======================================================
-    // RENDER THE ELEMENTS PANEL actual content
+    // 6. RENDER ELEMENTS PANEL
     // ======================================================
 
     return (
         <div className="elements-panel">
 
-            {/* HEADER SECTION */}
-
-            {/* HEADER SECTION */}
+            {/* SHARED HEADER */}
 
             <button
                 type="button"
@@ -611,9 +553,7 @@ export default function ElementsPanel({
 
             <Divider />
 
-            <Divider />
-
-            {/* ELEMENTS HEADING */}
+            {/* ELEMENTS SECTION TITLE */}
 
             <div className="elements-panel__section-title">
                 <Text as="span" variant="bodySm" tone="subdued">
@@ -621,7 +561,7 @@ export default function ElementsPanel({
                 </Text>
             </div>
 
-            {/* PAGES LIST */}
+            {/* PAGES AND ELEMENTS TREE */}
 
             <div className="element-tree">
 
@@ -630,12 +570,14 @@ export default function ElementsPanel({
                 <DndContext
                     sensors={sensors}
 
+                    // Restrict page and row dragging to their own containers.
                     collisionDetection={(args) => {
                         const activeType = args.active.data.current?.type;
 
                         if (activeType === "page") {
                             const pageContainers = args.droppableContainers.filter(
-                                (container) => container.data.current?.type === "page"
+                                (container) =>
+                                    container.data.current?.type === "page"
                             );
 
                             return closestCenter({
@@ -646,7 +588,8 @@ export default function ElementsPanel({
 
                         if (activeType === "row") {
                             const rowContainers = args.droppableContainers.filter(
-                                (container) => container.data.current?.type === "row"
+                                (container) =>
+                                    container.data.current?.type === "row"
                             );
 
                             return closestCenter({
@@ -658,7 +601,7 @@ export default function ElementsPanel({
                         return closestCenter(args);
                     }}
 
-                    // NEW: Store the item being dragged.
+                    // Store information for the floating drag preview.
                     onDragStart={(event) => {
                         const data = event.active.data.current;
 
@@ -669,13 +612,13 @@ export default function ElementsPanel({
                         });
                     }}
 
-                    // Existing drop logic remains unchanged.
+                    // Run the appropriate drag-and-drop handler.
                     onDragEnd={(event) => {
                         handleAllDragEnd(event);
                         setActiveDragItem(null);
                     }}
 
-                    // NEW: Clear overlay if dragging is cancelled.
+                    // Clear the floating preview if dragging is cancelled.
                     onDragCancel={() => {
                         setActiveDragItem(null);
                     }}
@@ -684,39 +627,42 @@ export default function ElementsPanel({
                         items={pages.map((page) => `page-${page.id}`)}
                         strategy={verticalListSortingStrategy}
                     >
-                        {/* Render each page as a draggable component. */}
+                        {/* Render all draggable pages. */}
 
                         {pages.map((page) => (
                             <SortablePage
                                 key={page.id}
                                 page={page}
-                                sensors={sensors}
                                 togglePage={togglePage}
-                                handleRowDragEnd={handleRowDragEnd}
+
+                                // Drag-and-drop handlers.
                                 handleFieldDragEnd={handleFieldDragEnd}
-                                handlePageContentDragEnd={handlePageContentDragEnd}
                                 handleElementDragEnd={handleElementDragEnd}
-                                addRowElement={addRowElement}
-                                addRootElement={addRootElement}
+
+                                // Element picker.
                                 openElementPicker={openElementPicker}
-                                onSelectElement={onSelectElement} // ADD THIS
 
+                                // Element selection.
+                                onSelectElement={onSelectElement}
 
-                                // Element toolbox actions from FormEditor
+                                // Element toolbox actions.
                                 onToggleElementVisibility={onToggleElementVisibility}
                                 onDuplicateElement={onDuplicateElement}
                                 onDeleteElement={onDeleteElement}
-                                // NEW: Row toolbox actions
+
+                                // Row toolbox actions.
                                 onToggleRowVisibility={onToggleRowVisibility}
                                 onDuplicateRow={onDuplicateRow}
                                 onDeleteRow={onDeleteRow}
 
-                                // NEW: Page toolbox action
+                                // Page toolbox action.
                                 onDuplicatePage={onDuplicatePage}
                             />
                         ))}
                     </SortableContext>
-                    {/* Floating drag card */}
+
+                    {/* FLOATING DRAG PREVIEW */}
+
                     <DragOverlay>
                         {activeDragItem ? (
                             <div className="element-tree__drag-overlay">
@@ -744,9 +690,7 @@ export default function ElementsPanel({
                 </button>
             </div>
 
-            {/* FOOTER SECTION */}
-
-            {/* FOOTER SECTION */}
+            {/* SHARED FOOTER */}
 
             <div className="elements-panel__footer">
                 <Divider />
@@ -771,35 +715,14 @@ export default function ElementsPanel({
                 </button>
             </div>
 
-            {/* ELEMENT PICKER MODAL */}
-
-            {/* <ElementPickerPopover
-                open={elementPickerOpen}
-                position={elementPickerPosition}
-                onClose={() => {
-                    setElementPickerOpen(false);
-                    setElementTarget(null);
-                }}
-                onSelect={handleSelectElement}
-            /> */}
-
         </div>
     );
 }
 
 // ======================================================
-// HELPER: GET DRAG ITEM ID
-// Returns the correct drag ID for fields.
+// 7. INSERTION COMPONENT
+// Adds an element between page sections.
 // ======================================================
-
-const getDragItemId = (item, index) => {
-    return typeof item === "object" && item?.id != null
-        ? `field-${item.id}`
-        : `field-index-${index}`;
-};
-
-///insert btw rows
-
 
 function SidebarSectionInsert({
     pageId,
@@ -836,39 +759,37 @@ function SidebarSectionInsert({
     );
 }
 
-
 // ======================================================
-// COMPONENT: SORTABLE PAGE
-// Makes the page draggable using its drag handle.
-// Its rows and elements remain inside the page.
+// 8. SORTABLE PAGE COMPONENT
+// Makes a page draggable and renders its contents.
 // ======================================================
-
-
 
 function SortablePage({
     page,
-    sensors,
     togglePage,
-    handleRowDragEnd,
+
+    // Drag-and-drop handlers.
     handleFieldDragEnd,
     handleElementDragEnd,
-    handlePageContentDragEnd,
-    addRowElement,
-    addRootElement,
-    onToggleElementVisibility,
-    onDuplicateElement,
-    onDeleteElement,
+
+    // Element picker and selection.
     openElementPicker,
     onSelectElement,
 
-    // Row toolbox actions
+    // Element toolbox actions.
+    onToggleElementVisibility,
+    onDuplicateElement,
+    onDeleteElement,
+
+    // Row toolbox actions.
     onToggleRowVisibility,
     onDuplicateRow,
     onDeleteRow,
 
-    // Page toolbox action
+    // Page toolbox action.
     onDuplicatePage,
 }) {
+    // Make the complete page draggable.
     const {
         attributes,
         listeners,
@@ -887,12 +808,13 @@ function SortablePage({
         },
     });
 
-    // Page styling
+    // Apply drag styling to the page.
     const pageStyle = {
         transform: CSS.Transform.toString(transform),
         transition,
 
         background: isDragging ? "#FFFFFF" : "transparent",
+
         boxShadow: isDragging
             ? "0 8px 24px rgba(0, 0, 0, 0.15)"
             : "none",
@@ -906,7 +828,7 @@ function SortablePage({
         zIndex: isDragging ? 10 : "auto",
     };
 
-    // Reusable insertion button for standalone elements
+    // Create insertion buttons above or below root elements.
     const renderRootInsertButton = (element, placement) => (
         <button
             type="button"
@@ -940,7 +862,7 @@ function SortablePage({
         />
     );
 
-    // Reusable standalone element renderer
+    // Render one standalone element with insertion controls.
     const renderRootElement = (element) => (
         <div
             key={element.id}
@@ -984,7 +906,7 @@ function SortablePage({
                 {...attributes}
                 {...listeners}
             >
-                {/* Expand/collapse arrow */}
+                {/* EXPAND / COLLAPSE BUTTON */}
 
                 <button
                     type="button"
@@ -1000,7 +922,7 @@ function SortablePage({
                     />
                 </button>
 
-                {/* Page icon and drag icon */}
+                {/* PAGE ICON AND DRAG HANDLE */}
 
                 <span className="element-tree__field-icon element-tree__page-icon">
                     <span className="element-tree__default-icon">
@@ -1012,7 +934,7 @@ function SortablePage({
                     </span>
                 </span>
 
-                {/* Page name */}
+                {/* PAGE NAME */}
 
                 <button
                     type="button"
@@ -1022,7 +944,7 @@ function SortablePage({
                     {page.label}
                 </button>
 
-                {/* Duplicate page */}
+                {/* DUPLICATE PAGE */}
 
                 {page.open && (
                     <button
@@ -1058,7 +980,7 @@ function SortablePage({
                         ]}
                         strategy={verticalListSortingStrategy}
                     >
-                        {/* INSERT BEFORE FIRST ROW */}
+                        {/* INSERT BEFORE THE FIRST ROW */}
 
                         {(page.rows || []).length > 0 && (
                             <SidebarSectionInsert
@@ -1069,7 +991,7 @@ function SortablePage({
                             />
                         )}
 
-                        {/* RENDER ROWS AND POSITIONED ROOT ELEMENTS */}
+                        {/* RENDER ROWS AND ROOT ELEMENTS */}
 
                         {(page.rows || []).map((row) => (
                             <React.Fragment key={row.id}>
@@ -1085,21 +1007,25 @@ function SortablePage({
                                         renderRootElement(element)
                                     )}
 
-                                {/* ACTUAL ROW */}
+                                {/* ROW */}
 
                                 <SortableRow
                                     page={page}
                                     row={row}
                                     pageId={page.id}
-                                    sensors={sensors}
                                     handleFieldDragEnd={handleFieldDragEnd}
                                     handleElementDragEnd={handleElementDragEnd}
-                                    addRowElement={addRowElement}
                                     openElementPicker={openElementPicker}
+
+                                    // Element toolbox actions.
                                     onToggleElementVisibility={onToggleElementVisibility}
                                     onDuplicateElement={onDuplicateElement}
                                     onDeleteElement={onDeleteElement}
+
+                                    // Element selection.
                                     onSelectElement={onSelectElement}
+
+                                    // Row toolbox actions.
                                     onToggleRowVisibility={onToggleRowVisibility}
                                     onDuplicateRow={onDuplicateRow}
                                     onDeleteRow={onDeleteRow}
@@ -1165,34 +1091,35 @@ function SortablePage({
     );
 }
 
-
-
 // ======================================================
-// COMPONENT: SORTABLE ROW
-// Makes a complete row draggable using its row handle.
-// The fields and elements move together with their row.
+// 9. SORTABLE ROW COMPONENT
+// Makes a complete row draggable and manages its contents.
 // ======================================================
-
-
 
 function SortableRow({
     page,
     row,
     pageId,
-    sensors,
+
+    // Drag-and-drop handlers.
     handleFieldDragEnd,
     handleElementDragEnd,
-    addRowElement,
+
+    // Element picker.
     openElementPicker,
+
+    // Element toolbox actions.
     onDeleteElement,
     onDuplicateElement,
     onToggleElementVisibility,
+
+    // Row toolbox actions.
     onToggleRowVisibility,
     onSelectElement,
     onDuplicateRow,
     onDeleteRow,
 }) {
-    // Drag and drop for the row itself
+    // Make the complete row draggable.
     const {
         attributes,
         listeners,
@@ -1211,7 +1138,7 @@ function SortableRow({
         },
     });
 
-    // Allow elements to be dropped inside this row
+    // Allow elements to be dropped inside this row.
     const {
         setNodeRef: setDropRef,
         isOver,
@@ -1224,29 +1151,34 @@ function SortableRow({
         },
     });
 
-    // Row styling
+    // Apply drag styling to the row.
     const rowStyle = {
         transform: CSS.Transform.toString(transform),
         transition,
+
         background: isDragging ? "#FFFFFF" : "transparent",
+
         boxShadow: isDragging
             ? "0 6px 18px rgba(0, 0, 0, 0.12)"
             : "none",
+
         border: isDragging
             ? "1px solid #E5E7EB"
             : "1px solid transparent",
+
         borderRadius: "8px",
         position: "relative",
         zIndex: isDragging ? 10 : "auto",
     };
 
-    // Row heading hover state
+    // Track row heading hover for the toolbox.
     const [isHovered, setIsHovered] = useState(false);
 
+    // Get the row's fields and created elements.
     const fields = row.fields || [];
     const elements = row.elements || [];
 
-    // Reusable insertion button
+    // Create insertion buttons around fields and elements.
     const renderInsertButton = (
         collection,
         elementId,
@@ -1308,7 +1240,7 @@ function SortableRow({
                 {...attributes}
                 {...listeners}
             >
-                {/* Folder icon / drag icon */}
+                {/* FOLDER ICON / DRAG ICON */}
 
                 <span className="element-tree__field-icon element-tree__row-drag-icon">
                     <span className="element-tree__default-icon">
@@ -1320,13 +1252,13 @@ function SortableRow({
                     </span>
                 </span>
 
-                {/* Row label */}
+                {/* ROW LABEL */}
 
                 <Text as="span" variant="bodySm">
                     Row
                 </Text>
 
-                {/* Row toolbox */}
+                {/* ROW TOOLBOX */}
 
                 {isHovered && (
                     <ElementActions
@@ -1389,9 +1321,7 @@ function SortableRow({
                                     rowId={row.id}
                                     pageId={pageId}
                                     onSelectElement={onSelectElement}
-                                    onToggleElementVisibility={
-                                        onToggleElementVisibility
-                                    }
+                                    onToggleElementVisibility={onToggleElementVisibility}
                                     onDuplicateElement={onDuplicateElement}
                                     onDeleteElement={onDeleteElement}
                                 />
@@ -1428,9 +1358,7 @@ function SortableRow({
                                 rowId={row.id}
                                 pageId={pageId}
                                 onSelectElement={onSelectElement}
-                                onToggleElementVisibility={
-                                    onToggleElementVisibility
-                                }
+                                onToggleElementVisibility={onToggleElementVisibility}
                                 onDuplicateElement={onDuplicateElement}
                                 onDeleteElement={onDeleteElement}
                             />
@@ -1463,13 +1391,9 @@ function SortableRow({
     );
 }
 
-
-
-
 // ======================================================
-// COMPONENT: SORTABLE SIDEBAR FIELD
-// Makes an original field draggable.
-// Shows the drag icon instead of the file icon on hover.
+// 10. SORTABLE SIDEBAR FIELD COMPONENT
+// Makes original template fields draggable.
 // ======================================================
 
 function SortableSidebarField({
@@ -1477,14 +1401,19 @@ function SortableSidebarField({
     field,
     rowId,
     pageId,
+
+    // Element toolbox actions.
     onToggleElementVisibility,
     onDuplicateElement,
     onDeleteElement,
-    onSelectElement, // ADD THIS
+
+    // Element selection.
+    onSelectElement,
 }) {
-    // State to handle the hover.
+    // Track hover to show the field toolbox.
     const [isHovered, setIsHovered] = useState(false);
 
+    // Make the field draggable.
     const {
         attributes,
         listeners,
@@ -1499,32 +1428,39 @@ function SortableSidebarField({
             rowId,
             pageId,
             itemId: id,
-            label: typeof field === "string"
-                ? field
-                : field?.label || field?.type || "Untitled field",
+
+            label:
+                typeof field === "string"
+                    ? field
+                    : field?.label || field?.type || "Untitled field",
+
             icon: getElementIcon(
                 typeof field === "string" ? field : field?.type
             ),
         },
     });
 
+    // Apply drag styling to the field.
     const style = {
         transform: CSS.Transform.toString(transform),
         transition,
 
         background: isDragging ? "#FFFFFF" : "transparent",
+
         boxShadow: isDragging
             ? "0 5px 15px rgba(0, 0, 0, 0.14)"
             : "none",
 
-        border: isDragging ? "1px solid #E5E7EB" : "1px solid transparent",
-        borderRadius: "8px",
+        border: isDragging
+            ? "1px solid #E5E7EB"
+            : "1px solid transparent",
 
+        borderRadius: "8px",
         position: "relative",
         zIndex: isDragging ? 10 : "auto",
     };
 
-    // Get the actual field ID, not the sortable drag ID.
+    // Get the actual field ID for toolbox actions.
     const fieldId = field?.id;
 
     return (
@@ -1534,10 +1470,11 @@ function SortableSidebarField({
                 ...style,
                 cursor: "pointer",
             }}
-            className={`element-tree__field element-tree__field--draggable ${field?.visible === false
-                ? "element-tree__field--hidden"
-                : ""
-                }`}
+            className={`element-tree__field element-tree__field--draggable ${
+                field?.visible === false
+                    ? "element-tree__field--hidden"
+                    : ""
+            }`}
             {...attributes}
             {...listeners}
             onMouseEnter={() => setIsHovered(true)}
@@ -1548,6 +1485,8 @@ function SortableSidebarField({
                 }
             }}
         >
+            {/* FIELD ICON AND DRAG HANDLE */}
+
             <span className="element-tree__field-icon">
                 <span className="element-tree__default-icon">
                     <Icon
@@ -1556,7 +1495,8 @@ function SortableSidebarField({
                                 ? field === "First Name" || field === "Last Name"
                                     ? "name"
                                     : field
-                                : field?.type === "first_name" || field?.type === "last_name"
+                                : field?.type === "first_name" ||
+                                    field?.type === "last_name"
                                     ? "name"
                                     : field?.type
                         )}
@@ -1568,14 +1508,15 @@ function SortableSidebarField({
                 </span>
             </span>
 
+            {/* FIELD LABEL */}
+
             <span className="element-tree__field-label">
                 {typeof field === "string"
                     ? field
                     : field?.label || field?.type || "Untitled field"}
             </span>
 
-            {/* Show reusable toolbox only when hovering.
-                Original string fields have no ID, so they cannot use ID-based actions. */}
+            {/* TOOLBOX: Only fields with IDs support these actions. */}
 
             {isHovered && fieldId != null && (
                 <ElementActions
@@ -1590,8 +1531,8 @@ function SortableSidebarField({
 }
 
 // ======================================================
-// COMPONENT: SORTABLE CREATED ELEMENT
-// Makes an element created by Add elements draggable.
+// 11. SORTABLE CREATED ELEMENT COMPONENT
+// Makes newly created elements draggable.
 // ======================================================
 
 function SortableCreatedElement({
@@ -1599,14 +1540,19 @@ function SortableCreatedElement({
     type = "element",
     rowId = null,
     pageId,
+
+    // Element toolbox actions.
     onToggleElementVisibility,
     onDuplicateElement,
     onDeleteElement,
-    onSelectElement, // ADD THIS
+
+    // Element selection.
+    onSelectElement,
 }) {
-    // State to handle the hover.
+    // Track hover to show the element toolbox.
     const [isHovered, setIsHovered] = useState(false);
 
+    // Make the created element draggable.
     const {
         attributes,
         listeners,
@@ -1626,18 +1572,22 @@ function SortableCreatedElement({
         },
     });
 
+    // Apply drag styling to the element.
     const style = {
         transform: CSS.Transform.toString(transform),
         transition,
 
         background: isDragging ? "#FFFFFF" : "transparent",
+
         boxShadow: isDragging
             ? "0 5px 15px rgba(0, 0, 0, 0.14)"
             : "none",
 
-        border: isDragging ? "1px solid #E5E7EB" : "1px solid transparent",
-        borderRadius: "8px",
+        border: isDragging
+            ? "1px solid #E5E7EB"
+            : "1px solid transparent",
 
+        borderRadius: "8px",
         position: "relative",
         zIndex: isDragging ? 10 : "auto",
     };
@@ -1649,16 +1599,19 @@ function SortableCreatedElement({
                 ...style,
                 cursor: "pointer",
             }}
-            className={`element-tree__field element-tree__field--draggable ${element.visible === false
-                ? "element-tree__field--hidden"
-                : ""
-                }`}
+            className={`element-tree__field element-tree__field--draggable ${
+                element.visible === false
+                    ? "element-tree__field--hidden"
+                    : ""
+            }`}
             {...attributes}
             {...listeners}
             onClick={() => onSelectElement?.(element)}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
         >
+            {/* ELEMENT ICON AND DRAG HANDLE */}
+
             <span className="element-tree__field-icon">
                 <span className="element-tree__default-icon">
                     <Icon source={getElementIcon(element.type)} />
@@ -1669,11 +1622,13 @@ function SortableCreatedElement({
                 </span>
             </span>
 
+            {/* ELEMENT LABEL */}
+
             <span className="element-tree__field-label">
                 {element.label || element.type || "Untitled element"}
             </span>
 
-            {/* Show reusable toolbox only when hovering */}
+            {/* ELEMENT TOOLBOX */}
 
             {isHovered && element?.id != null && (
                 <ElementActions

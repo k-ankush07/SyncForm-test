@@ -34,17 +34,18 @@ export default function ContactSettings({ element, onChange }) {
             {type === "email" && (
                 <BlockStack gap="300">
 
-                    <Checkbox
+                    {/* // we do not need this so soft remove 
+                     <Checkbox
                         label="Enable email validation"
                         checked={element.emailValidation !== false}
                         onChange={(value) =>
                             update("emailValidation", value)
                         }
-                    />
+                    /> */}
 
                     <Checkbox
                         label="Also create confirm email input"
-                        checked={element.confirmEmail || false}
+                        checked={Boolean(element.confirmEmail)}
                         onChange={(value) =>
                             update("confirmEmail", value)
                         }
@@ -54,8 +55,8 @@ export default function ContactSettings({ element, onChange }) {
                         <BlockStack gap="200">
 
                             <TextField
-                                label="Label confirm"
-                                value={element.confirmEmailLabel || ""}
+                                label="Confirm email label"
+                                value={element.confirmEmailLabel ?? "Confirm email"}
                                 onChange={(value) =>
                                     update("confirmEmailLabel", value)
                                 }
@@ -63,8 +64,8 @@ export default function ContactSettings({ element, onChange }) {
                             />
 
                             <TextField
-                                label="Placeholder confirm"
-                                value={element.confirmEmailPlaceholder || ""}
+                                label="Confirm email placeholder"
+                                value={element.confirmEmailPlaceholder ?? "Confirm your email"}
                                 onChange={(value) =>
                                     update("confirmEmailPlaceholder", value)
                                 }
@@ -72,8 +73,8 @@ export default function ContactSettings({ element, onChange }) {
                             />
 
                             <TextField
-                                label="Description confirm"
-                                value={element.confirmEmailDescription || ""}
+                                label="Confirm email description"
+                                value={element.confirmEmailDescription ?? ""}
                                 onChange={(value) =>
                                     update("confirmEmailDescription", value)
                                 }
@@ -88,8 +89,8 @@ export default function ContactSettings({ element, onChange }) {
 
 
             {/* =================================
-    NAME SETTINGS
-================================= */}
+                  NAME SETTINGS
+            ================================= */}
 
             {isName && (
                 <BlockStack gap="300">
@@ -150,6 +151,11 @@ export default function ContactSettings({ element, onChange }) {
                 PHONE SETTINGS
             ================================= */}
 
+
+            {/* =================================
+    PHONE SETTINGS
+================================= */}
+
             {type === "phone" && (
                 <BlockStack gap="300">
 
@@ -162,7 +168,7 @@ export default function ContactSettings({ element, onChange }) {
                     />
 
                     <Checkbox
-                        label="Show country code"
+                        label="Only used to display flags and country codes"
                         checked={element.showCountryCode !== false}
                         onChange={(value) =>
                             update("showCountryCode", value)
@@ -176,16 +182,19 @@ export default function ContactSettings({ element, onChange }) {
                         onChange={(value) =>
                             update("defaultCountryCode", value)
                         }
+                        disabled={
+                            element.phoneValidation === false &&
+                            element.showCountryCode === false
+                        }
                     />
 
                 </BlockStack>
             )}
 
 
-
             {/* =================================
-                     PASSWORD SETTINGS
-                ================================= */}
+    PASSWORD SETTINGS
+================================= */}
 
             {type === "password" && (
                 <BlockStack gap="300">
@@ -194,7 +203,7 @@ export default function ContactSettings({ element, onChange }) {
                         label="Validate"
                         value={element.passwordValidation || "none"}
                         options={[
-                            { label: "None", value: "false" },
+                            { label: "None", value: "none" },
 
                             {
                                 label: "Minimum 6 characters",
@@ -226,17 +235,26 @@ export default function ContactSettings({ element, onChange }) {
                                 value: "advancedValidateRule",
                             },
                         ]}
-                        onChange={(value) =>
-                            update("passwordValidation", value)
-                        }
+                        onChange={(value) => update("passwordValidation", value)}
                     />
+
+                    {element.passwordValidation === "advancedValidateRule" && (
+                        <TextField
+                            label="Advanced validation regex"
+                            value={element.advancedPasswordValidation || ""}
+                            onChange={(value) =>
+                                update("advancedPasswordValidation", value)
+                            }
+                            placeholder="Example: ^(?=.*[A-Z]).{8,}$"
+                            helpText="Enter a regular expression to define your password requirements."
+                            autoComplete="off"
+                        />
+                    )}
 
                     <Checkbox
                         label="Also create confirm password input"
                         checked={Boolean(element.confirmPassword)}
-                        onChange={(value) =>
-                            update("confirmPassword", value)
-                        }
+                        onChange={(value) => update("confirmPassword", value)}
                     />
 
                     {element.confirmPassword && (
@@ -275,13 +293,12 @@ export default function ContactSettings({ element, onChange }) {
                     <Checkbox
                         label="Store password for purpose"
                         checked={Boolean(element.storePassword)}
-                        onChange={(value) =>
-                            update("storePassword", value)
-                        }
+                        onChange={(value) => update("storePassword", value)}
                     />
 
                 </BlockStack>
             )}
+
 
             {/* =================================
                 COUNTRY SETTINGS
@@ -297,14 +314,15 @@ export default function ContactSettings({ element, onChange }) {
                             update("showFlags", value)
                         }
                     />
-
-                    <Checkbox
-                        label="Allow multiple countries"
-                        checked={element.allowMultiple || false}
+                    {/* // the actual dropdown is in elemnt settings.jsx */}
+                     <Checkbox
+                        label="Enable search"
+                        checked={element.enableSearch || false}
                         onChange={(value) =>
-                            update("allowMultiple", value)
+                            update("enableSearch", value)
                         }
                     />
+
 
                 </BlockStack>
             )}
