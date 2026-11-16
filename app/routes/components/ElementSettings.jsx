@@ -365,7 +365,8 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
     // ---------------------------------------------------------------
 
     const showDefaultValue =
-        isName || isEmail || isPhone || isChoiceInput || isCountry;
+    isName || isEmail || isPhone || isCountry ||
+    (isChoiceInput && !isDropdown && !isButton);
 
     const showKeepLabelPosition =
         isName || isEmail || isPhone || isPassword ||
@@ -709,9 +710,10 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
                     </BlockStack>
                 )}
 
+
                 {/* =========================================
-                LIMIT SELECTIONS SETTINGS
-            ========================================= */}
+    LIMIT SELECTIONS SETTINGS
+========================================= */}
 
                 {showLimitSelections && (
                     <BlockStack gap="200">
@@ -720,56 +722,88 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
                             label="Limit selections"
                             checked={Boolean(element.limitSelections)}
                             onChange={(value) =>
-                                update("limitSelections", value)
+                                onChange({
+                                    ...element,
+                                    limitSelections: value,
+                                    ...(value
+                                        ? {
+                                            minSelections: 0,
+                                            maxSelections: options.length,
+                                        }
+                                        : {}),
+                                })
                             }
                         />
 
                         {element.limitSelections && (
                             <InlineStack gap="300" wrap={false}>
-
                                 {/* MIN SELECTIONS */}
-
                                 <Box width="50%">
                                     <TextField
                                         label="Min selections"
                                         type="number"
-                                        placeholder="0-2"
-                                        value={String(
-                                            element.minSelections ?? ""
-                                        )}
-                                        onChange={(value) =>
-                                            update("minSelections", value)
+                                        placeholder={`0–${options.length}`}
+                                        value={
+                                            element.minSelections === undefined ||
+                                                element.minSelections === null
+                                                ? ""
+                                                : String(element.minSelections)
                                         }
+                                        onChange={(value) => {
+                                            onChange({
+                                                ...element,
+                                                minSelections:
+                                                    value === ""
+                                                        ? undefined
+                                                        : Math.max(
+                                                            0,
+                                                            Math.min(Number(value), options.length)
+                                                        ),
+                                            });
+                                        }}
                                         autoComplete="off"
-                                        max={2}
+                                        min={0}
+                                        max={options.length}
                                         condensed
                                     />
                                 </Box>
 
                                 {/* MAX SELECTIONS */}
-
                                 <Box width="50%">
                                     <TextField
                                         label="Max selections"
                                         type="number"
-                                        placeholder="0-2"
-                                        value={String(
-                                            element.maxSelections ?? ""
-                                        )}
-                                        onChange={(value) =>
-                                            update("maxSelections", value)
+                                        placeholder={`0–${options.length}`}
+                                        value={
+                                            element.maxSelections === undefined ||
+                                                element.maxSelections === null
+                                                ? ""
+                                                : String(element.maxSelections)
                                         }
+                                        onChange={(value) => {
+                                            onChange({
+                                                ...element,
+                                                maxSelections:
+                                                    value === ""
+                                                        ? undefined
+                                                        : Math.max(
+                                                            0,
+                                                            Math.min(Number(value), options.length)
+                                                        ),
+                                            });
+                                        }}
                                         autoComplete="off"
-                                        max={2}
+                                        min={0}
+                                        max={options.length}
                                         condensed
                                     />
                                 </Box>
-
                             </InlineStack>
                         )}
 
                     </BlockStack>
                 )}
+
 
             </BlockStack>
         );
@@ -1124,7 +1158,6 @@ export default function ElementSettings({
             "radio_button",
             "checkbox_group",
             "checkboxes",
-            "dropdown",
             "select"
         ].includes(type);
 

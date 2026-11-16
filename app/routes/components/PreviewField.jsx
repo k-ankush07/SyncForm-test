@@ -12,6 +12,10 @@ import {
   InlineStack,
   Button,
   BlockStack,
+   Combobox,
+  Listbox,
+
+ 
 } from "@shopify/polaris";
 
 import createDOMPurify from "dompurify";
@@ -286,6 +290,7 @@ function SignaturePreview({
 
 
 
+
 // =============================================================
 // MAIN PREVIEW FIELD COMPONENT
 // =============================================================
@@ -294,6 +299,7 @@ export default function PreviewField({
   element,
   field,
   pages = [],
+  onChange, // to upadte the val 
   activePageId = null,
   products = [],
   isModelPreview = false,
@@ -405,6 +411,14 @@ export default function PreviewField({
   // Country dropdown states
   const [countrySearch, setCountrySearch] = useState("");
   const [selectedCountry, setSelectedCountry] = useState("");
+
+  // dropdown 
+const [dropdownOpen, setDropdownOpen] = useState(false);
+const [dropdownSearch, setDropdownSearch] = useState("");
+useEffect(() => {
+  setDropdownOpen(false);
+  setDropdownSearch("");
+}, [normalizedElement.id]);
 
   // Date and time.
   const [dateValue, setDateValue] = useState(
@@ -1293,25 +1307,316 @@ export default function PreviewField({
     // COUNTRY
     // -------------------------------------------------------
 
-   case "country": {
-  const selectedCountryDetails = countries.find(
-    (country) => country.value === selectedCountry
+    case "country": {
+      const selectedCountryDetails = countries.find(
+        (country) => country.value === selectedCountry
+      );
+
+      const filteredCountries = countries.filter((country) => {
+        const search = countrySearch.toLowerCase();
+
+        return (
+          country.name.toLowerCase().includes(search) ||
+          (country.nativeName || "").toLowerCase().includes(search)
+        );
+      });
+
+      const handleCountrySelect = (country) => {
+        setSelectedCountry(country.value);
+        setValue(country.value);
+        setCountryDropdownOpen(false);
+        setCountrySearch("");
+      };
+
+      return (
+        <BlockStack gap="200">
+          {fieldLabelWithIcon}
+
+          <div style={{ position: "relative", width: "100%" }}>
+
+            {/* SELECTED COUNTRY / DROPDOWN BUTTON */}
+            <button
+              type="button"
+              disabled={isReadOnly}
+              onClick={() =>
+                setCountryDropdownOpen((previous) => !previous)
+              }
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: "10px",
+                width: "100%",
+                minHeight: "40px",
+                padding: "8px 12px",
+                background: "#FFFFFF",
+                border: "1px solid #8A8A8A",
+                borderRadius: "6px",
+                cursor: isReadOnly ? "default" : "pointer",
+                textAlign: "left",
+              }}
+            >
+              <span
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "9px",
+                  minWidth: 0,
+                }}
+              >
+                {/* SELECTED ICON */}
+                {selectedIcon && (
+                  <span
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      width: "24px",
+                      height: "24px",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <Icon source={selectedIcon} />
+                  </span>
+                )}
+
+                {/* COUNTRY FLAG */}
+                {normalizedElement.showFlags &&
+                  selectedCountryDetails && (
+                    <span
+                      className={`fi fi-${selectedCountryDetails.value.toLowerCase()}`}
+                      aria-label={`${selectedCountryDetails.name} flag`}
+                      style={{
+                        display: "inline-block",
+                        width: "24px",
+                        height: "18px",
+                        flexShrink: 0,
+                        backgroundSize: "cover",
+                        backgroundPosition: "center",
+                        borderRadius: "2px",
+                      }}
+                    />
+                  )}
+
+                {/* COUNTRY NAME / PLACEHOLDER */}
+                <span
+                  style={{
+                    color: selectedCountryDetails
+                      ? "#303030"
+                      : "#8C9196",
+                    fontSize: "14px",
+                  }}
+                >
+                  {selectedCountryDetails?.name ||
+                    normalizedElement.placeholder ||
+                    "Please select a country"}
+                </span>
+              </span>
+
+              {/* DROPDOWN ARROW */}
+              <span
+                style={{
+                  color: "#6D7175",
+                  display: "inline-block",
+                  transition: "transform 250ms ease",
+                  transform: countryDropdownOpen
+                    ? "rotate(180deg)"
+                    : "rotate(0deg)",
+                }}
+              >
+                ▾
+              </span>
+            </button>
+
+            {/* COUNTRY DROPDOWN WITH SMOOTH ANIMATION */}
+            {!isReadOnly && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: "calc(100% + 4px)",
+                  left: 0,
+                  width: "100%",
+                  maxHeight: countryDropdownOpen ? "280px" : "0px",
+                  opacity: countryDropdownOpen ? 1 : 0,
+                  visibility: countryDropdownOpen
+                    ? "visible"
+                    : "hidden",
+                  transform: countryDropdownOpen
+                    ? "translateY(0)"
+                    : "translateY(-8px)",
+                  background: "#FFFFFF",
+                  border: countryDropdownOpen
+                    ? "1px solid #E1E3E5"
+                    : "1px solid transparent",
+                  borderRadius: "8px",
+                  boxShadow: countryDropdownOpen
+                    ? "0 4px 16px rgba(0,0,0,0.12)"
+                    : "none",
+                  zIndex: 10000,
+                  boxSizing: "border-box",
+                  overflow: "hidden",
+                  transition:
+                    "max-height 250ms ease, opacity 200ms ease, transform 250ms ease, visibility 250ms ease, border-color 250ms ease",
+                  pointerEvents: countryDropdownOpen ? "auto" : "none",
+                }}
+              >
+
+                {/* SEARCH INPUT */}
+                {normalizedElement.enableSearch && (
+                  <div
+                    style={{
+                      padding: "8px",
+                      borderBottom: "1px solid #E1E3E5",
+                    }}
+                  >
+                    <input
+                      type="text"
+                      value={countrySearch}
+                      onChange={(event) =>
+                        setCountrySearch(event.target.value)
+                      }
+                      placeholder="Search countries..."
+                      autoComplete="off"
+                      style={{
+                        width: "100%",
+                        height: "36px",
+                        padding: "0 10px",
+                        border: "1px solid #8A8A8A",
+                        borderRadius: "5px",
+                        outline: "none",
+                        fontSize: "13px",
+                        boxSizing: "border-box",
+                      }}
+                    />
+                  </div>
+                )}
+
+                {/* COUNTRY LIST */}
+                <div
+                  style={{
+                    maxHeight: "220px",
+                    overflowY: "auto",
+                    padding: "4px",
+                  }}
+                >
+                  {filteredCountries.length > 0 ? (
+                    filteredCountries.map((country) => {
+                      const isSelected =
+                        selectedCountry === country.value;
+
+                      return (
+                        <button
+                          key={country.value}
+                          type="button"
+                          onClick={() => handleCountrySelect(country)}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "10px",
+                            width: "100%",
+                            minHeight: "40px",
+                            padding: "8px 10px",
+                            border: "none",
+                            borderRadius: "5px",
+                            background: isSelected
+                              ? "#F1F2F3"
+                              : "#FFFFFF",
+                            cursor: "pointer",
+                            textAlign: "left",
+                          }}
+                        >
+                          {/* COUNTRY FLAG */}
+                          {normalizedElement.showFlags && (
+                            <span
+                              className={`fi fi-${country.value.toLowerCase()}`}
+                              aria-label={`${country.name} flag`}
+                              style={{
+                                display: "inline-block",
+                                width: "24px",
+                                height: "18px",
+                                flexShrink: 0,
+                                backgroundSize: "cover",
+                                backgroundPosition: "center",
+                                borderRadius: "2px",
+                              }}
+                            />
+                          )}
+
+                          {/* COUNTRY NAME */}
+                          <span
+                            style={{
+                              flex: 1,
+                              fontSize: "13px",
+                              color: "#303030",
+                              fontWeight: isSelected ? 600 : 400,
+                            }}
+                          >
+                            {country.name}
+                          </span>
+
+                          {/* SELECTED CHECK ICON */}
+                          {isSelected && (
+                            <Icon source={PolarisIcons.CheckIcon} />
+                          )}
+                        </button>
+                      );
+                    })
+                  ) : (
+                    <div
+                      style={{
+                        padding: "14px",
+                        textAlign: "center",
+                      }}
+                    >
+                      <Text
+                        as="p"
+                        variant="bodySm"
+                        tone="subdued"
+                      >
+                        No countries found.
+                      </Text>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {descriptionText}
+        </BlockStack>
+      );
+    }
+    // -------------------------------------------------------
+    // DROPDOWN AND SELECT
+    // -------------------------------------------------------
+
+
+
+case "dropdown":
+case "select": {
+  const dropdownOptions = (normalizedElement.options || []).map((option) => ({
+    label:
+      typeof option === "string"
+        ? option
+        : option.label || option.value,
+    value:
+      typeof option === "string"
+        ? option
+        : option.value || option.label,
+  }));
+
+  const selectedOption = dropdownOptions.find(
+    (option) => option.value === value
   );
 
-  const filteredCountries = countries.filter((country) => {
-    const search = countrySearch.toLowerCase();
+  const filteredOptions = dropdownOptions.filter((option) =>
+    option.label.toLowerCase().includes(dropdownSearch.toLowerCase())
+  );
 
-    return (
-      country.name.toLowerCase().includes(search) ||
-      (country.nativeName || "").toLowerCase().includes(search)
-    );
-  });
-
-  const handleCountrySelect = (country) => {
-    setSelectedCountry(country.value);
-    setValue(country.value);
-    setCountryDropdownOpen(false);
-    setCountrySearch("");
+  const handleDropdownSelect = (option) => {
+    setValue(option.value);
+    setDropdownOpen(false);
+    setDropdownSearch("");
   };
 
   return (
@@ -1319,19 +1624,15 @@ export default function PreviewField({
       {fieldLabelWithIcon}
 
       <div style={{ position: "relative", width: "100%" }}>
-
-        {/* SELECTED COUNTRY / DROPDOWN BUTTON */}
+        {/* DROPDOWN BUTTON */}
         <button
           type="button"
           disabled={isReadOnly}
-          onClick={() =>
-            setCountryDropdownOpen((previous) => !previous)
-          }
+          onClick={() => setDropdownOpen((previous) => !previous)}
           style={{
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            gap: "10px",
             width: "100%",
             minHeight: "40px",
             padding: "8px 12px",
@@ -1344,68 +1645,20 @@ export default function PreviewField({
         >
           <span
             style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "9px",
-              minWidth: 0,
+              color: selectedOption ? "#303030" : "#8C9196",
+              fontSize: "14px",
             }}
           >
-            {/* SELECTED ICON */}
-            {selectedIcon && (
-              <span
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  width: "24px",
-                  height: "24px",
-                  flexShrink: 0,
-                }}
-              >
-                <Icon source={selectedIcon} />
-              </span>
-            )}
-
-            {/* COUNTRY FLAG */}
-            {normalizedElement.showFlags &&
-              selectedCountryDetails && (
-                <span
-                  className={`fi fi-${selectedCountryDetails.value.toLowerCase()}`}
-                  aria-label={`${selectedCountryDetails.name} flag`}
-                  style={{
-                    display: "inline-block",
-                    width: "24px",
-                    height: "18px",
-                    flexShrink: 0,
-                    backgroundSize: "cover",
-                    backgroundPosition: "center",
-                    borderRadius: "2px",
-                  }}
-                />
-              )}
-
-            {/* COUNTRY NAME / PLACEHOLDER */}
-            <span
-              style={{
-                color: selectedCountryDetails
-                  ? "#303030"
-                  : "#8C9196",
-                fontSize: "14px",
-              }}
-            >
-              {selectedCountryDetails?.name ||
-                normalizedElement.placeholder ||
-                "Please select a country"}
-            </span>
+            {selectedOption?.label ||
+              normalizedElement.placeholder ||
+              "Please select"}
           </span>
 
-          {/* DROPDOWN ARROW */}
           <span
             style={{
               color: "#6D7175",
-              display: "inline-block",
               transition: "transform 250ms ease",
-              transform: countryDropdownOpen
+              transform: dropdownOpen
                 ? "rotate(180deg)"
                 : "rotate(0deg)",
             }}
@@ -1414,7 +1667,7 @@ export default function PreviewField({
           </span>
         </button>
 
-        {/* COUNTRY DROPDOWN WITH SMOOTH ANIMATION */}
+        {/* DROPDOWN PANEL */}
         {!isReadOnly && (
           <div
             style={{
@@ -1422,33 +1675,30 @@ export default function PreviewField({
               top: "calc(100% + 4px)",
               left: 0,
               width: "100%",
-              maxHeight: countryDropdownOpen ? "280px" : "0px",
-              opacity: countryDropdownOpen ? 1 : 0,
-              visibility: countryDropdownOpen
-                ? "visible"
-                : "hidden",
-              transform: countryDropdownOpen
+              maxHeight: dropdownOpen ? "280px" : "0px",
+              opacity: dropdownOpen ? 1 : 0,
+              visibility: dropdownOpen ? "visible" : "hidden",
+              transform: dropdownOpen
                 ? "translateY(0)"
                 : "translateY(-8px)",
               background: "#FFFFFF",
-              border: countryDropdownOpen
+              border: dropdownOpen
                 ? "1px solid #E1E3E5"
                 : "1px solid transparent",
               borderRadius: "8px",
-              boxShadow: countryDropdownOpen
+              boxShadow: dropdownOpen
                 ? "0 4px 16px rgba(0,0,0,0.12)"
                 : "none",
               zIndex: 10000,
               boxSizing: "border-box",
               overflow: "hidden",
               transition:
-                "max-height 250ms ease, opacity 200ms ease, transform 250ms ease, visibility 250ms ease, border-color 250ms ease",
-              pointerEvents: countryDropdownOpen ? "auto" : "none",
+                "max-height 250ms ease, opacity 200ms ease, transform 250ms ease, visibility 250ms ease",
+              pointerEvents: dropdownOpen ? "auto" : "none",
             }}
           >
-
-            {/* SEARCH INPUT */}
-            {normalizedElement.enableSearch && (
+            {/* SEARCH BAR - ONLY WHEN ENABLED */}
+            {normalizedElement.selectWithSearch && (
               <div
                 style={{
                   padding: "8px",
@@ -1457,11 +1707,11 @@ export default function PreviewField({
               >
                 <input
                   type="text"
-                  value={countrySearch}
+                  value={dropdownSearch}
                   onChange={(event) =>
-                    setCountrySearch(event.target.value)
+                    setDropdownSearch(event.target.value)
                   }
-                  placeholder="Search countries..."
+                  placeholder="Search options..."
                   autoComplete="off"
                   style={{
                     width: "100%",
@@ -1477,7 +1727,7 @@ export default function PreviewField({
               </div>
             )}
 
-            {/* COUNTRY LIST */}
+            {/* OPTIONS */}
             <div
               style={{
                 maxHeight: "220px",
@@ -1485,16 +1735,15 @@ export default function PreviewField({
                 padding: "4px",
               }}
             >
-              {filteredCountries.length > 0 ? (
-                filteredCountries.map((country) => {
-                  const isSelected =
-                    selectedCountry === country.value;
+              {filteredOptions.length > 0 ? (
+                filteredOptions.map((option) => {
+                  const isSelected = value === option.value;
 
                   return (
                     <button
-                      key={country.value}
+                      key={option.value}
                       type="button"
-                      onClick={() => handleCountrySelect(country)}
+                      onClick={() => handleDropdownSelect(option)}
                       style={{
                         display: "flex",
                         alignItems: "center",
@@ -1511,24 +1760,6 @@ export default function PreviewField({
                         textAlign: "left",
                       }}
                     >
-                      {/* COUNTRY FLAG */}
-                      {normalizedElement.showFlags && (
-                        <span
-                          className={`fi fi-${country.value.toLowerCase()}`}
-                          aria-label={`${country.name} flag`}
-                          style={{
-                            display: "inline-block",
-                            width: "24px",
-                            height: "18px",
-                            flexShrink: 0,
-                            backgroundSize: "cover",
-                            backgroundPosition: "center",
-                            borderRadius: "2px",
-                          }}
-                        />
-                      )}
-
-                      {/* COUNTRY NAME */}
                       <span
                         style={{
                           flex: 1,
@@ -1537,10 +1768,9 @@ export default function PreviewField({
                           fontWeight: isSelected ? 600 : 400,
                         }}
                       >
-                        {country.name}
+                        {option.label}
                       </span>
 
-                      {/* SELECTED CHECK ICON */}
                       {isSelected && (
                         <Icon source={PolarisIcons.CheckIcon} />
                       )}
@@ -1548,18 +1778,9 @@ export default function PreviewField({
                   );
                 })
               ) : (
-                <div
-                  style={{
-                    padding: "14px",
-                    textAlign: "center",
-                  }}
-                >
-                  <Text
-                    as="p"
-                    variant="bodySm"
-                    tone="subdued"
-                  >
-                    No countries found.
+                <div style={{ padding: "14px", textAlign: "center" }}>
+                  <Text as="p" variant="bodySm" tone="subdued">
+                    No options found.
                   </Text>
                 </div>
               )}
@@ -1572,21 +1793,8 @@ export default function PreviewField({
     </BlockStack>
   );
 }
-    // -------------------------------------------------------
-    // DROPDOWN AND SELECT
-    // -------------------------------------------------------
 
-    case "dropdown":
-    case "select":
-      return (
-        <Select
-          {...commonSelectProps}
-          options={[{ label: "Dropdown", value: "" }, ...options]}
-          value={value}
-          onChange={setValue}
-          disabled={isReadOnly}
-        />
-      );
+
 
     // -------------------------------------------------------
     // CHECKBOX
@@ -1594,7 +1802,9 @@ export default function PreviewField({
 
     case "checkbox":
     case "checkboxes":
-    case "checkbox_group":
+    case "checkbox_group": {
+      const otherChecked = selected.includes("__other__");
+
       return (
         <BlockStack gap="200">
           {fieldLabelWithIcon}
@@ -1607,22 +1817,70 @@ export default function PreviewField({
                 checked={selected.includes(option.value)}
                 disabled={isReadOnly}
                 onChange={(isChecked) => {
-                  setSelected((previous) =>
-                    isChecked
-                      ? [...previous, option.value]
-                      : previous.filter(
-                        (selectedValue) =>
-                          selectedValue !== option.value
-                      )
-                  );
+                  const updated = isChecked
+                    ? [...selected, option.value]
+                    : selected.filter(
+                      (selectedValue) =>
+                        selectedValue !== option.value
+                    );
+
+                  setSelected(updated);
+                  onChange?.(element.id, updated);
                 }}
               />
             ))}
+
+            {/* OTHER CHECKBOX */}
+            {normalizedElement.otherOption && (
+              <Checkbox
+                label={normalizedElement.otherLabel || "Other"}
+                checked={otherChecked}
+                disabled={isReadOnly}
+                onChange={(isChecked) => {
+                  const updated = isChecked
+                    ? [...selected, "__other__"]
+                    : selected.filter(
+                      (selectedValue) =>
+                        selectedValue !== "__other__"
+                    );
+
+                  setSelected(updated);
+                  onChange?.(element.id, updated);
+
+                  if (!isChecked) {
+                    onChange({
+                      ...normalizedElement,
+                      otherValue: "",
+                    });
+                  }
+                }}
+              />
+            )}
           </div>
+
+          {/* OTHER TEXT FIELD */}
+          {normalizedElement.otherOption && otherChecked && (
+            <TextField
+              placeholder={
+                normalizedElement.otherPlaceholder ||
+                "Please specify"
+              }
+              value={normalizedElement.otherValue || ""}
+              disabled={isReadOnly}
+              onChange={(value) =>
+                onChange({
+                  ...normalizedElement,
+                  otherValue: value,
+                })
+              }
+              autoComplete="off"
+            />
+          )}
 
           {descriptionText}
         </BlockStack>
       );
+    }
 
     // -------------------------------------------------------
     // RADIO

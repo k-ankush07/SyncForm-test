@@ -53,15 +53,28 @@ export default function ChoiceSettings({ element, onChange }) {
     <BlockStack gap="400">
 
       {/* DROPDOWN SETTINGS */}
-      {isDropdown && (
-        <Checkbox
-          label="Enable search"
-          checked={Boolean(element.selectWithSearch)}
-          onChange={(value) =>
-            update("selectWithSearch", value)
-          }
-        />
-      )}
+    {/* DROPDOWN SETTINGS */}
+{isDropdown && (
+  <>
+    <Select
+      label="Select default value"
+      options={[
+        { label: "Please select", value: "" },
+        ...optionList,
+      ]}
+      value={element.defaultValue || ""}
+      onChange={(value) => update("defaultValue", value)}
+    />
+
+    <Checkbox
+      label="Enable search"
+      checked={Boolean(element.selectWithSearch)}
+      onChange={(value) =>
+        update("selectWithSearch", value)
+      }
+    />
+  </>
+)}
 
       {/* RADIO SETTINGS */}
       {isRadio && (
