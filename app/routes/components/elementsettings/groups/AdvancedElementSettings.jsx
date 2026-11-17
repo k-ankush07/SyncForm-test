@@ -1014,22 +1014,40 @@ export function MatrixSettings({ element, onChange }) {
 // FEEDBACK
 
 
-export function FeedbackSettings({ element, onChange }) {
-  const update = (key, value) =>
-    updateElement(element, onChange, key, value);
 
-  const allowMultiple = Boolean(element.allowMultiple);
+export default function FeedbackSettings({ element, onChange }) {
+  const update = (key, value) => {
+    onChange({
+      ...element,
+      [key]: value,
+    });
+  };
 
-  const feedbackStyles = [
-    { label: "Experience", value: "experience" },
-    { label: "Satisfaction", value: "satisfaction" },
-    { label: "Agreement", value: "agreement" },
-    { label: "Effort", value: "effort" },
-    { label: "Likelihood", value: "likelihood" },
+  const feedbackStyleOptions = [
+    {
+      label: "Experience",
+      value: "experience",
+    },
+    {
+      label: "Satisfaction",
+      value: "satisfaction",
+    },
+    {
+      label: "Agreement",
+      value: "agreement",
+    },
+    {
+      label: "Effort",
+      value: "effort",
+    },
+    {
+      label: "Likelihood",
+      value: "likelihood",
+    },
   ];
 
   return (
-    <BlockStack gap="400">
+    <BlockStack gap="300">
       <TextField
         label="Feedback question"
         value={element.content || ""}
@@ -1040,51 +1058,34 @@ export function FeedbackSettings({ element, onChange }) {
 
       <Select
         label="Feedback style"
-        options={feedbackStyles}
+        options={feedbackStyleOptions}
         value={element.feedbackStyle || "experience"}
         onChange={(value) => update("feedbackStyle", value)}
       />
 
-      <Divider />
+      <Checkbox
+        label="Allow multiple selections"
+        checked={Boolean(element.allowMultiple)}
+        onChange={(value) => update("allowMultiple", value)}
+      />
 
-      <BlockStack gap="300">
-        <Text as="p" variant="headingSm">
-          Selection behavior
-        </Text>
-
-        {/* <Checkbox
-          label="Allow multiple selections"
-          checked={allowMultiple}
+      {element.allowMultiple && (
+        <TextField
+          label="Maximum selections"
+          type="number"
+          value={String(element.maxSelections ?? "")}
           onChange={(value) => {
-            update("allowMultiple", value);
-
-            if (!value) {
-              update("maxSelections", "");
-            }
+            const number = value === "" ? "" : Math.max(1, Number(value));
+            update("maxSelections", number);
           }}
-        /> */}
-
-        {allowMultiple && (
-          <TextField
-            label="Maximum selections"
-            type="number"
-            value={String(element.maxSelections ?? "")}
-            onChange={(value) =>
-              update(
-                "maxSelections",
-                value === "" ? "" : Math.max(1, Number(value) || 1)
-              )
-            }
-            placeholder="No limit"
-            helpText="Leave empty to allow all five options."
-            autoComplete="off"
-          />
-        )}
-      </BlockStack>
+          placeholder="Leave empty for unlimited"
+          autoComplete="off"
+          helpText="Maximum number of feedback icons a visitor can select."
+        />
+      )}
     </BlockStack>
   );
 }
-
 
 
 

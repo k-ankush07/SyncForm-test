@@ -2920,6 +2920,143 @@ export default function PreviewField({
       );
     }
 
+
+    // -------------------------------------------------------
+// FEEDBACK
+// -------------------------------------------------------
+case "feedback": {
+  const feedbackStyles = {
+    experience: ["😡", "🙁", "😐", "🙂", "😍"],
+    satisfaction: ["😞", "😕", "😐", "😊", "🤩"],
+    agreement: ["👎", "🙅", "🤷", "👍", "💯"],
+    effort: ["😫", "😓", "😐", "😌", "💪"],
+    likelihood: ["🚫", "🙁", "🤔", "🙂", "🚀"],
+  };
+
+  const emojis =
+    feedbackStyles[normalizedElement.feedbackStyle] ||
+    feedbackStyles.experience;
+
+  const allowMultiple = Boolean(normalizedElement.allowMultiple);
+
+  const maxSelections = Number(normalizedElement.maxSelections);
+
+  const selectedValues = Array.isArray(selected)
+    ? selected
+    : selected
+      ? [selected]
+      : [];
+
+  const handleFeedbackSelection = (emoji) => {
+    if (isReadOnly) return;
+
+    const alreadySelected = selectedValues.includes(emoji);
+
+    if (allowMultiple) {
+      if (alreadySelected) {
+        setSelected(
+          selectedValues.filter((item) => item !== emoji)
+        );
+        return;
+      }
+
+      if (
+        maxSelections > 0 &&
+        selectedValues.length >= maxSelections
+      ) {
+        return;
+      }
+
+      setSelected([...selectedValues, emoji]);
+    } else {
+      setSelected([emoji]);
+    }
+  };
+
+  return (
+    <BlockStack gap="200">
+      {fieldLabelWithIcon}
+
+      {normalizedElement.content && (
+        <Text as="p" variant="bodyMd">
+          {normalizedElement.content}
+        </Text>
+      )}
+
+      <div
+        style={{
+          width: "100%",
+          maxWidth: "100%",
+          minWidth: 0,
+          containerType: "inline-size",
+          containerName: "feedback-container",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            width: "100%",
+            gap: "clamp(4px, 2cqw, 9px)",
+            alignItems: "center",
+            justifyContent: "flex-start",
+            boxSizing: "border-box",
+            minWidth: 0,
+          }}
+        >
+          {emojis.map((emoji, index) => {
+            const isSelected = selectedValues.includes(emoji);
+
+            return (
+              <div
+                key={`${emoji}-${index}`}
+                style={{
+                  flex: "1 1 0",
+                  minWidth: 0,
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                }}
+              >
+                <button
+                  type="button"
+                  disabled={isReadOnly}
+                  onClick={() => handleFeedbackSelection(emoji)}
+                  style={{
+                    width: "100%",
+                    aspectRatio: "1 / 1",
+                    maxWidth: "90px",
+                    minWidth: 0,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "clamp(25px, 12cqw, 54px)",
+                    lineHeight: 1,
+                    background: isSelected ? "#EAF1EF" : "transparent",
+                    cursor: isReadOnly ? "default" : "pointer",
+                    padding: "2px",
+                    boxSizing: "border-box",
+                    overflow: "hidden",
+                    borderRadius: "8px",
+                    border: isSelected
+                      ? "2px solid #2E4E49"
+                      : "1px solid transparent",
+                    transition: "all 150ms ease",
+                  }}
+                >
+                  {emoji}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {descriptionText}
+    </BlockStack>
+  );
+}
+
+
     // -------------------------------------------------------
     // SIGNATURE
     // The hooks are now inside SignaturePreview.
