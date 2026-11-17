@@ -1,5 +1,8 @@
-
 import React, { useEffect, useState, useRef } from "react";
+import flatpickr from "flatpickr";
+import "flatpickr/dist/flatpickr.min.css";
+import monthSelectPlugin from "flatpickr/dist/plugins/monthSelect";
+import "flatpickr/dist/plugins/monthSelect/style.css";
 import SignaturePad from "signature_pad";
 import "flag-icons/css/flag-icons.min.css";
 import * as PolarisIcons from "@shopify/polaris-icons";
@@ -27,6 +30,7 @@ import FormProgressIndicator from "./RichTextEditor/FormProgressIndicator";
 import {
   isValidPhoneNumber,
 } from "libphonenumber-js";
+
 
 // =============================================================
 // SIGNATURE PREVIEW COMPONENT
@@ -288,7 +292,152 @@ function SignaturePreview({
   );
 }
 
+// =============================================================
+// REUSABLE FLATPICKR FIELD
+// =============================================================
 
+
+
+
+function FlatpickrField({
+  value = "",
+  options = {},
+  onChange,
+  placeholder = "",
+  className = "",
+}) {
+  const inputRef = useRef(null);
+  const instanceRef = useRef(null);
+
+  const optionsRef = useRef(options);
+  const onChangeRef = useRef(onChange);
+
+  optionsRef.current = options;
+  onChangeRef.current = onChange;
+
+  // INITIALIZE FLATPICKR
+  useEffect(() => {
+    const input = inputRef.current;
+    if (!input) return;
+
+    // Destroy an old instance if one exists.
+    const existingInstance = input._flatpickr;
+
+    if (existingInstance && typeof existingInstance.destroy === "function") {
+      existingInstance.destroy();
+    }
+
+    const instance = flatpickr(input, {
+      ...optionsRef.current,
+      clickOpens: true,
+      disableMobile: true,
+
+      onChange: (selectedDates, dateString) => {
+        onChangeRef.current?.(dateString, selectedDates);
+      },
+    });
+
+    const flatpickrInstance = input._flatpickr || instance;
+
+    if (!flatpickrInstance || typeof flatpickrInstance.destroy !== "function") {
+      console.error("Flatpickr initialization failed:", flatpickrInstance);
+      return;
+    }
+
+    instanceRef.current = flatpickrInstance;
+
+    return () => {
+      if (
+        input._flatpickr === flatpickrInstance &&
+        typeof flatpickrInstance.destroy === "function"
+      ) {
+        flatpickrInstance.destroy();
+      }
+
+      instanceRef.current = null;
+    };
+  }, []);
+
+  // UPDATE FLATPICKR OPTIONS
+  useEffect(() => {
+    const instance = instanceRef.current;
+    if (!instance || typeof instance.set !== "function") return;
+
+    Object.entries(options).forEach(([key, optionValue]) => {
+      if (
+        key === "onChange" ||
+        key === "onReady" ||
+        key === "plugins"
+      ) {
+        return;
+      }
+
+      try {
+        instance.set(key, optionValue);
+      } catch (error) {
+        console.warn(`Could not update Flatpickr option: ${key}`, error);
+      }
+    });
+  }, [options]);
+
+  // SYNC VALUE WITH FLATPICKR
+  useEffect(() => {
+    const instance = instanceRef.current;
+    if (!instance || typeof instance.setDate !== "function") return;
+
+    if (
+      value === undefined ||
+      value === null ||
+      value === "" ||
+      (Array.isArray(value) && value.length === 0)
+    ) {
+      instance.clear(false);
+      return;
+    }
+
+    // Do not pass a time-only value to a date-only picker.
+    const isDateOnly =
+      optionsRef.current.enableTime === false &&
+      optionsRef.current.noCalendar !== true;
+
+    if (
+      isDateOnly &&
+      typeof value === "string" &&
+      /^\d{1,2}:\d{2}\s?(AM|PM)$/i.test(value.trim())
+    ) {
+      console.warn("Date-only picker received a time-only value:", value);
+      instance.clear(false);
+      return;
+    }
+
+    instance.setDate(value, false);
+  }, [value]);
+
+  // OPEN PICKER
+  const openPicker = () => {
+    const input = inputRef.current;
+    const instance = input?._flatpickr || instanceRef.current;
+
+    if (!instance || typeof instance.open !== "function") {
+      console.error("Flatpickr instance is missing or invalid:", instance);
+      return;
+    }
+
+    instance.open();
+  };
+
+  // RENDER
+  return (
+    <input
+      ref={inputRef}
+      type="text"
+      readOnly
+      placeholder={placeholder}
+      className={className}
+      onClick={openPicker}
+    />
+  );
+}
 
 
 // =============================================================
@@ -950,6 +1099,122 @@ export default function PreviewField({
     // Allow selecting the same file again.
     event.target.value = "";
   };
+  //date ghelper
+
+  const getDateOnly = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+  };
+
+  const parseDateValue = (value) => {
+    if (!value) return null;
+
+    // Parse date strings as local dates, avoiding UTC date shifts.
+    const match = String(value).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+
+    if (match) {
+      return new Date(
+        Number(match[1]),
+        Number(match[2]) - 1,
+        Number(match[3])
+      );
+    }
+
+    const parsed = new Date(value);
+
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  };
+
+  const addDays = (date, days) => {
+    const result = new Date(date);
+    result.setDate(result.getDate() + Number(days || 0));
+    return result;
+  };
+
+  const getTimeMinutes = (value) => {
+    if (!value) return null;
+
+    const text = String(value).trim();
+
+    // 12-hour format, for example: 01:30 PM
+    const twelveHour = text.match(
+      /^(\d{1,2}):(\d{2})\s*(AM|PM)$/i
+    );
+
+    if (twelveHour) {
+      let hours = Number(twelveHour[1]) % 12;
+
+      if (twelveHour[3].toUpperCase() === "PM") {
+        hours += 12;
+      }
+
+      return hours * 60 + Number(twelveHour[2]);
+    }
+
+    // 24-hour format, for example: 13:30
+    const twentyFourHour = text.match(/^(\d{1,2}):(\d{2})$/);
+
+    if (twentyFourHour) {
+      return Number(twentyFourHour[1]) * 60 +
+        Number(twentyFourHour[2]);
+    }
+
+    return null;
+  };
+
+  const formatTimeOption = (totalMinutes, timeFormat) => {
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+
+    if (timeFormat === "12h") {
+      const period = hours >= 12 ? "PM" : "AM";
+      const displayHour = hours % 12 || 12;
+
+      return `${String(displayHour).padStart(2, "0")}:${String(
+        minutes
+      ).padStart(2, "0")} ${period}`;
+    }
+
+    return `${String(hours).padStart(2, "0")}:${String(
+      minutes
+    ).padStart(2, "0")}`;
+  };
+
+  const getTimeOptions = (element) => {
+    const step = Math.max(
+      1,
+      Math.min(60, Number(element.timeStep) || 15)
+    );
+
+    const timeFormat = element.timeFormat || "24h";
+
+    const start = element.enableStartTime !== false
+      ? getTimeMinutes(element.startTime || "09:00")
+      : 0;
+
+    const end = element.enableEndTime !== false
+      ? getTimeMinutes(element.endTime || "17:00")
+      : 23 * 60 + 59;
+
+    if (start === null || end === null || start > end) {
+      return [];
+    }
+
+    const options = [];
+
+    for (let minutes = start; minutes <= end; minutes += step) {
+      options.push({
+        label: formatTimeOption(minutes, timeFormat),
+        value: formatTimeOption(minutes, timeFormat),
+      });
+    }
+
+    return options;
+  };
+
 
 
   // =========================================================
@@ -2309,15 +2574,366 @@ export default function PreviewField({
     // DATE
     // -------------------------------------------------------
 
-    case "date":
-      return (
-        <TextField
-          {...commonTextFieldProps}
-          value={dateValue}
-          onChange={setDateValue}
-          readOnly={isReadOnly}
-        />
+
+
+
+    case "date": {
+      const format = normalizedElement.format || "date_time";
+
+      const dateFormat = normalizedElement.dateFormat || "Y-m-d";
+      const timeFormat = normalizedElement.timeFormat || "24h";
+      const timeType = normalizedElement.timeType || "picker";
+
+      const timeStep = Math.max(
+        1,
+        Math.min(60, Number(normalizedElement.timeStep) || 15)
       );
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      // ===========================================================
+      // DATE BOUNDARIES
+      // ===========================================================
+
+      let minDate;
+      let maxDate;
+
+      if (normalizedElement.startDateType === "today") {
+        minDate = today;
+      }
+
+      if (normalizedElement.startDateType === "specificDate") {
+        minDate =
+          parseDateValue(normalizedElement.specificStartDate) ||
+          undefined;
+      }
+
+      if (normalizedElement.startDateType === "relativeDate") {
+        minDate =
+          addDays(
+            today,
+            Number(normalizedElement.relativeStartDate) || 0
+          ) || undefined;
+      }
+
+      if (normalizedElement.endDateType === "today") {
+        maxDate = today;
+      }
+
+      if (normalizedElement.endDateType === "specificDate") {
+        maxDate =
+          parseDateValue(normalizedElement.specificDate) ||
+          undefined;
+      }
+
+      if (normalizedElement.endDateType === "relativeDate") {
+        maxDate =
+          addDays(
+            today,
+            Number(normalizedElement.relativeEndDate) || 0
+          ) || undefined;
+      }
+
+      // ===========================================================
+      // DATE RESTRICTIONS
+      // ===========================================================
+
+      const limitEnabled = Boolean(
+        normalizedElement.limitDatePicker &&
+        format === "date"
+      );
+
+      const limitType =
+        normalizedElement.limitDateType || "disable";
+
+      const specificDates = String(
+        normalizedElement.specificDates || ""
+      )
+        .split(",")
+        .map((item) => parseDateValue(item.trim()))
+        .filter(Boolean)
+        .map(getDateOnly);
+
+      const rangeParts = String(
+        normalizedElement.rangeDates || ""
+      )
+        .split(" to ")
+        .map((item) => parseDateValue(item.trim()))
+        .filter(Boolean);
+
+      const rangeStart = rangeParts[0]
+        ? getDateOnly(rangeParts[0])
+        : null;
+
+      const rangeEnd = rangeParts[1]
+        ? getDateOnly(rangeParts[1])
+        : rangeStart;
+
+      const selectedDays = Array.isArray(
+        normalizedElement.targetDaysOfWeek
+      )
+        ? normalizedElement.targetDaysOfWeek.map((day) =>
+          String(day).toLowerCase()
+        )
+        : [];
+
+      const weekdayNames = [
+        "sunday",
+        "monday",
+        "tuesday",
+        "wednesday",
+        "thursday",
+        "friday",
+        "saturday",
+      ];
+
+      const hasSpecificDates = Boolean(
+        limitEnabled && normalizedElement.enableSpecificDates
+      );
+
+      const hasRangeDates = Boolean(
+        limitEnabled && normalizedElement.enableRangeDates
+      );
+
+      const hasWeekdays = Boolean(
+        limitEnabled && normalizedElement.enableDaysOfWeek
+      );
+
+      const hasAnyRestriction =
+        hasSpecificDates || hasRangeDates || hasWeekdays;
+
+      const isDateInRange = (dateString) => {
+        if (!rangeStart) return false;
+
+        return (
+          dateString >= rangeStart &&
+          dateString <= (rangeEnd || rangeStart)
+        );
+      };
+
+      const matchesConfiguredDates = (date) => {
+        const dateString = getDateOnly(date);
+        const weekday = weekdayNames[date.getDay()];
+
+        const matchesSpecific =
+          hasSpecificDates &&
+          specificDates.includes(dateString);
+
+        const matchesRange =
+          hasRangeDates &&
+          isDateInRange(dateString);
+
+        const matchesWeekday =
+          hasWeekdays &&
+          selectedDays.includes(weekday);
+
+        return (
+          matchesSpecific ||
+          matchesRange ||
+          matchesWeekday
+        );
+      };
+
+      // ===========================================================
+      // ENABLE / DISABLE DATES
+      // ===========================================================
+
+      let enableDates;
+      let disableDates;
+
+      if (limitEnabled && hasAnyRestriction) {
+        if (limitType === "enable") {
+          enableDates = [
+            (date) => matchesConfiguredDates(date),
+          ];
+        } else {
+          disableDates = [
+            (date) => matchesConfiguredDates(date),
+          ];
+        }
+      }
+
+      // ===========================================================
+      // MONTH ONLY
+      // ===========================================================
+
+      const onlyShowMonth = Boolean(
+        normalizedElement.onlyShowMonth &&
+        format === "date"
+      );
+
+      // ===========================================================
+      // DATE FORMAT
+      // ===========================================================
+
+      const combinedDateFormat =
+        timeFormat === "12h"
+          ? `${dateFormat} h:i K`
+          : `${dateFormat} H:i`;
+
+      // ===========================================================
+      // DATE ONLY PICKER
+      // ===========================================================
+
+      const datePickerOptions = {
+        enableTime: false,
+        noCalendar: false,
+        clickOpens: true,
+        disableMobile: true,
+        static: false,
+        appendTo: document.body,
+
+        dateFormat: onlyShowMonth ? "Y-m" : dateFormat,
+
+        minDate,
+        maxDate,
+        enable: enableDates,
+        disable: disableDates,
+
+        allowInput: false,
+        monthSelectorType: "dropdown",
+        animate: true,
+      };
+
+      if (onlyShowMonth) {
+        datePickerOptions.plugins = [
+          new monthSelectPlugin({
+            shorthand: false,
+            dateFormat: "Y-m",
+            altFormat: "F Y",
+            theme: "light",
+          }),
+        ];
+      }
+
+      // ===========================================================
+      // DATE + TIME PICKER (ONE COMBINED FIELD)
+      // ===========================================================
+
+      const dateTimePickerOptions = {
+        enableTime: true,
+        noCalendar: false,
+
+        dateFormat: combinedDateFormat,
+
+        time_24hr: timeFormat !== "12h",
+        minuteIncrement: timeStep,
+
+        minDate,
+        maxDate,
+
+        allowInput: false,
+        monthSelectorType: "dropdown",
+        animate: true,
+      };
+
+      // ===========================================================
+      // TIME ONLY PICKER
+      // ===========================================================
+
+      const timePickerOptions = {
+        enableTime: true,
+        noCalendar: true,
+
+        dateFormat:
+          timeFormat === "12h" ? "h:i K" : "H:i",
+
+        time_24hr: timeFormat !== "12h",
+        minuteIncrement: timeStep,
+
+        allowInput: false,
+      };
+
+      const timeOptions = getTimeOptions(normalizedElement);
+
+      // ===========================================================
+      // UPDATE VALUE
+      // ===========================================================
+
+      const updateDateValue = (nextValue) => {
+        const safeValue = nextValue ?? "";
+
+        setDateValue(safeValue);
+        onChange?.(safeValue);
+      };
+
+      // ===========================================================
+      // RENDER
+      // ===========================================================
+
+      return (
+        <BlockStack gap="300">
+          {!hideLabel && fieldLabelWithIcon}
+
+          {/* =========================================
+          DATE + TIME: ONE COMBINED PICKER
+      ========================================= */}
+
+          {format === "date_time" && (
+            <FlatpickrField
+              key="combined-date-time-picker"
+              value={dateValue || ""}
+              options={dateTimePickerOptions}
+              onChange={updateDateValue}
+              placeholder={placeholder || "Select date and time"}
+              className="date-time-flatpickr-input"
+            />
+          )}
+
+          {/* =========================================
+          DATE ONLY
+      ========================================= */}
+
+          {format === "date" && (
+            <FlatpickrField
+              key={onlyShowMonth ? "month-picker" : "date-picker"}
+              value={dateValue || ""}
+              options={datePickerOptions}
+              onChange={updateDateValue}
+              placeholder={
+                onlyShowMonth ? "Select month" : placeholder
+              }
+              className="date-time-flatpickr-input"
+            />
+          )}
+
+          {/* =========================================
+          TIME ONLY: PICKER
+      ========================================= */}
+
+          {format === "time" && timeType === "picker" && (
+            <FlatpickrField
+              key="time-only-picker"
+              value={dateValue || ""}
+              options={timePickerOptions}
+              onChange={updateDateValue}
+              placeholder="Select time"
+              className="date-time-flatpickr-input"
+            />
+          )}
+
+          {/* =========================================
+          TIME ONLY: DROPDOWN
+      ========================================= */}
+
+          {format === "time" && timeType === "dropdown" && (
+            <Select
+              label="Select time"
+              labelHidden
+              placeholder="Select time"
+              options={timeOptions}
+              value={dateValue || ""}
+              onChange={updateDateValue}
+            />
+          )}
+
+          {descriptionText}
+        </BlockStack>
+      );
+    }
+
+
 
     // -------------------------------------------------------
     // TEXT
@@ -2922,139 +3538,139 @@ export default function PreviewField({
 
 
     // -------------------------------------------------------
-// FEEDBACK
-// -------------------------------------------------------
-case "feedback": {
-  const feedbackStyles = {
-    experience: ["😡", "🙁", "😐", "🙂", "😍"],
-    satisfaction: ["😞", "😕", "😐", "😊", "🤩"],
-    agreement: ["👎", "🙅", "🤷", "👍", "💯"],
-    effort: ["😫", "😓", "😐", "😌", "💪"],
-    likelihood: ["🚫", "🙁", "🤔", "🙂", "🚀"],
-  };
+    // FEEDBACK
+    // -------------------------------------------------------
+    case "feedback": {
+      const feedbackStyles = {
+        experience: ["😡", "🙁", "😐", "🙂", "😍"],
+        satisfaction: ["😞", "😕", "😐", "😊", "🤩"],
+        agreement: ["👎", "🙅", "🤷", "👍", "💯"],
+        effort: ["😫", "😓", "😐", "😌", "💪"],
+        likelihood: ["🚫", "🙁", "🤔", "🙂", "🚀"],
+      };
 
-  const emojis =
-    feedbackStyles[normalizedElement.feedbackStyle] ||
-    feedbackStyles.experience;
+      const emojis =
+        feedbackStyles[normalizedElement.feedbackStyle] ||
+        feedbackStyles.experience;
 
-  const allowMultiple = Boolean(normalizedElement.allowMultiple);
+      const allowMultiple = Boolean(normalizedElement.allowMultiple);
 
-  const maxSelections = Number(normalizedElement.maxSelections);
+      const maxSelections = Number(normalizedElement.maxSelections);
 
-  const selectedValues = Array.isArray(selected)
-    ? selected
-    : selected
-      ? [selected]
-      : [];
+      const selectedValues = Array.isArray(selected)
+        ? selected
+        : selected
+          ? [selected]
+          : [];
 
-  const handleFeedbackSelection = (emoji) => {
-    if (isReadOnly) return;
+      const handleFeedbackSelection = (emoji) => {
+        if (isReadOnly) return;
 
-    const alreadySelected = selectedValues.includes(emoji);
+        const alreadySelected = selectedValues.includes(emoji);
 
-    if (allowMultiple) {
-      if (alreadySelected) {
-        setSelected(
-          selectedValues.filter((item) => item !== emoji)
-        );
-        return;
-      }
-
-      if (
-        maxSelections > 0 &&
-        selectedValues.length >= maxSelections
-      ) {
-        return;
-      }
-
-      setSelected([...selectedValues, emoji]);
-    } else {
-      setSelected([emoji]);
-    }
-  };
-
-  return (
-    <BlockStack gap="200">
-      {fieldLabelWithIcon}
-
-      {normalizedElement.content && (
-        <Text as="p" variant="bodyMd">
-          {normalizedElement.content}
-        </Text>
-      )}
-
-      <div
-        style={{
-          width: "100%",
-          maxWidth: "100%",
-          minWidth: 0,
-          containerType: "inline-size",
-          containerName: "feedback-container",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            width: "100%",
-            gap: "clamp(4px, 2cqw, 9px)",
-            alignItems: "center",
-            justifyContent: "flex-start",
-            boxSizing: "border-box",
-            minWidth: 0,
-          }}
-        >
-          {emojis.map((emoji, index) => {
-            const isSelected = selectedValues.includes(emoji);
-
-            return (
-              <div
-                key={`${emoji}-${index}`}
-                style={{
-                  flex: "1 1 0",
-                  minWidth: 0,
-                  display: "flex",
-                  justifyContent: "center",
-                  alignItems: "center",
-                }}
-              >
-                <button
-                  type="button"
-                  disabled={isReadOnly}
-                  onClick={() => handleFeedbackSelection(emoji)}
-                  style={{
-                    width: "100%",
-                    aspectRatio: "1 / 1",
-                    maxWidth: "90px",
-                    minWidth: 0,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: "clamp(25px, 12cqw, 54px)",
-                    lineHeight: 1,
-                    background: isSelected ? "#EAF1EF" : "transparent",
-                    cursor: isReadOnly ? "default" : "pointer",
-                    padding: "2px",
-                    boxSizing: "border-box",
-                    overflow: "hidden",
-                    borderRadius: "8px",
-                    border: isSelected
-                      ? "2px solid #2E4E49"
-                      : "1px solid transparent",
-                    transition: "all 150ms ease",
-                  }}
-                >
-                  {emoji}
-                </button>
-              </div>
+        if (allowMultiple) {
+          if (alreadySelected) {
+            setSelected(
+              selectedValues.filter((item) => item !== emoji)
             );
-          })}
-        </div>
-      </div>
+            return;
+          }
 
-      {descriptionText}
-    </BlockStack>
-  );
-}
+          if (
+            maxSelections > 0 &&
+            selectedValues.length >= maxSelections
+          ) {
+            return;
+          }
+
+          setSelected([...selectedValues, emoji]);
+        } else {
+          setSelected([emoji]);
+        }
+      };
+
+      return (
+        <BlockStack gap="200">
+          {fieldLabelWithIcon}
+
+          {normalizedElement.content && (
+            <Text as="p" variant="bodyMd">
+              {normalizedElement.content}
+            </Text>
+          )}
+
+          <div
+            style={{
+              width: "100%",
+              maxWidth: "100%",
+              minWidth: 0,
+              containerType: "inline-size",
+              containerName: "feedback-container",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                width: "100%",
+                gap: "clamp(4px, 2cqw, 9px)",
+                alignItems: "center",
+                justifyContent: "flex-start",
+                boxSizing: "border-box",
+                minWidth: 0,
+              }}
+            >
+              {emojis.map((emoji, index) => {
+                const isSelected = selectedValues.includes(emoji);
+
+                return (
+                  <div
+                    key={`${emoji}-${index}`}
+                    style={{
+                      flex: "1 1 0",
+                      minWidth: 0,
+                      display: "flex",
+                      justifyContent: "center",
+                      alignItems: "center",
+                    }}
+                  >
+                    <button
+                      type="button"
+                      disabled={isReadOnly}
+                      onClick={() => handleFeedbackSelection(emoji)}
+                      style={{
+                        width: "100%",
+                        aspectRatio: "1 / 1",
+                        maxWidth: "90px",
+                        minWidth: 0,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: "clamp(25px, 12cqw, 54px)",
+                        lineHeight: 1,
+                        background: isSelected ? "#EAF1EF" : "transparent",
+                        cursor: isReadOnly ? "default" : "pointer",
+                        padding: "2px",
+                        boxSizing: "border-box",
+                        overflow: "hidden",
+                        borderRadius: "8px",
+                        border: isSelected
+                          ? "2px solid #2E4E49"
+                          : "1px solid transparent",
+                        transition: "all 150ms ease",
+                      }}
+                    >
+                      {emoji}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {descriptionText}
+        </BlockStack>
+      );
+    }
 
 
     // -------------------------------------------------------

@@ -1015,7 +1015,7 @@ export function MatrixSettings({ element, onChange }) {
 
 
 
-export default function FeedbackSettings({ element, onChange }) {
+export function FeedbackSettings({ element, onChange }) {
   const update = (key, value) => {
     onChange({
       ...element,

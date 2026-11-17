@@ -1,6 +1,6 @@
 
-import React, { useState } from "react";
-import Flatpickr from "react-flatpickr";
+import React, { useState, useEffect, useRef } from "react";
+import flatpickr from "flatpickr";
 import "flatpickr/dist/flatpickr.min.css";
 
 import {
@@ -13,10 +13,161 @@ import {
 } from "@shopify/polaris";
 
 // =====================================
+// REUSABLE FLATPICKR INPUT
+// =====================================
+
+const FlatpickrInput = ({
+    value,
+    onChange,
+    dateFormat = "Y-m-d",
+    mode = "single",
+    enableTime = false,
+    noCalendar = false,
+    time24hr = true,
+    minuteIncrement = 5,
+    placeholder = "",
+    className = "date-time-flatpickr-input",
+}) => {
+    const inputRef = useRef(null);
+    const instanceRef = useRef(null);
+    const onChangeRef = useRef(onChange);
+
+    onChangeRef.current = onChange;
+
+    // =====================================
+    // INITIALIZE FLATPICKR
+    // =====================================
+
+    useEffect(() => {
+        const input = inputRef.current;
+
+        if (!input) return;
+
+        // Clean up an existing instance, if present.
+        const existingInstance = input._flatpickr;
+
+        if (
+            existingInstance &&
+            typeof existingInstance.destroy === "function"
+        ) {
+            existingInstance.destroy();
+        }
+
+        // Initialize Flatpickr.
+        const createdInstance = flatpickr(input, {
+            enableTime,
+            noCalendar,
+            dateFormat,
+            mode,
+            allowInput: false,
+            monthSelectorType: "dropdown",
+            animate: true,
+            time_24hr: time24hr,
+            minuteIncrement: Math.max(
+                1,
+                Number(minuteIncrement) || 5
+            ),
+
+            onChange: (selectedDates, dateString) => {
+                onChangeRef.current?.(
+                    dateString,
+                    selectedDates
+                );
+            },
+        });
+
+        // Get the actual instance attached to the input.
+        const instance = input._flatpickr || createdInstance;
+
+        if (
+            !instance ||
+            typeof instance.destroy !== "function"
+        ) {
+            console.error(
+                "Flatpickr initialization failed.",
+                instance
+            );
+
+            return;
+        }
+
+        instanceRef.current = instance;
+
+        // =====================================
+        // CLEANUP
+        // =====================================
+
+        return () => {
+            const currentInstance = input._flatpickr;
+
+            if (
+                currentInstance &&
+                currentInstance === instance &&
+                typeof currentInstance.destroy === "function"
+            ) {
+                currentInstance.destroy();
+            }
+
+            instanceRef.current = null;
+        };
+    }, [
+        dateFormat,
+        mode,
+        enableTime,
+        noCalendar,
+        time24hr,
+        minuteIncrement,
+    ]);
+
+    // =====================================
+    // SYNC VALUE WITH FLATPICKR
+    // =====================================
+
+    useEffect(() => {
+        const instance = instanceRef.current;
+
+        if (
+            !instance ||
+            typeof instance.setDate !== "function"
+        ) {
+            return;
+        }
+
+        if (
+            value === undefined ||
+            value === null ||
+            value === "" ||
+            (Array.isArray(value) && value.length === 0)
+        ) {
+            if (typeof instance.clear === "function") {
+                instance.clear(false);
+            }
+
+            return;
+        }
+
+        instance.setDate(value, false, dateFormat);
+    }, [value, dateFormat]);
+
+    return (
+        <input
+            ref={inputRef}
+            type="text"
+            readOnly
+            placeholder={placeholder}
+            className={className}
+        />
+    );
+};
+
+// =====================================
 // TARGET DAYS PICKER
 // =====================================
+
 const TargetDaysPicker = ({ value = [], onChange }) => {
     const [isOpen, setIsOpen] = useState(false);
+
+    const selectedDays = Array.isArray(value) ? value : [];
 
     const days = [
         { label: "Monday", value: "monday" },
@@ -29,25 +180,27 @@ const TargetDaysPicker = ({ value = [], onChange }) => {
     ];
 
     const toggleDay = (day) => {
-        const updatedDays = value.includes(day)
-            ? value.filter((item) => item !== day)
-            : [...value, day];
+        const updatedDays = selectedDays.includes(day)
+            ? selectedDays.filter((item) => item !== day)
+            : [...selectedDays, day];
 
         onChange(updatedDays);
     };
 
     const removeDay = (day) => {
-        onChange(value.filter((item) => item !== day));
+        onChange(
+            selectedDays.filter((item) => item !== day)
+        );
     };
 
     return (
         <div className="target-days-picker">
             <div
                 className="target-days-selection"
-                onClick={() => setIsOpen(!isOpen)}
+                onClick={() => setIsOpen((previous) => !previous)}
             >
                 <div className="target-days-values">
-                    {value.map((day) => (
+                    {selectedDays.map((day) => (
                         <span
                             key={day}
                             className="target-day-chip"
@@ -65,14 +218,18 @@ const TargetDaysPicker = ({ value = [], onChange }) => {
                         </span>
                     ))}
 
-                    {value.length === 0 && (
+                    {selectedDays.length === 0 && (
                         <span className="target-days-placeholder">
                             Select days
                         </span>
                     )}
                 </div>
 
-                <span className={`target-days-arrow ${isOpen ? "open" : ""}`}>
+                <span
+                    className={`target-days-arrow ${
+                        isOpen ? "open" : ""
+                    }`}
+                >
                     <svg viewBox="0 0 10 7" width="10" height="7">
                         <path
                             d="M1 1l4 4 4-4"
@@ -87,13 +244,16 @@ const TargetDaysPicker = ({ value = [], onChange }) => {
             {isOpen && (
                 <div className="target-days-options">
                     {days.map((day) => {
-                        const selected = value.includes(day.value);
+                        const selected = selectedDays.includes(
+                            day.value
+                        );
 
                         return (
                             <div
                                 key={day.value}
-                                className={`target-days-option ${selected ? "selected" : ""
-                                    }`}
+                                className={`target-days-option ${
+                                    selected ? "selected" : ""
+                                }`}
                                 onClick={() => toggleDay(day.value)}
                             >
                                 <span>{day.label}</span>
@@ -127,30 +287,12 @@ const DatePickerField = ({
                 </Text>
             )}
 
-            <Flatpickr
+            <FlatpickrInput
                 value={value || ""}
-                options={{
-                    enableTime: false,
-                    noCalendar: false,
-                    dateFormat,
-                    mode,
-                    allowInput: false,
-                    monthSelectorType: "dropdown",
-                    animate: true,
-                }}
-                onChange={(dates, dateString) => {
-                    onChange(dateString);
-                }}
-                render={(props, ref) => (
-                    <input
-                        {...props}
-                        ref={ref}
-                        value={value || ""}
-                        readOnly
-                        placeholder={dateFormat}
-                        className="date-time-flatpickr-input"
-                    />
-                )}
+                onChange={onChange}
+                dateFormat={dateFormat}
+                mode={mode}
+                placeholder={dateFormat}
             />
         </BlockStack>
     );
@@ -161,7 +303,6 @@ const DatePickerField = ({
 // =====================================
 
 const DateSettings = ({ element, onChange }) => {
-
     const update = (key, value) => {
         onChange({
             ...element,
@@ -169,21 +310,31 @@ const DateSettings = ({ element, onChange }) => {
         });
     };
 
-    // Selected format
+    // =====================================
+    // SELECTED FORMAT
+    // =====================================
+
     const format = element.format || "date_time";
 
+    // Date & time and Date share date settings.
     const showDateSettings =
         format === "date_time" || format === "date";
 
-    const showTimeSettings =
+    // Date & time and Time share time format settings.
+    const showTimeFormat =
         format === "date_time" || format === "time";
 
-    const isDate = format === "date";
+    // Only Date displays date restrictions.
+    const showDateRestrictions = format === "date";
+
+    // Only Time displays advanced time settings.
+    const showAdvancedTimeSettings = format === "time";
 
     const dateFormat = element.dateFormat || "Y-m-d";
+    const timeFormat = element.timeFormat || "24h";
 
     // =====================================
-    // OPTIONS
+    // LOCALIZATION OPTIONS
     // =====================================
 
     const localizationOptions = [
@@ -246,6 +397,10 @@ const DateSettings = ({ element, onChange }) => {
         { label: "Mandarin", value: "zh" },
     ];
 
+    // =====================================
+    // DATE FORMAT OPTIONS
+    // =====================================
+
     const dateFormatOptions = [
         { label: "Y-m-d", value: "Y-m-d" },
         { label: "d-m-Y", value: "d-m-Y" },
@@ -260,10 +415,18 @@ const DateSettings = ({ element, onChange }) => {
         { label: "m/d", value: "m/d" },
     ];
 
+    // =====================================
+    // TIME FORMAT OPTIONS
+    // =====================================
+
     const timeFormatOptions = [
         { label: "24h", value: "24h" },
         { label: "12h", value: "12h" },
     ];
+
+    // =====================================
+    // START / END DATE OPTIONS
+    // =====================================
 
     const startDateOptions = [
         { label: "Unset", value: "false" },
@@ -279,13 +442,9 @@ const DateSettings = ({ element, onChange }) => {
         { label: "Relative date", value: "relativeDate" },
     ];
 
-    const targetDayOptions = [
-        { label: "All days", value: "all" },
-        { label: "Weekdays", value: "weekdays" },
-        { label: "Weekends", value: "weekends" },
-        { label: "Saturday", value: "saturday" },
-        { label: "Sunday", value: "sunday" },
-    ];
+    // =====================================
+    // TIME TYPE OPTIONS
+    // =====================================
 
     const timeTypeOptions = [
         { label: "Time picker", value: "picker" },
@@ -293,7 +452,7 @@ const DateSettings = ({ element, onChange }) => {
     ];
 
     // =====================================
-    // TIME PICKER
+    // START / END TIME PICKER
     // =====================================
 
     const renderTimePicker = (field, defaultValue, label) => {
@@ -303,6 +462,16 @@ const DateSettings = ({ element, onChange }) => {
                 : "enableEndTime";
 
         const enabled = element[enabledKey] !== false;
+
+        const pickerFormat =
+            timeFormat === "12h" ? "h:i K" : "H:i";
+
+        const fallbackValue =
+            timeFormat === "12h"
+                ? field === "startTime"
+                    ? "12:00 PM"
+                    : "12:00 AM"
+                : defaultValue;
 
         return (
             <BlockStack gap="200">
@@ -315,31 +484,19 @@ const DateSettings = ({ element, onChange }) => {
                 />
 
                 {enabled && (
-                    <Flatpickr
-                        value={element[field] || defaultValue}
-                        options={{
-                            enableTime: true,
-                            noCalendar: true,
-                            dateFormat: "H:i",
-                            time_24hr: element.timeFormat !== "12h",
-                            minuteIncrement: Math.max(
-                                1,
-                                Number(element.timeStep) || 5
-                            ),
-                        }}
-                        onChange={(dates, dateString) =>
+                    <FlatpickrInput
+                        value={element[field] || fallbackValue}
+                        onChange={(dateString) =>
                             update(field, dateString)
                         }
-                        render={(props, ref) => (
-                            <input
-                                {...props}
-                                ref={ref}
-                                value={element[field] || defaultValue}
-                                readOnly
-                                placeholder={label}
-                                className="Polaris-TextField__Input date-time-flatpickr-input"
-                            />
-                        )}
+                        dateFormat={pickerFormat}
+                        mode="single"
+                        enableTime
+                        noCalendar
+                        time24hr={timeFormat !== "12h"}
+                        minuteIncrement={element.timeStep ?? 8}
+                        placeholder={label}
+                        className="Polaris-TextField__Input date-time-flatpickr-input"
                     />
                 )}
             </BlockStack>
@@ -353,7 +510,9 @@ const DateSettings = ({ element, onChange }) => {
     return (
         <BlockStack gap="400">
 
-            {/* FORMAT */}
+            {/* =====================================
+                FORMAT
+            ====================================== */}
 
             <BlockStack gap="200">
                 <Text as="span" variant="bodyMd">
@@ -368,8 +527,9 @@ const DateSettings = ({ element, onChange }) => {
                     ].map((item) => (
                         <div
                             key={item.value}
-                            className={`chooseItem ${format === item.value ? "active" : ""
-                                }`}
+                            className={`chooseItem ${
+                                format === item.value ? "active" : ""
+                            }`}
                             onClick={() => update("format", item.value)}
                         >
                             {item.label}
@@ -378,7 +538,10 @@ const DateSettings = ({ element, onChange }) => {
                 </div>
             </BlockStack>
 
-            {/* OTHER LANGUAGE */}
+            {/* =====================================
+                OTHER LANGUAGE
+                AVAILABLE FOR ALL FORMATS
+            ====================================== */}
 
             <Checkbox
                 label="Other language"
@@ -400,130 +563,114 @@ const DateSettings = ({ element, onChange }) => {
             )}
 
             {/* =====================================
-                DATE SETTINGS
+                DATE FORMAT
+                DATE & TIME + DATE
             ====================================== */}
 
             {showDateSettings && (
                 <>
                     <Divider />
 
-                    <BlockStack gap="300">
+                    <Select
+                        label="Date format"
+                        options={dateFormatOptions}
+                        value={dateFormat}
+                        onChange={(value) =>
+                            update("dateFormat", value)
+                        }
+                    />
 
-                        {/* DATE FORMAT */}
+                    {/* DEFAULT DATE */}
 
-                        <Select
-                            label="Date format"
-                            options={dateFormatOptions}
-                            value={dateFormat}
-                            onChange={(value) =>
-                                update("dateFormat", value)
-                            }
-                        />
+                    <DatePickerField
+                        label="Default date"
+                        value={element.defaultDate || ""}
+                        onChange={(value) =>
+                            update("defaultDate", value)
+                        }
+                        dateFormat={dateFormat}
+                    />
 
-                        {/* DEFAULT DATE */}
+                    {/* START DATE */}
 
-                        <DatePickerField
-                            label="Default date"
-                            value={element.defaultDate}
-                            onChange={(value) =>
-                                update("defaultDate", value)
-                            }
-                            dateFormat={dateFormat}
-                        />
+                    <Select
+                        label="Start date"
+                        options={startDateOptions}
+                        value={element.startDateType || "false"}
+                        onChange={(value) =>
+                            update("startDateType", value)
+                        }
+                    />
 
-                        {/* START DATE */}
-
-                        <Select
-                            label="Start date"
-                            options={startDateOptions}
-                            value={element.startDateType || "false"}
-                            onChange={(value) =>
-                                update("startDateType", value)
-                            }
-                        />
-
-                        {element.startDateType === "specificDate" && (
-                            <DatePickerField
-                                label="Specific date"
-                                value={element.specificStartDate}
-                                onChange={(value) =>
-                                    update("specificStartDate", value)
-                                }
-                                dateFormat={dateFormat}
-                            />
-                        )}
-
-                        {element.startDateType === "relativeDate" && (
-                            <TextField
-                                label="Relative date (days)"
-                                type="number"
-                                value={String(
-                                    element.relativeStartDate ?? ""
-                                )}
-                                onChange={(value) =>
-                                    update("relativeStartDate", value)
-                                }
-                                autoComplete="off"
-                            />
-                        )}
-
-                        {/* END DATE */}
-
-                        <Select
-                            label="End date"
-                            options={endDateOptions}
-                            value={element.endDateType || "false"}
-                            onChange={(value) =>
-                                update("endDateType", value)
-                            }
-                        />
-
-                        {element.endDateType === "specificDate" && (
-                            <DatePickerField
-                                label="Specific end date"
-                                value={element.specificDate}
-                                onChange={(value) =>
-                                    update("specificDate", value)
-                                }
-                                dateFormat={dateFormat}
-                            />
-                        )}
-
-                        {element.endDateType === "relativeDate" && (
-                            <TextField
-                                label="Relative date (days)"
-                                type="number"
-                                value={String(
-                                    element.relativeEndDate ?? ""
-                                )}
-                                onChange={(value) =>
-                                    update("relativeEndDate", value)
-                                }
-                                autoComplete="off"
-                            />
-                        )}
-
-                        {/* SPECIFIC DATE */}
-
+                    {element.startDateType === "specificDate" && (
                         <DatePickerField
                             label="Specific date"
-                            value={element.selectedSpecificDate}
+                            value={element.specificStartDate || ""}
                             onChange={(value) =>
-                                update("selectedSpecificDate", value)
+                                update("specificStartDate", value)
                             }
                             dateFormat={dateFormat}
                         />
+                    )}
 
-                    </BlockStack>
+                    {element.startDateType === "relativeDate" && (
+                        <TextField
+                            label="Relative date (days)"
+                            type="number"
+                            value={String(
+                                element.relativeStartDate ?? ""
+                            )}
+                            onChange={(value) =>
+                                update("relativeStartDate", value)
+                            }
+                            autoComplete="off"
+                        />
+                    )}
+
+                    {/* END DATE */}
+
+                    <Select
+                        label="End date"
+                        options={endDateOptions}
+                        value={element.endDateType || "false"}
+                        onChange={(value) =>
+                            update("endDateType", value)
+                        }
+                    />
+
+                    {element.endDateType === "specificDate" && (
+                        <DatePickerField
+                            label="Specific end date"
+                            value={element.specificDate || ""}
+                            onChange={(value) =>
+                                update("specificDate", value)
+                            }
+                            dateFormat={dateFormat}
+                        />
+                    )}
+
+                    {element.endDateType === "relativeDate" && (
+                        <TextField
+                            label="Relative date (days)"
+                            type="number"
+                            value={String(
+                                element.relativeEndDate ?? ""
+                            )}
+                            onChange={(value) =>
+                                update("relativeEndDate", value)
+                            }
+                            autoComplete="off"
+                        />
+                    )}
                 </>
             )}
 
             {/* =====================================
-                LIMIT DATE PICKER
+                DATE-ONLY RESTRICTIONS
                 ONLY WHEN DATE IS SELECTED
             ====================================== */}
 
-            {isDate && (
+            {showDateRestrictions && (
                 <>
                     <Divider />
 
@@ -573,7 +720,7 @@ const DateSettings = ({ element, onChange }) => {
                             {element.enableSpecificDates && (
                                 <DatePickerField
                                     label="Select specific dates"
-                                    value={element.specificDates}
+                                    value={element.specificDates || ""}
                                     onChange={(value) =>
                                         update("specificDates", value)
                                     }
@@ -597,7 +744,7 @@ const DateSettings = ({ element, onChange }) => {
                             {element.enableRangeDates && (
                                 <DatePickerField
                                     label="Select range dates"
-                                    value={element.rangeDates}
+                                    value={element.rangeDates || ""}
                                     onChange={(value) =>
                                         update("rangeDates", value)
                                     }
@@ -625,14 +772,18 @@ const DateSettings = ({ element, onChange }) => {
                                     </Text>
 
                                     <TargetDaysPicker
-                                        value={element.targetDaysOfWeek || []}
+                                        value={
+                                            element.targetDaysOfWeek || []
+                                        }
                                         onChange={(value) =>
-                                            update("targetDaysOfWeek", value)
+                                            update(
+                                                "targetDaysOfWeek",
+                                                value
+                                            )
                                         }
                                     />
                                 </BlockStack>
                             )}
-
                         </BlockStack>
                     )}
 
@@ -649,85 +800,91 @@ const DateSettings = ({ element, onChange }) => {
             )}
 
             {/* =====================================
-                TIME SETTINGS
+                TIME FORMAT
+                DATE & TIME + TIME
             ====================================== */}
 
-            {showTimeSettings && (
+            {showTimeFormat && (
                 <>
                     <Divider />
 
-                    <BlockStack gap="300">
-
-                        {/* TIME FORMAT */}
-
-                        <Select
-                            label="Time format"
-                            options={timeFormatOptions}
-                            value={element.timeFormat || "24h"}
-                            onChange={(value) =>
-                                update("timeFormat", value)
-                            }
-                        />
-
-                        {/* TYPE */}
-
-                        <BlockStack gap="200">
-                            <Text as="span" variant="bodyMd">
-                                Type
-                            </Text>
-
-                            <div className="column-width-selector">
-                                {timeTypeOptions.map((item) => (
-                                    <div
-                                        key={item.value}
-                                        className={`chooseItem ${(element.timeType || "picker") ===
-                                                item.value
-                                                ? "active"
-                                                : ""
-                                            }`}
-                                        onClick={() =>
-                                            update("timeType", item.value)
-                                        }
-                                    >
-                                        {item.label}
-                                    </div>
-                                ))}
-                            </div>
-                        </BlockStack>
-
-                        {/* STEP */}
-
-                        <TextField
-                            label="Step"
-                            type="number"
-                            value={String(element.timeStep ?? "15")}
-                            onChange={(value) =>
-                                update("timeStep", value)
-                            }
-                            suffix="minutes"
-                            autoComplete="off"
-                        />
-
-                        {/* START TIME */}
-
-                        {renderTimePicker(
-                            "startTime",
-                            "12:00",
-                            "Start time"
-                        )}
-
-                        {/* END TIME */}
-
-                        {renderTimePicker(
-                            "endTime",
-                            "00:00",
-                            "End time"
-                        )}
-
-                    </BlockStack>
+                    <Select
+                        label="Time format"
+                        options={timeFormatOptions}
+                        value={timeFormat}
+                        onChange={(value) =>
+                            update("timeFormat", value)
+                        }
+                    />
                 </>
             )}
 
+            {/* =====================================
+                ADVANCED TIME SETTINGS
+                ONLY WHEN TIME IS SELECTED
+            ====================================== */}
+
+            {showAdvancedTimeSettings && (
+                <>
+                    <Divider />
+
+                    {/* TYPE */}
+
+                    <BlockStack gap="200">
+                        <Text as="span" variant="bodyMd">
+                            Type
+                        </Text>
+
+                        <div className="column-width-selector">
+                            {timeTypeOptions.map((item) => (
+                                <div
+                                    key={item.value}
+                                    className={`chooseItem ${
+                                        (element.timeType || "picker") ===
+                                        item.value
+                                            ? "active"
+                                            : ""
+                                    }`}
+                                    onClick={() =>
+                                        update("timeType", item.value)
+                                    }
+                                >
+                                    {item.label}
+                                </div>
+                            ))}
+                        </div>
+                    </BlockStack>
+
+                    {/* STEP */}
+
+                    <TextField
+                        label="Step"
+                        type="number"
+                        value={String(element.timeStep ?? "8")}
+                        onChange={(value) =>
+                            update("timeStep", value)
+                        }
+                        autoComplete="off"
+                        suffix="minutes"
+                    />
+
+                    {/* START TIME */}
+
+                    {renderTimePicker(
+                        "startTime",
+                        "12:00",
+                        "Start time"
+                    )}
+
+                    {/* END TIME */}
+
+                    {renderTimePicker(
+                        "endTime",
+                        "00:00",
+                        "End time"
+                    )}
+                </>
+            )}
         </BlockStack>
     );
 };

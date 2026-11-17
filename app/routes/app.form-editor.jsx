@@ -407,6 +407,7 @@ export default function FormEditor() {
 
   // Element currently opened in the settings panel.
   const [selectedElement, setSelectedElement] = useState(null);
+  
 
   // Element picker popover state.
   const [elementPickerOpen, setElementPickerOpen] = useState(false);
