@@ -1,11 +1,18 @@
 import React, { useEffect, useState, useRef } from "react";
 import flatpickr from "flatpickr";
+import flatpickrLocales from "flatpickr/dist/l10n/index.js";
 import "flatpickr/dist/flatpickr.min.css";
 import monthSelectPlugin from "flatpickr/dist/plugins/monthSelect";
 import "flatpickr/dist/plugins/monthSelect/style.css";
 import SignaturePad from "signature_pad";
 import "flag-icons/css/flag-icons.min.css";
 import * as PolarisIcons from "@shopify/polaris-icons";
+import { Spanish } from "flatpickr/dist/l10n/es.js";
+import { French } from "flatpickr/dist/l10n/fr.js";
+import { German } from "flatpickr/dist/l10n/de.js";
+import { Italian } from "flatpickr/dist/l10n/it.js";
+import { Portuguese } from "flatpickr/dist/l10n/pt.js";
+import { Dutch } from "flatpickr/dist/l10n/nl.js";
 import {
   Icon,
   Text,
@@ -1183,37 +1190,41 @@ export default function PreviewField({
     ).padStart(2, "0")}`;
   };
 
-  const getTimeOptions = (element) => {
-    const step = Math.max(
-      1,
-      Math.min(60, Number(element.timeStep) || 15)
-    );
+ 
+const getTimeOptions = (element) => {
+  const step = Math.max(
+    1,
+    Math.min(60, Number(element.timeStep) || 15)
+  );
 
-    const timeFormat = element.timeFormat || "24h";
+  const timeFormat = element.timeFormat || "24h";
 
-    const start = element.enableStartTime !== false
-      ? getTimeMinutes(element.startTime || "09:00")
-      : 0;
+  // Apply start/end restrictions only when explicitly enabled.
+  const start = element.enableStartTime === true
+    ? getTimeMinutes(element.startTime)
+    : 0;
 
-    const end = element.enableEndTime !== false
-      ? getTimeMinutes(element.endTime || "17:00")
-      : 23 * 60 + 59;
+  const end = element.enableEndTime === true
+    ? getTimeMinutes(element.endTime)
+    : 23 * 60 + 59;
 
-    if (start === null || end === null || start > end) {
-      return [];
-    }
+  if (start === null || end === null || start > end) {
+    return [];
+  }
 
-    const options = [];
+  const options = [];
 
-    for (let minutes = start; minutes <= end; minutes += step) {
-      options.push({
-        label: formatTimeOption(minutes, timeFormat),
-        value: formatTimeOption(minutes, timeFormat),
-      });
-    }
+  for (let minutes = start; minutes <= end; minutes += step) {
+    const formattedTime = formatTimeOption(minutes, timeFormat);
 
-    return options;
-  };
+    options.push({
+      label: formattedTime,
+      value: formattedTime,
+    });
+  }
+
+  return options;
+};
 
 
 
@@ -2577,443 +2588,434 @@ export default function PreviewField({
 
 
 
-    case "date": {
-      const format = normalizedElement.format || "date_time";
 
-      const dateFormat = normalizedElement.dateFormat || "Y-m-d";
-      const timeFormat = normalizedElement.timeFormat || "24h";
-      const timeType = normalizedElement.timeType || "picker";
 
-      const timeStep = Math.max(
-        1,
-        Math.min(60, Number(normalizedElement.timeStep) || 15)
-      );
+case "date": {
+  const format = normalizedElement.format || "date_time";
 
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+  const dateFormat = normalizedElement.dateFormat || "Y-m-d";
+  const timeFormat = normalizedElement.timeFormat || "24h";
+  const timeType = normalizedElement.timeType || "picker";
 
-      // ===========================================================
-      // DATE BOUNDARIES
-      // ===========================================================
+  const timeStep = Math.max(
+    1,
+    Math.min(60, Number(normalizedElement.timeStep) || 15)
+  );
 
-      let minDate;
-      let maxDate;
+  // ===========================================================
+  // LANGUAGE / LOCALE
+  // ===========================================================
 
-      if (normalizedElement.startDateType === "today") {
-        minDate = today;
-      }
+  const localeMap = {
+    es: Spanish,
+    spanish: Spanish,
 
-      if (normalizedElement.startDateType === "specificDate") {
-        minDate =
-          parseDateValue(normalizedElement.specificStartDate) ||
-          undefined;
-      }
+    fr: French,
+    french: French,
 
-      if (normalizedElement.startDateType === "relativeDate") {
-        minDate =
-          addDays(
-            today,
-            Number(normalizedElement.relativeStartDate) || 0
-          ) || undefined;
-      }
+    de: German,
+    german: German,
 
-      if (normalizedElement.endDateType === "today") {
-        maxDate = today;
-      }
+    it: Italian,
+    italian: Italian,
 
-      if (normalizedElement.endDateType === "specificDate") {
-        maxDate =
-          parseDateValue(normalizedElement.specificDate) ||
-          undefined;
-      }
+    pt: Portuguese,
+    portuguese: Portuguese,
 
-      if (normalizedElement.endDateType === "relativeDate") {
-        maxDate =
-          addDays(
-            today,
-            Number(normalizedElement.relativeEndDate) || 0
-          ) || undefined;
-      }
+    nl: Dutch,
+    dutch: Dutch,
+  };
 
-      // ===========================================================
-      // DATE RESTRICTIONS
-      // ===========================================================
+  const selectedLanguage = normalizedElement.otherLanguage
+    ? String(normalizedElement.localization || "en").toLowerCase()
+    : "en";
 
-      const limitEnabled = Boolean(
-        normalizedElement.limitDatePicker &&
-        format === "date"
-      );
+  const selectedLocale =
+    localeMap[selectedLanguage] || undefined;
 
-      const limitType =
-        normalizedElement.limitDateType || "disable";
+  // ===========================================================
+  // CURRENT DATE
+  // ===========================================================
 
-      const specificDates = String(
-        normalizedElement.specificDates || ""
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // ===========================================================
+  // DATE BOUNDARIES
+  // ===========================================================
+
+  let minDate;
+  let maxDate;
+
+  if (normalizedElement.startDateType === "today") {
+    minDate = today;
+  } else if (normalizedElement.startDateType === "specificDate") {
+    minDate =
+      parseDateValue(normalizedElement.specificStartDate) || undefined;
+  } else if (normalizedElement.startDateType === "relativeDate") {
+    minDate =
+      addDays(
+        today,
+        Number(normalizedElement.relativeStartDate) || 0
+      ) || undefined;
+  }
+
+  if (normalizedElement.endDateType === "today") {
+    maxDate = today;
+  } else if (normalizedElement.endDateType === "specificDate") {
+    maxDate =
+      parseDateValue(normalizedElement.specificDate) || undefined;
+  } else if (normalizedElement.endDateType === "relativeDate") {
+    maxDate =
+      addDays(
+        today,
+        Number(normalizedElement.relativeEndDate) || 0
+      ) || undefined;
+  }
+
+  // ===========================================================
+  // DATE RESTRICTIONS
+  // ===========================================================
+
+  const limitEnabled = Boolean(
+    normalizedElement.limitDatePicker && format === "date"
+  );
+
+  const limitType = normalizedElement.limitDateType || "disable";
+
+  const specificDates = String(
+    normalizedElement.specificDates || ""
+  )
+    .split(",")
+    .map((item) => parseDateValue(item.trim()))
+    .filter(Boolean)
+    .map((date) => getDateOnly(date));
+
+  const rangeParts = String(
+    normalizedElement.rangeDates || ""
+  )
+    .split(/\s+to\s+/i)
+    .map((item) => parseDateValue(item.trim()))
+    .filter(Boolean);
+
+  const rangeStart = rangeParts[0]
+    ? getDateOnly(rangeParts[0])
+    : null;
+
+  const rangeEnd = rangeParts[1]
+    ? getDateOnly(rangeParts[1])
+    : rangeStart;
+
+  const selectedDays = Array.isArray(
+    normalizedElement.targetDaysOfWeek
+  )
+    ? normalizedElement.targetDaysOfWeek.map((day) =>
+        String(day).toLowerCase()
       )
-        .split(",")
-        .map((item) => parseDateValue(item.trim()))
-        .filter(Boolean)
-        .map(getDateOnly);
+    : [];
 
-      const rangeParts = String(
-        normalizedElement.rangeDates || ""
-      )
-        .split(" to ")
-        .map((item) => parseDateValue(item.trim()))
-        .filter(Boolean);
+  const weekdayNames = [
+    "sunday",
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday",
+  ];
 
-      const rangeStart = rangeParts[0]
-        ? getDateOnly(rangeParts[0])
-        : null;
+  const hasSpecificDates = Boolean(
+    limitEnabled && normalizedElement.enableSpecificDates
+  );
 
-      const rangeEnd = rangeParts[1]
-        ? getDateOnly(rangeParts[1])
-        : rangeStart;
+  const hasRangeDates = Boolean(
+    limitEnabled && normalizedElement.enableRangeDates
+  );
 
-      const selectedDays = Array.isArray(
-        normalizedElement.targetDaysOfWeek
-      )
-        ? normalizedElement.targetDaysOfWeek.map((day) =>
-          String(day).toLowerCase()
-        )
-        : [];
+  const hasWeekdays = Boolean(
+    limitEnabled && normalizedElement.enableDaysOfWeek
+  );
 
-      const weekdayNames = [
-        "sunday",
-        "monday",
-        "tuesday",
-        "wednesday",
-        "thursday",
-        "friday",
-        "saturday",
+  const hasAnyRestriction =
+    hasSpecificDates || hasRangeDates || hasWeekdays;
+
+  // ===========================================================
+  // DATE RANGE CHECK
+  // ===========================================================
+
+  const isDateInRange = (dateString) => {
+    if (!rangeStart) return false;
+
+    return (
+      dateString >= rangeStart &&
+      dateString <= (rangeEnd || rangeStart)
+    );
+  };
+
+  // ===========================================================
+  // CHECK CONFIGURED DATES
+  // ===========================================================
+
+  const matchesConfiguredDates = (date) => {
+    const dateString = getDateOnly(date);
+    const weekday = weekdayNames[date.getDay()];
+
+    const matchesSpecific =
+      hasSpecificDates &&
+      specificDates.includes(dateString);
+
+    const matchesRange =
+      hasRangeDates &&
+      isDateInRange(dateString);
+
+    const matchesWeekday =
+      hasWeekdays &&
+      selectedDays.includes(weekday);
+
+    return (
+      matchesSpecific ||
+      matchesRange ||
+      matchesWeekday
+    );
+  };
+
+  // ===========================================================
+  // ENABLE / DISABLE DATES
+  // ===========================================================
+
+  let enableDates;
+  let disableDates;
+
+  if (limitEnabled && hasAnyRestriction) {
+    if (limitType === "enable") {
+      enableDates = [
+        (date) => matchesConfiguredDates(date),
       ];
-
-      const hasSpecificDates = Boolean(
-        limitEnabled && normalizedElement.enableSpecificDates
-      );
-
-      const hasRangeDates = Boolean(
-        limitEnabled && normalizedElement.enableRangeDates
-      );
-
-      const hasWeekdays = Boolean(
-        limitEnabled && normalizedElement.enableDaysOfWeek
-      );
-
-      const hasAnyRestriction =
-        hasSpecificDates || hasRangeDates || hasWeekdays;
-
-      const isDateInRange = (dateString) => {
-        if (!rangeStart) return false;
-
-        return (
-          dateString >= rangeStart &&
-          dateString <= (rangeEnd || rangeStart)
-        );
-      };
-
-      const matchesConfiguredDates = (date) => {
-        const dateString = getDateOnly(date);
-        const weekday = weekdayNames[date.getDay()];
-
-        const matchesSpecific =
-          hasSpecificDates &&
-          specificDates.includes(dateString);
-
-        const matchesRange =
-          hasRangeDates &&
-          isDateInRange(dateString);
-
-        const matchesWeekday =
-          hasWeekdays &&
-          selectedDays.includes(weekday);
-
-        return (
-          matchesSpecific ||
-          matchesRange ||
-          matchesWeekday
-        );
-      };
-
-      // ===========================================================
-      // ENABLE / DISABLE DATES
-      // ===========================================================
-
-      let enableDates;
-      let disableDates;
-
-      if (limitEnabled && hasAnyRestriction) {
-        if (limitType === "enable") {
-          enableDates = [
-            (date) => matchesConfiguredDates(date),
-          ];
-        } else {
-          disableDates = [
-            (date) => matchesConfiguredDates(date),
-          ];
-        }
-      }
-
-      // ===========================================================
-      // MONTH ONLY
-      // ===========================================================
-
-      const onlyShowMonth = Boolean(
-        normalizedElement.onlyShowMonth &&
-        format === "date"
-      );
-
-      // ===========================================================
-      // DATE FORMAT
-      // ===========================================================
-
-      const combinedDateFormat =
-        timeFormat === "12h"
-          ? `${dateFormat} h:i K`
-          : `${dateFormat} H:i`;
-
-      // ===========================================================
-      // DATE ONLY PICKER
-      // ===========================================================
-
-      const datePickerOptions = {
-        enableTime: false,
-        noCalendar: false,
-        clickOpens: true,
-        disableMobile: true,
-        static: false,
-        appendTo: document.body,
-
-        dateFormat: onlyShowMonth ? "Y-m" : dateFormat,
-
-        minDate,
-        maxDate,
-        enable: enableDates,
-        disable: disableDates,
-
-        allowInput: false,
-        monthSelectorType: "dropdown",
-        animate: true,
-      };
-
-      if (onlyShowMonth) {
-        datePickerOptions.plugins = [
-          new monthSelectPlugin({
-            shorthand: false,
-            dateFormat: "Y-m",
-            altFormat: "F Y",
-            theme: "light",
-          }),
-        ];
-      }
-
-      // ===========================================================
-      // DATE + TIME PICKER (ONE COMBINED FIELD)
-      // ===========================================================
-
-      const dateTimePickerOptions = {
-        enableTime: true,
-        noCalendar: false,
-
-        dateFormat: combinedDateFormat,
-
-        time_24hr: timeFormat !== "12h",
-        minuteIncrement: timeStep,
-
-        minDate,
-        maxDate,
-
-        allowInput: false,
-        monthSelectorType: "dropdown",
-        animate: true,
-      };
-
-      // ===========================================================
-      // TIME ONLY PICKER
-      // ===========================================================
-
-      const timePickerOptions = {
-        enableTime: true,
-        noCalendar: true,
-
-        dateFormat:
-          timeFormat === "12h" ? "h:i K" : "H:i",
-
-        time_24hr: timeFormat !== "12h",
-        minuteIncrement: timeStep,
-
-        allowInput: false,
-      };
-
-      const timeOptions = getTimeOptions(normalizedElement);
-
-      // ===========================================================
-      // UPDATE VALUE
-      // ===========================================================
-
-      const updateDateValue = (nextValue) => {
-        const safeValue = nextValue ?? "";
-
-        setDateValue(safeValue);
-        onChange?.(safeValue);
-      };
-
-      // ===========================================================
-      // RENDER
-      // ===========================================================
-
-      return (
-        <BlockStack gap="300">
-          {!hideLabel && fieldLabelWithIcon}
-
-          {/* =========================================
-          DATE + TIME: ONE COMBINED PICKER
-      ========================================= */}
-
-          {format === "date_time" && (
-            <FlatpickrField
-              key="combined-date-time-picker"
-              value={dateValue || ""}
-              options={dateTimePickerOptions}
-              onChange={updateDateValue}
-              placeholder={placeholder || "Select date and time"}
-              className="date-time-flatpickr-input"
-            />
-          )}
-
-          {/* =========================================
-          DATE ONLY
-      ========================================= */}
-
-          {format === "date" && (
-            <FlatpickrField
-              key={onlyShowMonth ? "month-picker" : "date-picker"}
-              value={dateValue || ""}
-              options={datePickerOptions}
-              onChange={updateDateValue}
-              placeholder={
-                onlyShowMonth ? "Select month" : placeholder
-              }
-              className="date-time-flatpickr-input"
-            />
-          )}
-
-          {/* =========================================
-          TIME ONLY: PICKER
-      ========================================= */}
-
-          {format === "time" && timeType === "picker" && (
-            <FlatpickrField
-              key="time-only-picker"
-              value={dateValue || ""}
-              options={timePickerOptions}
-              onChange={updateDateValue}
-              placeholder="Select time"
-              className="date-time-flatpickr-input"
-            />
-          )}
-
-          {/* =========================================
-          TIME ONLY: DROPDOWN
-      ========================================= */}
-
-          {format === "time" && timeType === "dropdown" && (
-            <Select
-              label="Select time"
-              labelHidden
-              placeholder="Select time"
-              options={timeOptions}
-              value={dateValue || ""}
-              onChange={updateDateValue}
-            />
-          )}
-
-          {descriptionText}
-        </BlockStack>
-      );
+    } else {
+      disableDates = [
+        (date) => matchesConfiguredDates(date),
+      ];
     }
+  }
 
+  // ===========================================================
+  // MONTH ONLY
+  // ===========================================================
 
+  const onlyShowMonth = Boolean(
+    normalizedElement.onlyShowMonth && format === "date"
+  );
 
-    // -------------------------------------------------------
-    // TEXT
-    // -------------------------------------------------------
+  // ===========================================================
+  // SAFE PICKER VALUES
+  // ===========================================================
 
-    case "text":
-    case "short_text": {
-      const handleTextChange = (nextValue) => {
-        let newValue = nextValue;
+  const currentValue =
+    typeof dateValue === "string"
+      ? dateValue.trim()
+      : dateValue;
 
-        // Allow numbers only
-        if (normalizedElement.numbersOnly) {
-          newValue = newValue.replace(/[^0-9]/g, "");
+  const isTimeOnlyValue =
+    typeof currentValue === "string" &&
+    /^\d{1,2}:\d{2}\s?(AM|PM)$/i.test(currentValue);
+
+  const isDateOnlyValue =
+    typeof currentValue === "string" &&
+    /^\d{4}-\d{2}-\d{2}$/.test(currentValue);
+
+  const dateOnlyValue = isTimeOnlyValue
+    ? ""
+    : currentValue || "";
+
+  const timeOnlyValue = isDateOnlyValue
+    ? ""
+    : currentValue || "";
+
+  // ===========================================================
+  // DATE + TIME FORMAT
+  // ===========================================================
+
+  const combinedDateFormat =
+    timeFormat === "12h"
+      ? `${dateFormat} h:i K`
+      : `${dateFormat} H:i`;
+
+  // ===========================================================
+  // COMMON OPTIONS
+  // ===========================================================
+
+  const commonPickerOptions = {
+    clickOpens: true,
+    disableMobile: true,
+    allowInput: false,
+    static: false,
+    animate: true,
+
+    // Apply selected language.
+    ...(selectedLocale ? { locale: selectedLocale } : {}),
+  };
+
+  // ===========================================================
+  // DATE ONLY OPTIONS
+  // ===========================================================
+
+  const datePickerOptions = {
+    ...commonPickerOptions,
+
+    enableTime: false,
+    noCalendar: false,
+
+    dateFormat: onlyShowMonth ? "Y-m" : dateFormat,
+
+    minDate,
+    maxDate,
+
+    ...(enableDates ? { enable: enableDates } : {}),
+    ...(disableDates ? { disable: disableDates } : {}),
+
+    monthSelectorType: "dropdown",
+
+    ...(onlyShowMonth
+      ? {
+          plugins: [
+            new monthSelectPlugin({
+              shorthand: false,
+              dateFormat: "Y-m",
+              altFormat: "F Y",
+              theme: "light",
+            }),
+          ],
         }
+      : {}),
+  };
 
-        // Apply maximum character limit
-        if (normalizedElement.enableCharacterLimit) {
-          const maxLength = Number(normalizedElement.maxLength);
+  // ===========================================================
+  // DATE + TIME OPTIONS
+  // ===========================================================
 
-          if (maxLength > 0) {
-            newValue = newValue.slice(0, maxLength);
-          }
-        }
+  const dateTimePickerOptions = {
+    ...commonPickerOptions,
 
-        setValue(newValue);
-      };
+    enableTime: true,
+    noCalendar: false,
 
-      return (
-        <TextField
-          {...commonTextFieldProps}
-          value={value}
-          onChange={handleTextChange}
-          readOnly={isReadOnly}
+    dateFormat: combinedDateFormat,
+
+    time_24hr: timeFormat !== "12h",
+    minuteIncrement: timeStep,
+
+    minDate,
+    maxDate,
+
+    monthSelectorType: "dropdown",
+  };
+
+  // ===========================================================
+  // TIME ONLY OPTIONS
+  // ===========================================================
+
+  const timePickerOptions = {
+    ...commonPickerOptions,
+
+    enableTime: true,
+    noCalendar: true,
+
+    dateFormat:
+      timeFormat === "12h" ? "h:i K" : "H:i",
+
+    time_24hr: timeFormat !== "12h",
+    minuteIncrement: timeStep,
+
+    defaultHour: 12,
+    defaultMinute: 0,
+  };
+
+  // ===========================================================
+  // TIME DROPDOWN OPTIONS
+  // ===========================================================
+
+  const timeOptions = getTimeOptions(normalizedElement);
+
+  // ===========================================================
+  // UPDATE VALUE
+  // ===========================================================
+
+  const updateDateValue = (nextValue) => {
+    const safeValue = nextValue ?? "";
+
+    setDateValue(safeValue);
+    onChange?.(safeValue);
+  };
+
+  // ===========================================================
+  // RENDER
+  // ===========================================================
+
+  return (
+    <BlockStack gap="300">
+      {!hideLabel && fieldLabelWithIcon}
+
+      {/* DATE + TIME */}
+
+      {format === "date_time" && (
+        <FlatpickrField
+          key={`combined-date-time-${selectedLanguage}`}
+          value={dateValue || ""}
+          options={dateTimePickerOptions}
+          onChange={updateDateValue}
+          placeholder={placeholder || "Select date and time"}
+          className="date-time-flatpickr-input"
         />
-      );
-    }
+      )}
 
-    // -------------------------------------------------------
-    // TEXTAREA
-    // -------------------------------------------------------
+      {/* DATE ONLY */}
 
-    case "textarea": {
-      const handleTextareaChange = (nextValue) => {
-        let newValue = nextValue;
-
-        // Apply maximum character limit
-        if (normalizedElement.limitCharacters) {
-          const maxLength = Number(normalizedElement.maxCharacters);
-
-          if (maxLength > 0) {
-            newValue = newValue.slice(0, maxLength);
+      {format === "date" && (
+        <FlatpickrField
+          key={`date-picker-${selectedLanguage}-${onlyShowMonth ? "month" : "day"}`}
+          value={dateOnlyValue}
+          options={datePickerOptions}
+          onChange={updateDateValue}
+          placeholder={
+            onlyShowMonth
+              ? placeholder || "Select month"
+              : placeholder || "Select date"
           }
-        }
+          className="date-time-flatpickr-input"
+        />
+      )}
 
-        setValue(newValue);
-      };
+      {/* TIME PICKER */}
 
-      return (
-        <BlockStack gap="100">
-          <TextField
-            {...commonTextFieldProps}
-            multiline={3}
-            value={value}
-            onChange={handleTextareaChange}
-            readOnly={isReadOnly}
-          />
+      {format === "time" && timeType === "picker" && (
+        <FlatpickrField
+          key={`time-picker-${selectedLanguage}`}
+          value={timeOnlyValue}
+          options={timePickerOptions}
+          onChange={updateDateValue}
+          placeholder="Select time"
+          className="date-time-flatpickr-input"
+        />
+      )}
 
-          {normalizedElement.limitCharacters && (
-            <InlineStack align="end">
-              <Text as="p" variant="bodySm" tone="subdued">
-                {String(value || "").length}
-                {normalizedElement.maxCharacters
-                  ? ` / ${normalizedElement.maxCharacters}`
-                  : ""} characters
-              </Text>
-            </InlineStack>
-          )}
-        </BlockStack>
-      );
-    }
+      {/* TIME DROPDOWN */}
+
+      {format === "time" && timeType === "dropdown" && (
+        <Select
+          label="Select time"
+          labelHidden
+          placeholder="Select time"
+          options={timeOptions}
+          value={dateValue || ""}
+          onChange={updateDateValue}
+        />
+      )}
+
+      {descriptionText}
+    </BlockStack>
+  );
+}
+
 
     // -------------------------------------------------------
     // NUMBER

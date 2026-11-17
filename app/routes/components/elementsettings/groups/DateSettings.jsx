@@ -455,53 +455,48 @@ const DateSettings = ({ element, onChange }) => {
     // START / END TIME PICKER
     // =====================================
 
-    const renderTimePicker = (field, defaultValue, label) => {
-        const enabledKey =
-            field === "startTime"
-                ? "enableStartTime"
-                : "enableEndTime";
+    
+const renderTimePicker = (field, defaultValue, label) => {
+    const enabledKey =
+        field === "startTime"
+            ? "enableStartTime"
+            : "enableEndTime";
 
-        const enabled = element[enabledKey] !== false;
+    // Unchecked unless the user explicitly enables it.
+    const enabled = element[enabledKey] === true;
 
-        const pickerFormat =
-            timeFormat === "12h" ? "h:i K" : "H:i";
+    const pickerFormat =
+        timeFormat === "12h" ? "h:i K" : "H:i";
 
-        const fallbackValue =
-            timeFormat === "12h"
-                ? field === "startTime"
-                    ? "12:00 PM"
-                    : "12:00 AM"
-                : defaultValue;
+    return (
+        <BlockStack gap="200">
+            <Checkbox
+                label={label}
+                checked={enabled}
+                onChange={(checked) =>
+                    update(enabledKey, checked)
+                }
+            />
 
-        return (
-            <BlockStack gap="200">
-                <Checkbox
-                    label={label}
-                    checked={enabled}
-                    onChange={(checked) =>
-                        update(enabledKey, checked)
+            {enabled && (
+                <FlatpickrInput
+                    value={element[field] || ""}
+                    onChange={(dateString) =>
+                        update(field, dateString)
                     }
+                    dateFormat={pickerFormat}
+                    mode="single"
+                    enableTime
+                    noCalendar
+                    time24hr={timeFormat !== "12h"}
+                    minuteIncrement={element.timeStep ?? 1}
+                    placeholder={label}
+                    className="Polaris-TextField__Input date-time-flatpickr-input"
                 />
-
-                {enabled && (
-                    <FlatpickrInput
-                        value={element[field] || fallbackValue}
-                        onChange={(dateString) =>
-                            update(field, dateString)
-                        }
-                        dateFormat={pickerFormat}
-                        mode="single"
-                        enableTime
-                        noCalendar
-                        time24hr={timeFormat !== "12h"}
-                        minuteIncrement={element.timeStep ?? 8}
-                        placeholder={label}
-                        className="Polaris-TextField__Input date-time-flatpickr-input"
-                    />
-                )}
-            </BlockStack>
-        );
-    };
+            )}
+        </BlockStack>
+    );
+};
 
     // =====================================
     // UI
