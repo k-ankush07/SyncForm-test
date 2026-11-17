@@ -341,6 +341,8 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
     // URL
     const isUrl = type === "url";
 
+    //is consent
+    const isConsent = type === "consent";
     // STAR RATING
     const isStarRating = [
         "rating",
@@ -351,6 +353,8 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
     // NUMBER
     const isNumber = type === "number";
     const isQuantity = type === "quantity";
+    //TEXT
+    const isText = type === "text";
 
     // DATE AND TIME
     const isDateTime = [
@@ -365,8 +369,8 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
     // ---------------------------------------------------------------
 
     const showDefaultValue =
-    isName || isEmail || isPhone || isCountry ||
-    (isChoiceInput && !isDropdown && !isButton);
+        isName || isEmail || isPhone || isCountry ||
+        (isChoiceInput && !isDropdown && !isButton && !isRadio);
 
     const showKeepLabelPosition =
         isName || isEmail || isPhone || isPassword ||
@@ -375,7 +379,7 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
     const showCharacterLimit = isContactInput;
 
     const showSelectIcon =
-        isContactInput || isDropdown || isCountry || isUrl || isNumber;
+        isContactInput || isDropdown || isCountry || isUrl || isNumber || isText;
 
     const showRequiredNote =
         isContactInput || isChoiceInput || isStarRating;
@@ -935,13 +939,15 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
 
                     {/* HIDE LABEL */}
 
-                    <Checkbox
-                        label="Hide label"
-                        checked={element.hideLabel || false}
-                        onChange={(value) =>
-                            update("hideLabel", value)
-                        }
-                    />
+                    {!isConsent && (
+                        <Checkbox
+                            label="Hide label"
+                            checked={element.hideLabel || false}
+                            onChange={(value) =>
+                                update("hideLabel", value)
+                            }
+                        />
+                    )}
 
                     {showKeepLabelPosition && element.hideLabel && (
                         <Checkbox
@@ -954,36 +960,40 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
                     )}
 
                     {/* REQUIRED */}
+                    {!isConsent && (
+                        <>
+                            {/* REQUIRED */}
+                            <Checkbox
+                                label="Required"
+                                checked={element.required || false}
+                                onChange={(value) =>
+                                    update("required", value)
+                                }
+                            />
 
-                    <Checkbox
-                        label="Required"
-                        checked={element.required || false}
-                        onChange={(value) =>
-                            update("required", value)
-                        }
-                    />
+                            {element.required && (
+                                <TextField
+                                    label="Required error message"
+                                    value={
+                                        element.requiredMessage ||
+                                        `${element.label || "This field"} is required`
+                                    }
+                                    onChange={(value) => update("requiredMessage", value)}
+                                    autoComplete="off"
+                                    helpText="Customize the message shown when this required field is empty."
+                                />
+                            )}
 
-                    {element.required && (
-                        <TextField
-                            label="Required error message"
-                            value={
-                                element.requiredMessage ||
-                                `${element.label || "This field"} is required`
-                            }
-                            onChange={(value) => update("requiredMessage", value)}
-                            autoComplete="off"
-                            helpText="Customize the message shown when this required field is empty."
-                        />
-                    )}
-
-                    {showRequiredNote && element.required && (
-                        <Checkbox
-                            label="Show required note if hide label?"
-                            checked={element.showRequiredNote || false}
-                            onChange={(value) =>
-                                update("showRequiredNote", value)
-                            }
-                        />
+                            {showRequiredNote && element.required && (
+                                <Checkbox
+                                    label="Show required note if hide label?"
+                                    checked={element.showRequiredNote || false}
+                                    onChange={(value) =>
+                                        update("showRequiredNote", value)
+                                    }
+                                />
+                            )}
+                        </>
                     )}
 
                     {/* SELECT ICON */}

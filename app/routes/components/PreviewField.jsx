@@ -12,10 +12,10 @@ import {
   InlineStack,
   Button,
   BlockStack,
-   Combobox,
+  Combobox,
   Listbox,
 
- 
+
 } from "@shopify/polaris";
 
 import createDOMPurify from "dompurify";
@@ -379,7 +379,24 @@ export default function PreviewField({
   const [nameError, setNameError] = useState("");
   const [numberError, setNumberError] = useState("");
 
-  const [selected, setSelected] = useState([]);
+  const [selected, setSelected] = useState(() =>
+    normalizedElement.defaultValue
+      ? [normalizedElement.defaultValue]
+      : []
+  );
+
+  const [otherValue, setOtherValue] = useState(
+    normalizedElement.otherValue || ""
+  );
+  useEffect(() => {
+    setSelected(
+      normalizedElement.defaultValue
+        ? [normalizedElement.defaultValue]
+        : []
+    );
+
+    setOtherValue("");
+  }, [normalizedElement.id, normalizedElement.defaultValue]);
 
   const [checked, setChecked] = useState(
     normalizedElement.type === "consent"
@@ -413,12 +430,14 @@ export default function PreviewField({
   const [selectedCountry, setSelectedCountry] = useState("");
 
   // dropdown 
-const [dropdownOpen, setDropdownOpen] = useState(false);
-const [dropdownSearch, setDropdownSearch] = useState("");
-useEffect(() => {
-  setDropdownOpen(false);
-  setDropdownSearch("");
-}, [normalizedElement.id]);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [dropdownSearch, setDropdownSearch] = useState("");
+  useEffect(() => {
+    setDropdownOpen(false);
+    setDropdownSearch("");
+  }, [normalizedElement.id]);
+
+
 
   // Date and time.
   const [dateValue, setDateValue] = useState(
@@ -426,11 +445,35 @@ useEffect(() => {
   );
 
   // File and image previews.
-  const [imagePreview, setImagePreview] = useState("");
+  const [imagePreview, setImagePreview] = useState([]);
 
   // Rating and range values.
   const [rating, setRating] = useState(0);
-  const [rangeValue, setRangeValue] = useState(50);
+  const [rangeValue, setRangeValue] = useState(() => {
+    const min = Number(normalizedElement.min ?? 0);
+    const max = Number(normalizedElement.max ?? 100);
+    const defaultValue = Number(normalizedElement.defaultValue);
+
+    return Number.isFinite(defaultValue)
+      ? Math.min(max, Math.max(min, defaultValue))
+      : min;
+  });
+  useEffect(() => {
+    const min = Number(normalizedElement.min ?? 0);
+    const max = Number(normalizedElement.max ?? 100);
+    const defaultValue = Number(normalizedElement.defaultValue);
+
+    const newValue = Number.isFinite(defaultValue)
+      ? defaultValue
+      : min;
+
+    setRangeValue(Math.min(max, Math.max(min, newValue)));
+  }, [
+    normalizedElement.id,
+    normalizedElement.defaultValue,
+    normalizedElement.min,
+    normalizedElement.max,
+  ]);
 
   // Switch state.
   const [switchValue, setSwitchValue] = useState(
@@ -487,6 +530,10 @@ useEffect(() => {
     setValue(input);
     setNumberError("");
   };
+  const [imageDropdownOpen, setImageDropdownOpen] = useState(false);
+  useEffect(() => {
+    setImageDropdownOpen(false);
+  }, [normalizedElement.id]);
 
   // =========================================================
   // 5. EFFECTS
@@ -742,6 +789,18 @@ useEffect(() => {
     gap: "12px",
     width: "100%",
   };
+  // validateTextField this gives error if name valdation fails 
+  const validateTextField = (element, value) => {
+    if (
+      element.nameValidation &&
+      value &&
+      !/^[a-zA-Z0-9 ]+$/.test(value)
+    ) {
+      return "Only letters and numbers are allowed.";
+    }
+
+    return "";
+  };
 
   // =========================================================
   // 7. HTML SANITIZATION
@@ -826,6 +885,10 @@ useEffect(() => {
   // =========================================================
   // 8. ELEMENT RENDERING
   // =========================================================
+   // Completely hide the divider when Hide divider is enabled.
+  if (type === "divider" && normalizedElement.hideDivider) {
+    return null;
+  }
 
   switch (type) {
     // -------------------------------------------------------
@@ -937,6 +1000,7 @@ useEffect(() => {
             {showPhoneCountry ? (
               <div style={{ position: "relative", flexShrink: 0 }}>
                 {/* Selected country button */}
+                {/* Selected country button */}
                 <button
                   type="button"
                   disabled={isReadOnly}
@@ -944,14 +1008,15 @@ useEffect(() => {
                     setCountryDropdownOpen((previous) => !previous)
                   }
                   style={{
-                    minWidth: "100px",
+                    width: "76px",
+                    minWidth: "76px",
                     height: "100%",
                     minHeight: "40px",
-                    padding: "0 10px",
+                    padding: "0 7px",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    gap: "7px",
+                    gap: "5px",
                     background: "#F1F1F1",
                     border: "1px solid #8A8A8A",
                     borderRight: 0,
@@ -960,11 +1025,12 @@ useEffect(() => {
                     boxSizing: "border-box",
                   }}
                 >
+                  {/* Small country flag */}
                   <span
                     className={`fi fi-${currentPhoneCountry?.value || "in"}`}
                     style={{
-                      width: "24px",
-                      height: "18px",
+                      width: "20px",
+                      height: "15px",
                       display: "inline-block",
                       flexShrink: 0,
                       backgroundSize: "cover",
@@ -973,6 +1039,7 @@ useEffect(() => {
                     }}
                   />
 
+                  {/* Dial code only */}
                   <span
                     style={{
                       fontSize: "13px",
@@ -981,26 +1048,11 @@ useEffect(() => {
                       whiteSpace: "nowrap",
                     }}
                   >
-                    {currentPhoneCountry?.nativeName || "भारत"}
-                  </span>
-
-                  <span
-                    style={{
-                      fontSize: "13px",
-                      color: "var(--p-color-text-secondary)",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
                     {currentPhoneCountry?.dialCode || "+91"}
                   </span>
 
                   {!isReadOnly && (
-                    <span
-                      style={{
-                        fontSize: "10px",
-                        color: "var(--p-color-text-secondary)",
-                      }}
-                    >
+                    <span style={{ fontSize: "9px", color: "#666" }}>
                       ▾
                     </span>
                   )}
@@ -1164,7 +1216,6 @@ useEffect(() => {
     // PASSWORD
     // -------------------------------------------------------
 
-
     case "password": {
       const passwordError = passwordValidationTriggered
         ? getPasswordError()
@@ -1301,7 +1352,6 @@ useEffect(() => {
         </BlockStack>
       );
     }
-
 
     // -------------------------------------------------------
     // COUNTRY
@@ -1592,209 +1642,207 @@ useEffect(() => {
 
 
 
-case "dropdown":
-case "select": {
-  const dropdownOptions = (normalizedElement.options || []).map((option) => ({
-    label:
-      typeof option === "string"
-        ? option
-        : option.label || option.value,
-    value:
-      typeof option === "string"
-        ? option
-        : option.value || option.label,
-  }));
+    case "dropdown":
+    case "select": {
+      const dropdownOptions = (normalizedElement.options || []).map((option) => ({
+        label:
+          typeof option === "string"
+            ? option
+            : option.label || option.value,
+        value:
+          typeof option === "string"
+            ? option
+            : option.value || option.label,
+      }));
 
-  const selectedOption = dropdownOptions.find(
-    (option) => option.value === value
-  );
+      const selectedOption = dropdownOptions.find(
+        (option) => option.value === value
+      );
 
-  const filteredOptions = dropdownOptions.filter((option) =>
-    option.label.toLowerCase().includes(dropdownSearch.toLowerCase())
-  );
+      const filteredOptions = dropdownOptions.filter((option) =>
+        option.label.toLowerCase().includes(dropdownSearch.toLowerCase())
+      );
 
-  const handleDropdownSelect = (option) => {
-    setValue(option.value);
-    setDropdownOpen(false);
-    setDropdownSearch("");
-  };
+      const handleDropdownSelect = (option) => {
+        setValue(option.value);
+        setDropdownOpen(false);
+        setDropdownSearch("");
+      };
 
-  return (
-    <BlockStack gap="200">
-      {fieldLabelWithIcon}
+      return (
+        <BlockStack gap="200">
+          {fieldLabelWithIcon}
 
-      <div style={{ position: "relative", width: "100%" }}>
-        {/* DROPDOWN BUTTON */}
-        <button
-          type="button"
-          disabled={isReadOnly}
-          onClick={() => setDropdownOpen((previous) => !previous)}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            width: "100%",
-            minHeight: "40px",
-            padding: "8px 12px",
-            background: "#FFFFFF",
-            border: "1px solid #8A8A8A",
-            borderRadius: "6px",
-            cursor: isReadOnly ? "default" : "pointer",
-            textAlign: "left",
-          }}
-        >
-          <span
-            style={{
-              color: selectedOption ? "#303030" : "#8C9196",
-              fontSize: "14px",
-            }}
-          >
-            {selectedOption?.label ||
-              normalizedElement.placeholder ||
-              "Please select"}
-          </span>
-
-          <span
-            style={{
-              color: "#6D7175",
-              transition: "transform 250ms ease",
-              transform: dropdownOpen
-                ? "rotate(180deg)"
-                : "rotate(0deg)",
-            }}
-          >
-            ▾
-          </span>
-        </button>
-
-        {/* DROPDOWN PANEL */}
-        {!isReadOnly && (
-          <div
-            style={{
-              position: "absolute",
-              top: "calc(100% + 4px)",
-              left: 0,
-              width: "100%",
-              maxHeight: dropdownOpen ? "280px" : "0px",
-              opacity: dropdownOpen ? 1 : 0,
-              visibility: dropdownOpen ? "visible" : "hidden",
-              transform: dropdownOpen
-                ? "translateY(0)"
-                : "translateY(-8px)",
-              background: "#FFFFFF",
-              border: dropdownOpen
-                ? "1px solid #E1E3E5"
-                : "1px solid transparent",
-              borderRadius: "8px",
-              boxShadow: dropdownOpen
-                ? "0 4px 16px rgba(0,0,0,0.12)"
-                : "none",
-              zIndex: 10000,
-              boxSizing: "border-box",
-              overflow: "hidden",
-              transition:
-                "max-height 250ms ease, opacity 200ms ease, transform 250ms ease, visibility 250ms ease",
-              pointerEvents: dropdownOpen ? "auto" : "none",
-            }}
-          >
-            {/* SEARCH BAR - ONLY WHEN ENABLED */}
-            {normalizedElement.selectWithSearch && (
-              <div
-                style={{
-                  padding: "8px",
-                  borderBottom: "1px solid #E1E3E5",
-                }}
-              >
-                <input
-                  type="text"
-                  value={dropdownSearch}
-                  onChange={(event) =>
-                    setDropdownSearch(event.target.value)
-                  }
-                  placeholder="Search options..."
-                  autoComplete="off"
-                  style={{
-                    width: "100%",
-                    height: "36px",
-                    padding: "0 10px",
-                    border: "1px solid #8A8A8A",
-                    borderRadius: "5px",
-                    outline: "none",
-                    fontSize: "13px",
-                    boxSizing: "border-box",
-                  }}
-                />
-              </div>
-            )}
-
-            {/* OPTIONS */}
-            <div
+          <div style={{ position: "relative", width: "100%" }}>
+            {/* DROPDOWN BUTTON */}
+            <button
+              type="button"
+              disabled={isReadOnly}
+              onClick={() => setDropdownOpen((previous) => !previous)}
               style={{
-                maxHeight: "220px",
-                overflowY: "auto",
-                padding: "4px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                width: "100%",
+                minHeight: "40px",
+                padding: "8px 12px",
+                background: "#FFFFFF",
+                border: "1px solid #8A8A8A",
+                borderRadius: "6px",
+                cursor: isReadOnly ? "default" : "pointer",
+                textAlign: "left",
               }}
             >
-              {filteredOptions.length > 0 ? (
-                filteredOptions.map((option) => {
-                  const isSelected = value === option.value;
+              <span
+                style={{
+                  color: selectedOption ? "#303030" : "#8C9196",
+                  fontSize: "14px",
+                }}
+              >
+                {selectedOption?.label ||
+                  normalizedElement.placeholder ||
+                  "Please select"}
+              </span>
 
-                  return (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() => handleDropdownSelect(option)}
+              <span
+                style={{
+                  color: "#6D7175",
+                  transition: "transform 250ms ease",
+                  transform: dropdownOpen
+                    ? "rotate(180deg)"
+                    : "rotate(0deg)",
+                }}
+              >
+                ▾
+              </span>
+            </button>
+
+            {/* DROPDOWN PANEL */}
+            {!isReadOnly && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: "calc(100% + 4px)",
+                  left: 0,
+                  width: "100%",
+                  maxHeight: dropdownOpen ? "280px" : "0px",
+                  opacity: dropdownOpen ? 1 : 0,
+                  visibility: dropdownOpen ? "visible" : "hidden",
+                  transform: dropdownOpen
+                    ? "translateY(0)"
+                    : "translateY(-8px)",
+                  background: "#FFFFFF",
+                  border: dropdownOpen
+                    ? "1px solid #E1E3E5"
+                    : "1px solid transparent",
+                  borderRadius: "8px",
+                  boxShadow: dropdownOpen
+                    ? "0 4px 16px rgba(0,0,0,0.12)"
+                    : "none",
+                  zIndex: 10000,
+                  boxSizing: "border-box",
+                  overflow: "hidden",
+                  transition:
+                    "max-height 250ms ease, opacity 200ms ease, transform 250ms ease, visibility 250ms ease",
+                  pointerEvents: dropdownOpen ? "auto" : "none",
+                }}
+              >
+                {/* SEARCH BAR - ONLY WHEN ENABLED */}
+                {normalizedElement.selectWithSearch && (
+                  <div
+                    style={{
+                      padding: "8px",
+                      borderBottom: "1px solid #E1E3E5",
+                    }}
+                  >
+                    <input
+                      type="text"
+                      value={dropdownSearch}
+                      onChange={(event) =>
+                        setDropdownSearch(event.target.value)
+                      }
+                      placeholder="Search options..."
+                      autoComplete="off"
                       style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "10px",
                         width: "100%",
-                        minHeight: "40px",
-                        padding: "8px 10px",
-                        border: "none",
+                        height: "36px",
+                        padding: "0 10px",
+                        border: "1px solid #8A8A8A",
                         borderRadius: "5px",
-                        background: isSelected
-                          ? "#F1F2F3"
-                          : "#FFFFFF",
-                        cursor: "pointer",
-                        textAlign: "left",
+                        outline: "none",
+                        fontSize: "13px",
+                        boxSizing: "border-box",
                       }}
-                    >
-                      <span
-                        style={{
-                          flex: 1,
-                          fontSize: "13px",
-                          color: "#303030",
-                          fontWeight: isSelected ? 600 : 400,
-                        }}
-                      >
-                        {option.label}
-                      </span>
+                    />
+                  </div>
+                )}
 
-                      {isSelected && (
-                        <Icon source={PolarisIcons.CheckIcon} />
-                      )}
-                    </button>
-                  );
-                })
-              ) : (
-                <div style={{ padding: "14px", textAlign: "center" }}>
-                  <Text as="p" variant="bodySm" tone="subdued">
-                    No options found.
-                  </Text>
+                {/* OPTIONS */}
+                <div
+                  style={{
+                    maxHeight: "220px",
+                    overflowY: "auto",
+                    padding: "4px",
+                  }}
+                >
+                  {filteredOptions.length > 0 ? (
+                    filteredOptions.map((option) => {
+                      const isSelected = value === option.value;
+
+                      return (
+                        <button
+                          key={option.value}
+                          type="button"
+                          onClick={() => handleDropdownSelect(option)}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "10px",
+                            width: "100%",
+                            minHeight: "40px",
+                            padding: "8px 10px",
+                            border: "none",
+                            borderRadius: "5px",
+                            background: isSelected
+                              ? "#F1F2F3"
+                              : "#FFFFFF",
+                            cursor: "pointer",
+                            textAlign: "left",
+                          }}
+                        >
+                          <span
+                            style={{
+                              flex: 1,
+                              fontSize: "13px",
+                              color: "#303030",
+                              fontWeight: isSelected ? 600 : 400,
+                            }}
+                          >
+                            {option.label}
+                          </span>
+
+                          {isSelected && (
+                            <Icon source={PolarisIcons.CheckIcon} />
+                          )}
+                        </button>
+                      );
+                    })
+                  ) : (
+                    <div style={{ padding: "14px", textAlign: "center" }}>
+                      <Text as="p" variant="bodySm" tone="subdued">
+                        No options found.
+                      </Text>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
-        )}
-      </div>
 
-      {descriptionText}
-    </BlockStack>
-  );
-}
-
-
+          {descriptionText}
+        </BlockStack>
+      );
+    }
 
     // -------------------------------------------------------
     // CHECKBOX
@@ -1820,12 +1868,11 @@ case "select": {
                   const updated = isChecked
                     ? [...selected, option.value]
                     : selected.filter(
-                      (selectedValue) =>
-                        selectedValue !== option.value
+                      (selectedValue) => selectedValue !== option.value
                     );
 
                   setSelected(updated);
-                  onChange?.(element.id, updated);
+                  onChange?.(currentElement.id, updated);
                 }}
               />
             ))}
@@ -1840,18 +1887,20 @@ case "select": {
                   const updated = isChecked
                     ? [...selected, "__other__"]
                     : selected.filter(
-                      (selectedValue) =>
-                        selectedValue !== "__other__"
+                      (selectedValue) => selectedValue !== "__other__"
                     );
 
                   setSelected(updated);
-                  onChange?.(element.id, updated);
+
+                  onChange?.(currentElement.id, {
+                    value: updated,
+                    otherValue: isChecked
+                      ? otherValue
+                      : "",
+                  });
 
                   if (!isChecked) {
-                    onChange({
-                      ...normalizedElement,
-                      otherValue: "",
-                    });
+                    setOtherValue("");
                   }
                 }}
               />
@@ -1862,17 +1911,18 @@ case "select": {
           {normalizedElement.otherOption && otherChecked && (
             <TextField
               placeholder={
-                normalizedElement.otherPlaceholder ||
-                "Please specify"
+                normalizedElement.otherPlaceholder || "Please specify"
               }
-              value={normalizedElement.otherValue || ""}
+              value={otherValue}
               disabled={isReadOnly}
-              onChange={(value) =>
-                onChange({
-                  ...normalizedElement,
-                  otherValue: value,
-                })
-              }
+              onChange={(newValue) => {
+                setOtherValue(newValue);
+
+                onChange?.(currentElement.id, {
+                  value: selected,
+                  otherValue: newValue,
+                });
+              }}
               autoComplete="off"
             />
           )}
@@ -1888,7 +1938,9 @@ case "select": {
 
     case "radio":
     case "radio_button":
-    case "radio_group":
+    case "radio_group": {
+      const otherChecked = selected[0] === "__other__";
+
       return (
         <BlockStack gap="200">
           {fieldLabelWithIcon}
@@ -1910,17 +1962,72 @@ case "select": {
                   value={option.value}
                   checked={selected[0] === option.value}
                   disabled={isReadOnly}
-                  onChange={() => setSelected([option.value])}
+                  onChange={() => {
+                    setSelected([option.value]);
+                    setOtherValue("");
+                    onChange?.(currentElement.id, option.value);
+                  }}
                 />
 
                 <span>{option.label}</span>
               </label>
             ))}
+
+            {normalizedElement.otherOption && (
+              <label
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  cursor: isReadOnly ? "default" : "pointer",
+                }}
+              >
+                <input
+                  type="radio"
+                  name={`radio-${normalizedElement.id}`}
+                  value="__other__"
+                  checked={otherChecked}
+                  disabled={isReadOnly}
+                  onChange={() => {
+                    setSelected(["__other__"]);
+
+                    onChange?.(currentElement.id, {
+                      value: "__other__",
+                      otherValue,
+                    });
+                  }}
+                />
+
+                <span>
+                  {normalizedElement.otherLabel || "Other"}
+                </span>
+              </label>
+            )}
           </div>
+
+          {normalizedElement.otherOption && otherChecked && (
+            <TextField
+              placeholder={
+                normalizedElement.otherPlaceholder || "Please specify"
+              }
+              value={otherValue}
+              disabled={isReadOnly}
+              onChange={(newValue) => {
+                setOtherValue(newValue);
+
+                onChange?.(currentElement.id, {
+                  value: "__other__",
+                  otherValue: newValue,
+                });
+              }}
+              autoComplete="off"
+            />
+          )}
 
           {descriptionText}
         </BlockStack>
       );
+    }
 
     // -------------------------------------------------------
     // CONSENT
@@ -1953,41 +2060,131 @@ case "select": {
     // -------------------------------------------------------
     // BUTTON
     // -------------------------------------------------------
+    case "button": {
+      const buttonSelected = Array.isArray(selected)
+        ? selected
+        : selected
+          ? [selected]
+          : [];
 
-    case "button":
+      const otherChecked = buttonSelected.includes("__other__");
+
+      const min = Number(normalizedElement.minSelections ?? 0);
+      const max = Number(normalizedElement.maxSelections ?? 10);
+
+      const limitEnabled =
+        normalizedElement.multipleOptions &&
+        normalizedElement.limitSelections;
+
+      const handleButtonClick = (optionValue) => {
+        let updated;
+
+        if (normalizedElement.multipleOptions) {
+          if (buttonSelected.includes(optionValue)) {
+            updated = buttonSelected.filter((item) => item !== optionValue);
+          } else {
+            if (limitEnabled && buttonSelected.length >= max) {
+              setError?.(`You can select a maximum of ${max} options.`);
+              return;
+            }
+
+            updated = [...buttonSelected, optionValue];
+          }
+        } else {
+          updated = [optionValue];
+        }
+
+        setSelected(updated);
+        setError?.("");
+
+        if (optionValue !== "__other__" || updated.includes("__other__")) {
+          onChange?.(currentElement.id, updated);
+        }
+
+        if (!updated.includes("__other__")) {
+          setOtherValue("");
+        }
+      };
+
       return (
-        <InlineStack gap="200" align="center">
-          {(normalizedElement.options || []).map((option, index) => (
-            <Button
-              key={option.id || index}
+        <BlockStack gap="200">
+          <InlineStack gap="200" align="center">
+            {(normalizedElement.options || []).map((option, index) => (
+              <Button
+                key={option.id || index}
+                pressed={buttonSelected.includes(option.value)}
+                disabled={isReadOnly}
+                onClick={() => handleButtonClick(option.value)}
+              >
+                {option.label}
+              </Button>
+            ))}
+
+            {normalizedElement.otherOption && (
+              <Button
+                pressed={otherChecked}
+                disabled={isReadOnly}
+                onClick={() => handleButtonClick("__other__")}
+              >
+                {normalizedElement.otherLabel || "Other"}
+              </Button>
+            )}
+          </InlineStack>
+
+          {normalizedElement.otherOption && otherChecked && (
+            <TextField
+              placeholder={normalizedElement.otherPlaceholder || "Please specify"}
+              value={otherValue}
               disabled={isReadOnly}
-            >
-              {option.label}
-            </Button>
-          ))}
-        </InlineStack>
+              onChange={(newValue) => {
+                setOtherValue(newValue);
+                onChange?.(currentElement.id, {
+                  value: buttonSelected,
+                  otherValue: newValue,
+                });
+              }}
+              autoComplete="off"
+            />
+          )}
+
+          {descriptionText}
+        </BlockStack>
       );
+    }
 
     // -------------------------------------------------------
     // URL
     // -------------------------------------------------------
 
     case "url":
+      if (
+        normalizedElement.limitCharacters &&
+        normalizedElement.minCharacters !== "" &&
+        value.length < Number(normalizedElement.minCharacters)
+      ) {
+        // Show minimum character validation error
+      }
       return (
-        <TextField
-          {...commonTextFieldProps}
-          type="url"
-          placeholder={placeholder || "https://example.com"}
-          value={value}
-          onChange={setValue}
-          autoComplete="url"
-          readOnly={isReadOnly}
-          prefix={
-            normalizedElement.showIcon !== false ? (
-              <Icon source={PolarisIcons.LinkIcon} />
-            ) : undefined
-          }
-        />
+        <BlockStack gap="200">
+          {fieldLabelWithIcon}
+
+          <TextField
+            {...commonTextFieldProps}
+            label={undefined}
+            type="url"
+            placeholder={placeholder || "https://example.com"}
+            value={value}
+            onChange={setValue}
+            autoComplete="url"
+            readOnly={isReadOnly}
+            maxLength={
+              normalizedElement.limitCharacters &&
+                normalizedElement.maxCharacters
+                ? Number(normalizedElement.maxCharacters)
+                : undefined
+            }
+          />
+        </BlockStack>
       );
 
     // -------------------------------------------------------
@@ -2009,47 +2206,125 @@ case "select": {
     // -------------------------------------------------------
 
     case "text":
-    case "short_text":
+    case "short_text": {
+      const handleTextChange = (nextValue) => {
+        let newValue = nextValue;
+
+        // Allow numbers only
+        if (normalizedElement.numbersOnly) {
+          newValue = newValue.replace(/[^0-9]/g, "");
+        }
+
+        // Apply maximum character limit
+        if (normalizedElement.enableCharacterLimit) {
+          const maxLength = Number(normalizedElement.maxLength);
+
+          if (maxLength > 0) {
+            newValue = newValue.slice(0, maxLength);
+          }
+        }
+
+        setValue(newValue);
+      };
+
       return (
         <TextField
           {...commonTextFieldProps}
           value={value}
-          onChange={setValue}
+          onChange={handleTextChange}
           readOnly={isReadOnly}
         />
       );
+    }
 
     // -------------------------------------------------------
     // TEXTAREA
     // -------------------------------------------------------
 
-    case "textarea":
+    case "textarea": {
+      const handleTextareaChange = (nextValue) => {
+        let newValue = nextValue;
+
+        // Apply maximum character limit
+        if (normalizedElement.limitCharacters) {
+          const maxLength = Number(normalizedElement.maxCharacters);
+
+          if (maxLength > 0) {
+            newValue = newValue.slice(0, maxLength);
+          }
+        }
+
+        setValue(newValue);
+      };
+
       return (
-        <TextField
-          {...commonTextFieldProps}
-          multiline={3}
-          value={value}
-          onChange={setValue}
-          readOnly={isReadOnly}
-        />
+        <BlockStack gap="100">
+          <TextField
+            {...commonTextFieldProps}
+            multiline={3}
+            value={value}
+            onChange={handleTextareaChange}
+            readOnly={isReadOnly}
+          />
+
+          {normalizedElement.limitCharacters && (
+            <InlineStack align="end">
+              <Text as="p" variant="bodySm" tone="subdued">
+                {String(value || "").length}
+                {normalizedElement.maxCharacters
+                  ? ` / ${normalizedElement.maxCharacters}`
+                  : ""} characters
+              </Text>
+            </InlineStack>
+          )}
+        </BlockStack>
       );
+    }
 
     // -------------------------------------------------------
     // NUMBER
     // -------------------------------------------------------
 
-    case "number":
+    case "number": {
+      const min = normalizedElement.setMinValue
+        ? Number(normalizedElement.minValue)
+        : undefined;
+
+      const max = normalizedElement.setMaxValue
+        ? Number(normalizedElement.maxValue)
+        : undefined;
+
+      const handleNumberChangeWithLimits = (nextValue) => {
+        if (nextValue === "") {
+          setValue("");
+          return;
+        }
+
+        const numericValue = Number(nextValue);
+
+        if (!Number.isFinite(numericValue)) return;
+
+        if (min !== undefined && numericValue < min) {
+          setValue(String(min));
+        } else if (max !== undefined && numericValue > max) {
+          setValue(String(max));
+        } else {
+          setValue(nextValue);
+        }
+      };
+
       return (
         <TextField
           {...commonTextFieldProps}
           type="text"
           inputMode="numeric"
           value={value}
-          onChange={handleNumberChange}
+          onChange={handleNumberChangeWithLimits}
           readOnly={isReadOnly}
           error={numberError || undefined}
         />
       );
+    }
 
     // -------------------------------------------------------
     // QUANTITY
@@ -2563,21 +2838,21 @@ case "select": {
     // DIVIDER
     // -------------------------------------------------------
 
-    case "divider":
-      return (
-        <hr
-          style={{
-            border: "none",
-            borderTop: `2px ${normalizedElement.dividerStyle || "solid"
-              } ${normalizedElement.dividerColor || "currentColor"
-              }`,
-            display: normalizedElement.hideDivider ? "none" : "block",
-            width: "100%",
-            margin: 0,
-          }}
-        />
-      );
-
+   case "divider":
+  return (
+    <hr
+      style={{
+        border: "none",
+        borderTop: `2px ${
+          normalizedElement.dividerStyle || "solid"
+        } ${
+          normalizedElement.dividerColor || "currentColor"
+        }`,
+        width: "100%",
+        margin: 0,
+      }}
+    />
+  );
     // -------------------------------------------------------
     // FILE UPLOAD
     // -------------------------------------------------------
@@ -2662,7 +2937,24 @@ case "select": {
     // IMAGE OPTIONS
     // -------------------------------------------------------
 
-    case "image_options":
+
+    case "image_options": {
+      const maxImages = Math.max(
+        1,
+        Number(normalizedElement.maxImages) || 5
+      );
+
+      const selectedImages = Array.isArray(imagePreview)
+        ? imagePreview
+        : imagePreview
+          ? [imagePreview]
+          : [];
+
+      const remainingImages = Math.max(
+        0,
+        maxImages - selectedImages.length
+      );
+
       return (
         <BlockStack gap="200">
           {!hideLabel && (
@@ -2685,66 +2977,155 @@ case "select": {
               borderRadius: "8px",
               display: "flex",
               flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "10px",
+              gap: "12px",
               padding: "16px",
               boxSizing: "border-box",
             }}
           >
-            {imagePreview ? (
-              <img
-                src={imagePreview}
-                alt="Selected image preview"
+            {/* IMAGE PREVIEWS */}
+            {selectedImages.length > 0 && (
+              <div
                 style={{
-                  maxWidth: "100%",
-                  maxHeight: "180px",
-                  objectFit: "contain",
-                  borderRadius: "6px",
+                  display: "grid",
+                  gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+                  gap: "10px",
                 }}
-              />
-            ) : (
-              <Text as="p" variant="bodyMd">
-                {normalizedElement.placeholder || "Choose an image"}
-              </Text>
+              >
+                {selectedImages.map((image, index) => (
+                  <div
+                    key={index}
+                    style={{
+                      position: "relative",
+                      minWidth: 0,
+                    }}
+                  >
+                    <img
+                      src={image}
+                      alt={`Selected image ${index + 1}`}
+                      style={{
+                        width: "100%",
+                        height: "100px",
+                        objectFit: "cover",
+                        borderRadius: "6px",
+                        display: "block",
+                      }}
+                    />
+
+                    {!isReadOnly && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updatedImages = selectedImages.filter(
+                            (_, imageIndex) => imageIndex !== index
+                          );
+
+                          setImagePreview(updatedImages);
+                          onChange?.(currentElement.id, updatedImages);
+                        }}
+                        style={{
+                          position: "absolute",
+                          top: "4px",
+                          right: "4px",
+                          width: "23px",
+                          height: "23px",
+                          border: "none",
+                          borderRadius: "50%",
+                          background: "#ffffff",
+                          cursor: "pointer",
+                          fontSize: "15px",
+                        }}
+                      >
+                        ×
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
             )}
 
-            <label
-              style={{
-                padding: "7px 14px",
-                border: "1px solid #8c9196",
-                borderRadius: "5px",
-                color: "#303030",
-                fontSize: "14px",
-                background: "#ffffff",
-                cursor: isReadOnly ? "default" : "pointer",
-                pointerEvents: isReadOnly ? "none" : "auto",
-              }}
-            >
-              {imagePreview ? "Change image" : "Browse image"}
-
-              <input
-                type="file"
-                accept="image/*"
-                hidden
-                disabled={isReadOnly}
-                onChange={(event) => {
-                  const file = event.target.files?.[0];
-
-                  if (file && file.type.startsWith("image/")) {
-                    setImagePreview((previous) => {
-                      if (previous) URL.revokeObjectURL(previous);
-                      return URL.createObjectURL(file);
-                    });
-                  }
+            {selectedImages.length === 0 && (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  minHeight: "90px",
                 }}
-              />
-            </label>
+              >
+                <Text as="p" variant="bodyMd">
+                  {normalizedElement.placeholder || "Choose images"}
+                </Text>
+              </div>
+            )}
+
+            {/* UPLOAD BUTTON */}
+            {!isReadOnly && remainingImages > 0 && (
+              <label
+                style={{
+                  padding: "9px 14px",
+                  border: "1px solid #8c9196",
+                  borderRadius: "5px",
+                  color: "#303030",
+                  fontSize: "14px",
+                  background: "#ffffff",
+                  cursor: "pointer",
+                  textAlign: "center",
+                }}
+              >
+                {selectedImages.length > 0
+                  ? "Add more images"
+                  : "Browse images"}
+
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  hidden
+                  onChange={(event) => {
+                    const files = Array.from(event.target.files || []);
+
+                    const validFiles = files.filter((file) =>
+                      file.type.startsWith("image/")
+                    );
+
+                    const allowedFiles = validFiles.slice(
+                      0,
+                      remainingImages
+                    );
+
+                    const newImages = allowedFiles.map((file) =>
+                      URL.createObjectURL(file)
+                    );
+
+                    const updatedImages = [
+                      ...selectedImages,
+                      ...newImages,
+                    ];
+
+                    setImagePreview(updatedImages);
+                    onChange?.(currentElement.id, updatedImages);
+
+                    event.target.value = "";
+                  }}
+                />
+              </label>
+            )}
+
+            <Text
+              as="p"
+              variant="bodySm"
+              tone="subdued"
+              alignment="center"
+            >
+              {selectedImages.length} / {maxImages} images selected
+            </Text>
           </div>
 
           {descriptionText}
         </BlockStack>
       );
+    }
+
 
     // -------------------------------------------------------
     // COLOR SWATCH
@@ -3063,9 +3444,11 @@ case "select": {
             step={step}
             value={currentRangeValue}
             disabled={isReadOnly}
-            onChange={(event) =>
-              setRangeValue(Number(event.target.value))
-            }
+            onChange={(event) => {
+              const newValue = Number(event.target.value);
+              setRangeValue(newValue);
+              onChange?.(currentElement.id, newValue);
+            }}
             style={{ width: "100%" }}
           />
 
@@ -3220,52 +3603,158 @@ case "select": {
           typeof option === "object" && option?.image
       );
 
+      const showOptionLabel =
+        normalizedElement.showOptionLabel !== false;
+
+      const selectedImageOption = imageOptions.find(
+        (option) =>
+          (option.value || option.label) === value
+      );
+
       return (
         <BlockStack gap="200">
-          <Select
-            {...commonSelectProps}
-            options={[
-              { label: "Select an option", value: "" },
-              ...options,
-            ]}
-            value={value}
-            onChange={setValue}
-            disabled={isReadOnly}
-          />
+          {!hideLabel && (
+            <Text as="p" variant="bodyMd">
+              {label}
+              {required && (
+                <span style={{ color: "var(--p-color-text-critical)" }}>
+                  {" "}*
+                </span>
+              )}
+            </Text>
+          )}
+          <div
+            style={{
+              position: "relative",
+              width: "100%",
+            }}
+          >
 
-          {imageOptions.length > 0 && (
-            <div
+            {/* DROPDOWN BUTTON */}
+            <button
+              type="button"
+              disabled={isReadOnly}
+              onClick={() =>
+                setImageDropdownOpen((prev) => !prev)
+              }
               style={{
+                width: "100%",
+                minHeight: "42px",
+                padding: "10px 12px",
+                border: "1px solid #8c9196",
+                borderRadius: "8px",
+                background: "#fff",
                 display: "flex",
-                gap: "8px",
-                flexWrap: "wrap",
+                alignItems: "center",
+                justifyContent: "space-between",
+                cursor: isReadOnly ? "default" : "pointer",
+                textAlign: "left",
               }}
             >
-              {imageOptions.map((option, index) => (
-                <img
-                  key={option.value || index}
-                  src={option.image}
-                  alt={option.label || ""}
-                  onClick={() => {
-                    if (!isReadOnly) {
-                      setValue(option.value || option.label);
-                    }
-                  }}
-                  style={{
-                    width: "44px",
-                    height: "44px",
-                    objectFit: "cover",
-                    borderRadius: "6px",
-                    cursor: isReadOnly ? "default" : "pointer",
-                    border:
-                      value === (option.value || option.label)
-                        ? "2px solid #303030"
-                        : "1px solid #d2d5d8",
-                  }}
-                />
-              ))}
-            </div>
-          )}
+              <span>
+                {selectedImageOption?.label || "Select an option"}
+              </span>
+
+              <span
+                style={{
+                  transform: imageDropdownOpen
+                    ? "rotate(180deg)"
+                    : "rotate(0)",
+                  transition: "transform 0.2s",
+                }}
+              >
+                ▼
+              </span>
+            </button>
+
+            {/* DROPDOWN OPTIONS */}
+            {imageDropdownOpen && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: "calc(100% + 5px)",
+                  left: 0,
+                  right: 0,
+                  zIndex: 10000,
+                  background: "#fff",
+                  border: "1px solid #d2d5d8",
+                  borderRadius: "8px",
+                  padding: "12px",
+                  maxHeight: "260px",
+                  overflowY: "auto",
+                  overflowX: "hidden",
+                  display: "grid",
+                  gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+                  gap: "12px",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.12)",
+                }}
+              >
+                {imageOptions.map((option, index) => {
+                  const optionValue =
+                    option.value || option.label;
+
+                  const isSelected = value === optionValue;
+
+                  return (
+                    <div
+                      key={option.id || optionValue || index}
+                      onClick={() => {
+                        if (!isReadOnly) {
+                          setValue(optionValue);
+                          onChange?.(currentElement.id, optionValue);
+                          setImageDropdownOpen(false);
+                        }
+                      }}
+                      style={{
+                        cursor: isReadOnly ? "default" : "pointer",
+                        padding: "6px",
+                        borderRadius: "7px",
+                        border: isSelected
+                          ? "2px solid #303030"
+                          : "1px solid #e1e3e5",
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        gap: "6px",
+                        background: isSelected ? "#f6f6f7" : "#fff",
+                        minWidth: 0,
+                      }}
+                    >
+                      <img
+                        src={option.image}
+                        alt={option.label || ""}
+                        style={{
+                          width: "100%",
+                          height: "75px",
+                          objectFit: "cover",
+                          borderRadius: "5px",
+                          display: "block",
+                        }}
+                      />
+
+                      {showOptionLabel && (
+                        <div
+                          style={{
+                            fontSize: "12px",
+                            textAlign: "center",
+                            overflowWrap: "anywhere",
+                          }}
+                        >
+                          {option.label}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+
+                {imageOptions.length === 0 && (
+                  <Text as="p" tone="subdued">
+                    No image options available.
+                  </Text>
+                )}
+              </div>
+            )}
+          </div>
         </BlockStack>
       );
     }
@@ -3275,6 +3764,7 @@ case "select": {
     // -------------------------------------------------------
 
     case "product": {
+
       const selectedProductIds = Array.isArray(
         normalizedElement.selectedProductIds
       )

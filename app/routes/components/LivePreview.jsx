@@ -219,7 +219,7 @@ function DraggablePreviewElement({
   const isSelected = element.id === selectedElementId;
   const isHidden = element.visible === false;
 
-  
+
 
   // Drag behavior for this element.
   const {
@@ -566,7 +566,7 @@ export default function LivePreview({
 }) {
 
   //for debugging 
-    // DEBUG: Show currently selected element
+  // DEBUG: Show currently selected element
   const selectedElement = [
     header,
     footer,
@@ -578,16 +578,32 @@ export default function LivePreview({
       ...(page.rootElements ?? []),
     ]),
   ].find((element) => element?.id === selectedElementId);
-const selectedElementGroup = selectedElement
-  ? getElementSettingsType(selectedElement.type)
-  : null;
+  const selectedElementGroup = selectedElement
+    ? getElementSettingsType(selectedElement.type)
+    : null;
 
-console.log("========== SELECTED ELEMENT ==========");
-console.log("Element ID:", selectedElementId);
-console.log("Element Type:", selectedElement?.type);
-console.log("Element Group:", selectedElementGroup);
-console.log("Complete Element:", selectedElement);
-console.log("=======================================");
+  console.log("========== SELECTED ELEMENT ==========");
+  console.log("Element ID:", selectedElementId);
+  console.log("Element Type:", selectedElement?.type);
+  console.log("Element Group:", selectedElementGroup);
+  console.log("Complete Element:", selectedElement);
+  console.log("=======================================");
+
+  //
+  // Check whether an element should be rendered.
+  const shouldRenderElement = (element) => {
+    const type = String(element?.type || "")
+      .toLowerCase()
+      .trim()
+      .replace(/[\s-]+/g, "_");
+
+    // Completely skip dividers when Hide divider is enabled.
+    if (type === "divider" && element.hideDivider) {
+      return false;
+    }
+
+    return element.visible !== false;
+  };
 
   // Renders one draggable element. Used for both:
   //   - elements inside a row   (rowId = row.id, collection = "fields" / "elements")
@@ -709,10 +725,7 @@ console.log("=======================================");
                                 element,
                                 collection: "elements",
                               })),
-                            ].filter(
-                              ({ element }) =>
-                                element.visible !== false
-                            );
+                            ].filter(({ element }) => shouldRenderElement(element));
 
                             return {
                               row,
@@ -739,7 +752,7 @@ console.log("=======================================");
                               {(page.rootElements ?? [])
                                 .filter(
                                   (element) =>
-                                    element.visible !== false &&
+                                    shouldRenderElement(element) &&
                                     element.insertBeforeRowId === row.id
                                 )
                                 .map((element) => renderRootElement(element, page))}
@@ -768,7 +781,7 @@ console.log("=======================================");
                               {(page.rootElements ?? [])
                                 .filter(
                                   (element) =>
-                                    element.visible !== false &&
+                                    shouldRenderElement(element) &&
                                     element.insertAfterRowId === row.id
                                 )
                                 .map((element) => renderRootElement(element, page))}
@@ -796,7 +809,7 @@ console.log("=======================================");
                           {(page.rootElements ?? [])
                             .filter(
                               (element) =>
-                                element.visible !== false &&
+                                shouldRenderElement(element) &&
                                 !element.insertBeforeRowId &&
                                 !element.insertAfterRowId
                             )

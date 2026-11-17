@@ -49,7 +49,7 @@ export const ELEMENT_TYPES = [
     { type: "checkboxes", label: "Checkboxes", category: "Selects", icon: CheckboxIcon },
     { type: "dropdown", label: "Dropdown", category: "Selects", icon: SelectIcon },
     { type: "radio", label: "Radio buttons", category: "Selects", icon: CheckCircleIcon },
-    { type: "consent", label: "Consent", category: "Selects", icon: CheckboxIcon },
+    { type: "consent", label: " I agree to terms and conditions.", category: "Selects", icon: CheckboxIcon },
     { type: "switch", label: "Switch", category: "Selects", icon: ToggleOnIcon, disabled: true, badge: "New" },
     
      { type: "range_slider", label: "Range slider", category: "Selects", icon: SelectIcon, disabled: true, badge: "New" },

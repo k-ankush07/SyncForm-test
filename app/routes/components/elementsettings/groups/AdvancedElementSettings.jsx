@@ -36,13 +36,30 @@ function normalizeOptions(options = []) {
   );
 }
 
-function OptionEditor({ element, onChange, images = false }) {
+function OptionEditor({
+  element,
+  onChange,
+  images = false,
+  hideAddOption = false,
+  showOptionsHeading = true,
+}) {
   const options = normalizeOptions(element.options || []);
+
+  const maxImages = Math.max(
+    1,
+    Number(element.maxImages) || 5
+  );
+
+  const currentImageCount = options.filter(
+    (option) => option.image
+  ).length;
 
   const save = (next) =>
     updateElement(element, onChange, "options", next);
 
   const add = () => {
+    if (images && options.length >= maxImages) return;
+
     save([
       ...options,
       {
@@ -57,26 +74,39 @@ function OptionEditor({ element, onChange, images = false }) {
   const edit = (index, key, value) => {
     save(
       options.map((option, i) =>
-        i === index ? { ...option, [key]: value } : option
+        i === index
+          ? { ...option, [key]: value }
+          : option
       )
     );
   };
 
-  const remove = (index) =>
+  const remove = (index) => {
     save(options.filter((_, i) => i !== index));
+  };
 
   return (
     <BlockStack gap="300">
-      <Text as="h3" variant="headingSm">
-        Options
-      </Text>
+      {showOptionsHeading && (
+        <Text as="h3" variant="headingSm">
+          Options
+        </Text>
+      )}
+
+
+      {images && showOptionsHeading && (
+        <Text>
+          {currentImageCount} / {maxImages} images added
+        </Text>
+      )}
 
       {options.map((option, index) => (
-        <BlockStack key={option.id} gap="200">
+        <BlockStack key={option.id || index} gap="200">
           <InlineStack align="space-between" blockAlign="center">
             <Text as="span" variant="bodyMd" fontWeight="medium">
               Option {index + 1}
             </Text>
+
             <Button
               variant="plain"
               tone="critical"
@@ -88,14 +118,14 @@ function OptionEditor({ element, onChange, images = false }) {
 
           <TextField
             label="Label"
-            value={option.label}
+            value={option.label || ""}
             onChange={(value) => edit(index, "label", value)}
             autoComplete="off"
           />
 
           <TextField
             label="Value"
-            value={option.value}
+            value={option.value || ""}
             onChange={(value) => edit(index, "value", value)}
             autoComplete="off"
           />
@@ -103,7 +133,7 @@ function OptionEditor({ element, onChange, images = false }) {
           {images && (
             <TextField
               label="Image URL"
-              value={option.image}
+              value={option.image || ""}
               onChange={(value) => edit(index, "image", value)}
               placeholder="https://example.com/image.jpg"
               autoComplete="off"
@@ -113,7 +143,7 @@ function OptionEditor({ element, onChange, images = false }) {
           {images && option.image && (
             <img
               src={option.image}
-              alt={option.label}
+              alt={option.label || "Option image"}
               style={{
                 width: "72px",
                 height: "72px",
@@ -127,45 +157,69 @@ function OptionEditor({ element, onChange, images = false }) {
         </BlockStack>
       ))}
 
-      <Button onClick={add} fullWidth>
-        Add option
-      </Button>
+      {!hideAddOption && (
+        <Button
+          onClick={add}
+          fullWidth
+          disabled={images && options.length >= maxImages}
+        >
+          Add option
+        </Button>
+      )}
     </BlockStack>
   );
 }
 
+
 // IMAGE OPTIONS + IMAGE DROPDOWN
+
 export function ImageChoiceSettings({ element, onChange }) {
   const isDropdown = element.type === "image_dropdown";
 
   return (
     <BlockStack gap="300">
-      <Checkbox
-        label="Show option label"
-        checked={element.showOptionLabel !== false}
+      {/* {images && null} */}
+
+      <TextField
+        label="Maximum images"
+        type="number"
+        min={1}
+        value={String(element.maxImages ?? 5)}
         onChange={(value) =>
-          updateElement(element, onChange, "showOptionLabel", value)
+          updateElement(
+            element,
+            onChange,
+            "maxImages",
+            Math.max(1, Number(value) || 1)
+          )
         }
+        autoComplete="off"
+        helpText="Set the maximum number of image options."
       />
 
       {isDropdown && (
-        <Select
-          label="Image position"
-          value={element.imagePosition || "left"}
-          options={[
-            { label: "Left", value: "left" },
-            { label: "Right", value: "right" },
-          ]}
-          onChange={(value) =>
-            updateElement(element, onChange, "imagePosition", value)
-          }
-        />
+        <>
+          <Checkbox
+            label="Show option label"
+            checked={element.showOptionLabel !== false}
+            onChange={(value) =>
+              updateElement(element, onChange, "showOptionLabel", value)
+            }
+          />
+        </>
       )}
 
-      <OptionEditor element={element} onChange={onChange} images />
+      <OptionEditor
+        element={element}
+        onChange={onChange}
+        images
+        hideAddOption={!isDropdown}
+        showOptionsHeading={isDropdown}
+      />
     </BlockStack>
   );
 }
+
 
 // SWITCH
 export function SwitchSettings({ element, onChange }) {
@@ -1043,7 +1097,7 @@ export function ConsentSettings({
 
       {/* Default selected checkbox */}
       <Checkbox
-        label="Checked by default"
+        label="Default is selected"
         checked={element.checkedByDefault ?? true}
         onChange={(value) =>
           updateElement("checkedByDefault", value)
@@ -1070,105 +1124,48 @@ export function ConsentSettings({
   );
 }
 //URL
+
+
 export function UrlSettings({ element, onChange }) {
   const update = (key, value) =>
     updateElement(element, onChange, key, value);
 
   return (
     <BlockStack gap="300">
+     <Checkbox
+  label="Limit characters"
+  checked={Boolean(element.limitCharacters)}
+  onChange={(checked) => update("limitCharacters", checked)}
+/>
 
+{element.limitCharacters && (
+  <InlineStack gap="200" align="start">
+    <div style={{ flex: 1, minWidth: 0 }}>
       <TextField
-        label="Field label"
-        value={element.label || "Website URL"}
-        onChange={(value) => update("label", value)}
+        label="Min characters"
+        type="number"
+        value={String(element.minCharacters ?? "")}
+        onChange={(value) => update("minCharacters", value)}
         autoComplete="off"
       />
+    </div>
 
+    <div style={{ flex: 1, minWidth: 0 }}>
       <TextField
-        label="Placeholder"
-        value={element.placeholder || "https://example.com"}
-        onChange={(value) => update("placeholder", value)}
+        label="Max characters"
+        type="number"
+        value={String(element.maxCharacters ?? "")}
+        onChange={(value) => update("maxCharacters", value)}
         autoComplete="off"
       />
-
-      <TextField
-        label="Field name (key)"
-        value={element.name || "website_url"}
-        onChange={(value) => update("name", value)}
-        autoComplete="off"
-        helpText="Used to identify this field in form submissions."
-      />
-
-      <Divider />
-
-      <Text variant="headingSm" as="h3">
-        Default value
-      </Text>
-
-      <TextField
-        label="Default URL"
-        labelHidden
-        value={element.defaultValue || ""}
-        onChange={(value) => update("defaultValue", value)}
-        placeholder="https://yourwebsite.com"
-        autoComplete="off"
-        helpText="Pre-fill the field with a URL (optional)."
-      />
-
-      <Divider />
-
-      <Text variant="headingSm" as="h3">
-        Validation
-      </Text>
-
-      <Checkbox
-        label="Validate URL format"
-        checked={element.validateUrl !== false}
-        onChange={(value) => update("validateUrl", value)}
-      />
-
-      <Checkbox
-        label="Require HTTPS"
-        checked={Boolean(element.requireHttps)}
-        onChange={(value) => update("requireHttps", value)}
-      />
-
-      <Checkbox
-        label="Make field required"
-        checked={Boolean(element.required)}
-        onChange={(value) => update("required", value)}
-      />
-
-      <Divider />
-
-      <Text variant="headingSm" as="h3">
-        Advanced options
-      </Text>
-
-      <Checkbox
-        label="Show link icon"
-        checked={element.showIcon !== false}
-        onChange={(value) => update("showIcon", value)}
-      />
-
-      <Checkbox
-        label="Open link in new tab"
-        checked={element.openInNewTab !== false}
-        onChange={(value) => update("openInNewTab", value)}
-      />
-
-      <TextField
-        label="Allowed domains"
-        value={element.allowedDomains || ""}
-        onChange={(value) => update("allowedDomains", value)}
-        placeholder="example.com, shopify.com"
-        autoComplete="off"
-        helpText="Leave empty to allow any valid domain."
-      />
-
+    </div>
+  </InlineStack>
+)}
     </BlockStack>
   );
 }
+
+
 
 // HIDDEN
 // HIDDEN FIELD SETTINGS
@@ -1315,7 +1312,7 @@ export function HiddenSettings({
   onChange,
   pages = [],
 }) {
-    console.log("🔥 HIDDEN SETTINGS COMPONENT CALLED");
+  console.log("🔥 HIDDEN SETTINGS COMPONENT CALLED");
   const condition = element.conditionalLogic || {
     enabled: false,
     fieldId: "",
