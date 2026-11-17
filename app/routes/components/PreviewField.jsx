@@ -458,6 +458,12 @@ export default function PreviewField({
       ? Math.min(max, Math.max(min, defaultValue))
       : min;
   });
+
+  // files state 
+  const fileInputRef = useRef(null);
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [fileError, setFileError] = useState("");
+  //effects 
   useEffect(() => {
     const min = Number(normalizedElement.min ?? 0);
     const max = Number(normalizedElement.max ?? 100);
@@ -881,14 +887,79 @@ export default function PreviewField({
 
     return getPasswordError() === "";
   };
+  //Add the file validation logic
+  const acceptedFileTypes = Array.isArray(normalizedElement.acceptedFileTypes)
+    ? normalizedElement.acceptedFileTypes
+    : [];
+
+  const acceptAttribute = acceptedFileTypes
+    .map((extension) => `.${extension}`)
+    .join(",");
+
+  const fileSizeLimit = Number(normalizedElement.fileSizeLimit) || 0;
+  const maxFileSize = fileSizeLimit * 1024 * 1024;
+
+  const numberOfFilesLimit =
+    Number(normalizedElement.numberOfFilesLimit) || 0;
+
+  const maxFiles = normalizedElement.allowMultiple
+    ? numberOfFilesLimit
+    : 1;
+
+  const handleFileSelection = (event) => {
+    const incomingFiles = Array.from(event.target.files || []);
+    setFileError("");
+
+    const validFiles = [];
+
+    for (const file of incomingFiles) {
+      // Check allowed extension.
+      const extension = file.name.split(".").pop().toLowerCase();
+
+      if (
+        acceptedFileTypes.length > 0 &&
+        !acceptedFileTypes.includes(extension)
+      ) {
+        setFileError(`.${extension} files are not allowed.`);
+        continue;
+      }
+
+      // Check file size.
+      if (maxFileSize > 0 && file.size > maxFileSize) {
+        setFileError(
+          `${file.name} exceeds the ${fileSizeLimit} MB size limit.`
+        );
+        continue;
+      }
+
+      validFiles.push(file);
+    }
+
+    // Check number of files.
+    const combinedFiles = normalizedElement.allowMultiple
+      ? [...selectedFiles, ...validFiles]
+      : validFiles.slice(0, 1);
+
+    if (maxFiles > 0 && combinedFiles.length > maxFiles) {
+      setFileError(`You can select a maximum of ${maxFiles} files.`);
+      setSelectedFiles(combinedFiles.slice(0, maxFiles));
+    } else {
+      setSelectedFiles(combinedFiles);
+    }
+
+    // Allow selecting the same file again.
+    event.target.value = "";
+  };
+
 
   // =========================================================
   // 8. ELEMENT RENDERING
   // =========================================================
-   // Completely hide the divider when Hide divider is enabled.
+  // Completely hide the divider when Hide divider is enabled.
   if (type === "divider" && normalizedElement.hideDivider) {
     return null;
   }
+
 
   switch (type) {
     // -------------------------------------------------------
@@ -905,6 +976,7 @@ export default function PreviewField({
             value={value}
             onChange={setValue}
             readOnly={isReadOnly}
+            prefix:inputIconPrefix
             minLength={
               normalizedElement.limitCharacters &&
                 normalizedElement.minCharacters !== ""
@@ -976,6 +1048,9 @@ export default function PreviewField({
     // -------------------------------------------------------
     // PHONE
     // -------------------------------------------------------
+
+
+
     case "phone":
       return (
         <BlockStack gap="200">
@@ -991,16 +1066,34 @@ export default function PreviewField({
           )}
 
           <div
+            className="phone-field-shell"
             style={{
               display: "flex",
               width: "100%",
+              minWidth: 0,
               alignItems: "stretch",
+              position: "relative",
+              zIndex: countryDropdownOpen ? 10000 : 1,
+              overflow: "visible",
+              isolation: "isolate",
+              background: "#F6F6F7",
+              border: phoneError
+                ? "1px solid var(--p-color-border-critical)"
+                : "1px solid #C9CCCF",
+              borderRadius: "8px",
+              boxSizing: "border-box",
+              transition: "border-color 0.15s ease, box-shadow 0.15s ease",
             }}
           >
+            {/* COUNTRY SELECTOR */}
             {showPhoneCountry ? (
-              <div style={{ position: "relative", flexShrink: 0 }}>
-                {/* Selected country button */}
-                {/* Selected country button */}
+              <div
+                style={{
+                  position: "relative",
+                  flexShrink: 0,
+                  zIndex: countryDropdownOpen ? 10002 : 1,
+                }}
+              >
                 <button
                   type="button"
                   disabled={isReadOnly}
@@ -1008,24 +1101,22 @@ export default function PreviewField({
                     setCountryDropdownOpen((previous) => !previous)
                   }
                   style={{
-                    width: "76px",
-                    minWidth: "76px",
-                    height: "100%",
-                    minHeight: "40px",
-                    padding: "0 7px",
+                    height: "46px",
+                    minWidth: "80px",
+                    padding: "0 10px",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    gap: "5px",
-                    background: "#F1F1F1",
-                    border: "1px solid #8A8A8A",
-                    borderRight: 0,
-                    borderRadius: "6px 0 0 6px",
+                    gap: "6px",
+                    background: "transparent",
+                    border: "none",
+                    borderRight: "1px solid #D8DADD",
+                    borderRadius: "8px 0 0 8px",
                     cursor: isReadOnly ? "default" : "pointer",
                     boxSizing: "border-box",
                   }}
                 >
-                  {/* Small country flag */}
+                  {/* COUNTRY FLAG */}
                   <span
                     className={`fi fi-${currentPhoneCountry?.value || "in"}`}
                     style={{
@@ -1039,7 +1130,7 @@ export default function PreviewField({
                     }}
                   />
 
-                  {/* Dial code only */}
+                  {/* DIAL CODE */}
                   <span
                     style={{
                       fontSize: "13px",
@@ -1052,18 +1143,24 @@ export default function PreviewField({
                   </span>
 
                   {!isReadOnly && (
-                    <span style={{ fontSize: "9px", color: "#666" }}>
+                    <span
+                      style={{
+                        fontSize: "10px",
+                        color: "#777777",
+                      }}
+                    >
                       ▾
                     </span>
                   )}
                 </button>
 
-                {/* Country dropdown */}
+                {/* COUNTRY DROPDOWN */}
                 {countryDropdownOpen && !isReadOnly && (
                   <div
+                    className="phone-country-dropdown"
                     style={{
                       position: "absolute",
-                      top: "calc(100% + 4px)",
+                      top: "calc(100% + 6px)",
                       left: 0,
                       width: "280px",
                       maxHeight: "260px",
@@ -1071,15 +1168,16 @@ export default function PreviewField({
                       overflowX: "hidden",
                       backgroundColor: "#FFFFFF",
                       border: "1px solid #E1E3E5",
-                      borderRadius: "8px",
-                      boxShadow: "0 4px 16px rgba(0, 0, 0, 0.12)",
-                      zIndex: 10000,
-                      padding: "4px",
+                      borderRadius: "10px",
+                      boxShadow: "0 8px 24px rgba(0,0,0,0.18)",
+                      zIndex: 10003,
+                      padding: "5px",
                       boxSizing: "border-box",
                     }}
                   >
                     {phoneCountryList.map((country) => {
-                      const isSelected = phoneCountry === country.value;
+                      const isSelected =
+                        phoneCountry === country.value.toLowerCase();
 
                       return (
                         <button
@@ -1093,11 +1191,11 @@ export default function PreviewField({
                             display: "flex",
                             alignItems: "center",
                             width: "100%",
-                            minHeight: "42px",
+                            minHeight: "40px",
                             padding: "8px 10px",
                             gap: "10px",
                             border: "none",
-                            borderRadius: "5px",
+                            borderRadius: "6px",
                             backgroundColor: isSelected
                               ? "#F1F2F3"
                               : "#FFFFFF",
@@ -1117,9 +1215,9 @@ export default function PreviewField({
                               : "#FFFFFF";
                           }}
                         >
-                          {/* Country flag */}
+                          {/* COUNTRY FLAG */}
                           <span
-                            className={`fi fi-${country.value}`}
+                            className={`fi fi-${country.value.toLowerCase()}`}
                             style={{
                               width: "24px",
                               height: "18px",
@@ -1131,8 +1229,7 @@ export default function PreviewField({
                             }}
                           />
 
-
-                          {/* English country name + native name */}
+                          {/* COUNTRY NAME */}
                           <span
                             style={{
                               flex: 1,
@@ -1151,19 +1248,18 @@ export default function PreviewField({
                               ` (${country.nativeName})`}
                           </span>
 
-                          {/* Dial code */}
+                          {/* DIAL CODE */}
                           <span
                             style={{
                               fontSize: "13px",
                               fontWeight: 500,
-                              color: "var(--p-color-text-secondary)",
+                              color: "#6D7175",
                               flexShrink: 0,
                               whiteSpace: "nowrap",
                             }}
                           >
                             {country.dialCode}
                           </span>
-
                         </button>
                       );
                     })}
@@ -1171,17 +1267,17 @@ export default function PreviewField({
                 )}
               </div>
             ) : selectedIcon ? (
+              /* SELECTED FIELD ICON */
               <div
                 style={{
-                  width: "32px",
-                  minWidth: "32px",
+                  width: "42px",
+                  minWidth: "42px",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  background: "#F1F1F1",
-                  border: "1px solid #8A8A8A",
-                  borderRight: 0,
-                  borderRadius: "6px 0 0 6px",
+                  background: "#E8E8E9",
+                  borderRight: "1px solid #D8DADD",
+                  borderRadius: "8px 0 0 8px",
                   boxSizing: "border-box",
                 }}
               >
@@ -1189,8 +1285,14 @@ export default function PreviewField({
               </div>
             ) : null}
 
-            {/* Phone number input */}
-            <div style={{ flex: 1, minWidth: 0 }}>
+            {/* PHONE NUMBER INPUT */}
+            <div
+              className="phone-number-input"
+              style={{
+                flex: 1,
+                minWidth: 0,
+              }}
+            >
               <TextField
                 labelHidden
                 label={label}
@@ -1212,9 +1314,13 @@ export default function PreviewField({
         </BlockStack>
       );
 
+
+
+
     // -------------------------------------------------------
     // PASSWORD
     // -------------------------------------------------------
+
 
     case "password": {
       const passwordError = passwordValidationTriggered
@@ -1228,81 +1334,50 @@ export default function PreviewField({
           ? "Passwords do not match."
           : "";
 
+      const passwordSuffix = (
+        <button
+          type="button"
+          disabled={isReadOnly}
+          onClick={() => setShowPassword((previous) => !previous)}
+          aria-label={showPassword ? "Hide password" : "Show password"}
+          className="password-visibility-button"
+          style={{
+            border: "none",
+            background: "transparent",
+            padding: "6px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "#6D7175",
+            cursor: isReadOnly ? "default" : "pointer",
+            borderRadius: "5px",
+          }}
+        >
+          <Icon
+            source={
+              showPassword
+                ? PolarisIcons.HideIcon
+                : PolarisIcons.ViewIcon
+            }
+          />
+        </button>
+      );
+
       return (
         <BlockStack gap="300">
 
-          {/* Password input */}
-          <TextField
-            {...commonTextFieldProps}
-            type={showPassword ? "text" : "password"}
-            autoComplete="new-password"
-            value={value}
-            onChange={(newValue) => {
-              setValue(newValue);
-            }}
-            readOnly={isReadOnly}
-            error={passwordError || undefined}
-            minLength={
-              normalizedElement.limitCharacters &&
-                normalizedElement.minCharacters !== ""
-                ? Number(normalizedElement.minCharacters)
-                : undefined
-            }
-            maxLength={
-              normalizedElement.limitCharacters &&
-                normalizedElement.maxCharacters !== ""
-                ? Number(normalizedElement.maxCharacters)
-                : undefined
-            }
-            suffix={
-              <button
-                type="button"
-                disabled={isReadOnly}
-                onClick={() =>
-                  setShowPassword((previous) => !previous)
-                }
-                aria-label={showPassword ? "Hide password" : "Show password"}
-                style={{
-                  border: "none",
-                  background: "transparent",
-                  padding: "4px",
-                  display: "flex",
-                  alignItems: "center",
-                  cursor: isReadOnly ? "default" : "pointer",
-                }}
-              >
-                <Icon
-                  source={
-                    showPassword
-                      ? PolarisIcons.HideIcon
-                      : PolarisIcons.ViewIcon
-                  }
-                />
-              </button>
-            }
-          />
-
-          {/* Confirm password */}
-          {normalizedElement.confirmPassword && (
+          {/* PASSWORD INPUT */}
+          <div className="password-field-control">
             <TextField
-              type={showConfirmPassword ? "text" : "password"}
-              label={
-                normalizedElement.confirmPasswordLabel ||
-                "Confirm Password"
-              }
-              placeholder={
-                normalizedElement.confirmPasswordPlaceholder ||
-                "Confirm your password"
-              }
-              helpText={
-                normalizedElement.confirmPasswordDescription || undefined
-              }
-              value={confirmPasswordValue}
-              onChange={setConfirmPasswordValue}
+              {...commonTextFieldProps}
+              type={showPassword ? "text" : "password"}
               autoComplete="new-password"
+              value={value}
+              onChange={(newValue) => {
+                setValue(newValue);
+              }}
               readOnly={isReadOnly}
-              // show icon with styling
-              prefix={commonTextFieldProps.prefix}
+              error={passwordError || undefined}
               minLength={
                 normalizedElement.limitCharacters &&
                   normalizedElement.minCharacters !== ""
@@ -1315,43 +1390,86 @@ export default function PreviewField({
                   ? Number(normalizedElement.maxCharacters)
                   : undefined
               }
-              error={confirmPasswordError || undefined}
-              suffix={
-                <button
-                  type="button"
-                  disabled={isReadOnly}
-                  onClick={() =>
-                    setShowConfirmPassword((previous) => !previous)
-                  }
-                  aria-label={
-                    showConfirmPassword
-                      ? "Hide confirm password"
-                      : "Show confirm password"
-                  }
-                  style={{
-                    border: "none",
-                    background: "transparent",
-                    padding: "4px",
-                    display: "flex",
-                    alignItems: "center",
-                    cursor: isReadOnly ? "default" : "pointer",
-                  }}
-                >
-                  <Icon
-                    source={
-                      showConfirmPassword
-                        ? PolarisIcons.HideIcon
-                        : PolarisIcons.ViewIcon
-                    }
-                  />
-                </button>
-              }
+              suffix={passwordSuffix}
             />
+          </div>
+
+          {/* CONFIRM PASSWORD */}
+          {normalizedElement.confirmPassword && (
+            <div className="password-field-control">
+              <TextField
+                type={showConfirmPassword ? "text" : "password"}
+                label={
+                  normalizedElement.confirmPasswordLabel ||
+                  "Confirm Password"
+                }
+                placeholder={
+                  normalizedElement.confirmPasswordPlaceholder ||
+                  "Confirm your password"
+                }
+                helpText={
+                  normalizedElement.confirmPasswordDescription || undefined
+                }
+                value={confirmPasswordValue}
+                onChange={setConfirmPasswordValue}
+                autoComplete="new-password"
+                readOnly={isReadOnly}
+                prefix={commonTextFieldProps.prefix}
+                minLength={
+                  normalizedElement.limitCharacters &&
+                    normalizedElement.minCharacters !== ""
+                    ? Number(normalizedElement.minCharacters)
+                    : undefined
+                }
+                maxLength={
+                  normalizedElement.limitCharacters &&
+                    normalizedElement.maxCharacters !== ""
+                    ? Number(normalizedElement.maxCharacters)
+                    : undefined
+                }
+                error={confirmPasswordError || undefined}
+                suffix={
+                  <button
+                    type="button"
+                    disabled={isReadOnly}
+                    onClick={() =>
+                      setShowConfirmPassword((previous) => !previous)
+                    }
+                    aria-label={
+                      showConfirmPassword
+                        ? "Hide confirm password"
+                        : "Show confirm password"
+                    }
+                    className="password-visibility-button"
+                    style={{
+                      border: "none",
+                      background: "transparent",
+                      padding: "6px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "#6D7175",
+                      cursor: isReadOnly ? "default" : "pointer",
+                      borderRadius: "5px",
+                    }}
+                  >
+                    <Icon
+                      source={
+                        showConfirmPassword
+                          ? PolarisIcons.HideIcon
+                          : PolarisIcons.ViewIcon
+                      }
+                    />
+                  </button>
+                }
+              />
+            </div>
           )}
 
         </BlockStack>
       );
     }
+
 
     // -------------------------------------------------------
     // COUNTRY
@@ -2363,129 +2481,243 @@ export default function PreviewField({
       );
 
       const decreaseValue = () => {
+        if (isReadOnly || safeValue <= min) return;
         setValue(String(Math.max(min, safeValue - 1)));
       };
 
       const increaseValue = () => {
+        if (isReadOnly || safeValue >= max) return;
         setValue(String(Math.min(max, safeValue + 1)));
       };
 
       return (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            width: "100%",
-            minHeight: "54px",
-            padding: "0 14px",
-            background: "#eeeeee",
-            borderRadius: "9px",
-            boxSizing: "border-box",
-          }}
-        >
-          <button
-            type="button"
-            disabled={isReadOnly || safeValue <= min}
-            onClick={decreaseValue}
+        <BlockStack gap="200">
+          {/* Quantity selector */}
+          <div
             style={{
-              border: "none",
-              background: "transparent",
-              color: safeValue <= min ? "#C9CCCF" : "#555",
-              fontSize: "20px",
-              cursor:
-                isReadOnly || safeValue <= min
-                  ? "not-allowed"
-                  : "pointer",
+              display: "flex",
+              alignItems: "center",
+              width: "100%",
+              minHeight: "52px",
+              padding: "0 12px",
+              background: "#F6F6F7",
+              border: "1px solid #E1E3E5",
+              borderRadius: "8px",
+              boxSizing: "border-box",
             }}
           >
-            −
-          </button>
+            {/* Decrease button */}
+            <button
+              type="button"
+              disabled={isReadOnly || safeValue <= min}
+              onClick={decreaseValue}
+              style={{
+                width: "32px",
+                height: "32px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                border: "none",
+                borderRadius: "6px",
+                background: "transparent",
+                color:
+                  isReadOnly || safeValue <= min
+                    ? "#C9CCCF"
+                    : "#303030",
+                fontSize: "22px",
+                cursor:
+                  isReadOnly || safeValue <= min
+                    ? "not-allowed"
+                    : "pointer",
+                flexShrink: 0,
+              }}
+            >
+              −
+            </button>
 
-          <span
-            style={{
-              flex: 1,
-              marginLeft: "12px",
-              fontSize: "14px",
-              color: "#303030",
-            }}
-          >
-            {label || "Quantity"}
-          </span>
+            {/* Quantity label */}
+            <span
+              style={{
+                flex: 1,
+                minWidth: 0,
+                marginLeft: "10px",
+                fontSize: "14px",
+                fontWeight: 500,
+                color: "#303030",
+              }}
+            >
+              {label || "Quantity"}
+            </span>
 
-          <span
-            style={{
-              fontSize: "14px",
-              fontWeight: 500,
-              color: "#303030",
-              marginRight: "12px",
-            }}
-          >
-            {safeValue}
-          </span>
+            {/* Current value */}
+            <span
+              style={{
+                minWidth: "30px",
+                textAlign: "center",
+                fontSize: "14px",
+                fontWeight: 600,
+                color: "#303030",
+                marginRight: "10px",
+                fontVariantNumeric: "tabular-nums",
+              }}
+            >
+              {safeValue}
+            </span>
 
-          <button
-            type="button"
-            disabled={isReadOnly || safeValue >= max}
-            onClick={increaseValue}
-            style={{
-              border: "none",
-              background: "transparent",
-              color: safeValue >= max ? "#C9CCCF" : "#555",
-              fontSize: "20px",
-              cursor:
-                isReadOnly || safeValue >= max
-                  ? "not-allowed"
-                  : "pointer",
-            }}
-          >
-            +
-          </button>
-        </div>
+            {/* Increase button */}
+            <button
+              type="button"
+              disabled={isReadOnly || safeValue >= max}
+              onClick={increaseValue}
+              style={{
+                width: "32px",
+                height: "32px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                border: "none",
+                borderRadius: "6px",
+                background: "transparent",
+                color:
+                  isReadOnly || safeValue >= max
+                    ? "#C9CCCF"
+                    : "#303030",
+                fontSize: "22px",
+                cursor:
+                  isReadOnly || safeValue >= max
+                    ? "not-allowed"
+                    : "pointer",
+                flexShrink: 0,
+              }}
+            >
+              +
+            </button>
+          </div>
+
+          {/* Description */}
+          {normalizedElement.description && (
+            <Text
+              as="p"
+              variant="bodySm"
+              tone="subdued"
+            >
+              {normalizedElement.description}
+            </Text>
+          )}
+        </BlockStack>
       );
     }
+
 
     // -------------------------------------------------------
     // REPEATER
     // -------------------------------------------------------
 
-    case "repeater":
+
+    case "repeater": {
+      const minItems = Math.max(
+        0,
+        Number(normalizedElement.minItems ?? 1)
+      );
+
+      const maxItems = Math.max(
+        minItems,
+        Number(normalizedElement.maxItems ?? 5)
+      );
+
+      const addButtonText =
+        normalizedElement.addButtonText || "Add more";
+
+      const items = Array.isArray(value)
+        ? value
+        : value
+          ? [value]
+          : [];
+
+      const handleAddItem = () => {
+        if (isReadOnly || items.length >= maxItems) return;
+
+        setValue([...items, ""]);
+      };
+
+      const handleRemoveItem = (index) => {
+        if (isReadOnly || items.length <= minItems) return;
+
+        setValue(items.filter((_, i) => i !== index));
+      };
+
+      const handleItemChange = (index, newValue) => {
+        const updatedItems = [...items];
+        updatedItems[index] = newValue;
+        setValue(updatedItems);
+      };
+
       return (
         <BlockStack gap="200">
           {fieldLabelWithIcon}
 
-          <InlineStack gap="200" blockAlign="end" wrap={false}>
-            <div style={{ flex: 1 }}>
-              <TextField
-                label=""
-                labelHidden
-                placeholder={placeholder || "Repeater preview"}
-                value={value}
-                onChange={setValue}
-                autoComplete="off"
-                readOnly={isReadOnly}
-              />
-            </div>
-
-            <Button
-              icon={PolarisIcons.DeleteIcon}
-              accessibilityLabel="Remove"
-              disabled={isReadOnly}
-            />
-          </InlineStack>
-
-          <div>
-            <Button
-              icon={PolarisIcons.PlusIcon}
-              disabled={isReadOnly}
+          {items.map((item, index) => (
+            <InlineStack
+              key={index}
+              gap="200"
+              blockAlign="center"
+              wrap={false}
             >
-              {normalizedElement.addButtonText || "Add more"}
-            </Button>
-          </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <TextField
+                  label=""
+                  labelHidden
+                  placeholder={`${placeholder || "Enter value"} ${index + 1}`}
+                  value={String(item ?? "")}
+                  onChange={(newValue) =>
+                    handleItemChange(index, newValue)
+                  }
+                  autoComplete="off"
+                  readOnly={isReadOnly}
+                />
+              </div>
 
-          {descriptionText}
+              {items.length > minItems && (
+                <Button
+                  icon={PolarisIcons.DeleteIcon}
+                  variant="tertiary"
+                  tone="critical"
+                  disabled={isReadOnly}
+                  onClick={() => handleRemoveItem(index)}
+                />
+              )}
+            </InlineStack>
+          ))}
+
+          {items.length < maxItems && (
+            <div>
+              <Button
+                variant="secondary"
+                onClick={handleAddItem}
+                disabled={isReadOnly}
+                fullWidth={false}
+              >
+                {addButtonText}
+              </Button>
+            </div>
+          )}
+
+          <Text
+            as="p"
+            variant="bodySm"
+            tone="subdued"
+          >
+            {items.length} / {maxItems} items
+          </Text>
+          {normalizedElement.description && (
+            <Text as="p" variant="bodySm" tone="subdued">
+              {normalizedElement.description}
+            </Text>
+          )}
         </BlockStack>
       );
+    }
+
 
     // -------------------------------------------------------
     // RATING LEVEL
@@ -2541,13 +2773,15 @@ export default function PreviewField({
     // -------------------------------------------------------
     // STAR RATING
     // -------------------------------------------------------
-
     case "rating_star": {
       const customRatingIcon =
         normalizedElement.useCustomRatingIcon &&
           normalizedElement.ratingIcon
           ? PolarisIcons[normalizedElement.ratingIcon]
           : null;
+
+      const ratingColor =
+        normalizedElement.ratingColor || "#2E4E49";
 
       return (
         <BlockStack gap="200">
@@ -2566,7 +2800,7 @@ export default function PreviewField({
               style={{
                 display: "flex",
                 width: "100%",
-                gap: "clamp(2px, 2cqw, 9px)",
+                gap: "clamp(4px, 2cqw, 10px)",
                 alignItems: "center",
                 justifyContent: "flex-start",
                 boxSizing: "border-box",
@@ -2591,9 +2825,10 @@ export default function PreviewField({
                     disabled={isReadOnly}
                     onClick={() => setRating(star)}
                     style={{
+                      "--rating-active-color": ratingColor,
                       width: "100%",
                       aspectRatio: "1 / 1",
-                      maxWidth: "90px",
+                      maxWidth: "100px",
                       minWidth: 0,
                       border: "none",
                       background: "transparent",
@@ -2602,21 +2837,26 @@ export default function PreviewField({
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      color: star <= rating ? "#F5A623" : "#C9CCCF",
-                      fontSize: "clamp(18px, 12cqw, 54px)",
+                      color: star <= rating
+                        ? ratingColor
+                        : "#C9CCCF",
+                      fontSize: "clamp(28px, 15cqw, 68px)",
                       lineHeight: 1,
                       boxSizing: "border-box",
-                      overflow: "hidden",
+                      overflow: "visible",
+                      transition: "color 150ms ease, transform 150ms ease",
                     }}
                   >
                     {customRatingIcon ? (
                       <span
+                        className="rating-custom-icon"
                         style={{
                           width: "100%",
                           height: "100%",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
+                          color: "inherit",
                         }}
                       >
                         <Icon source={customRatingIcon} />
@@ -2627,7 +2867,12 @@ export default function PreviewField({
                   </button>
 
                   {normalizedElement.showNumberUnderIcon && (
-                    <span style={{ fontSize: "14px", color: "#6D7175" }}>
+                    <span
+                      style={{
+                        fontSize: "14px",
+                        color: "#6D7175",
+                      }}
+                    >
                       {star}
                     </span>
                   )}
@@ -2637,94 +2882,40 @@ export default function PreviewField({
           </div>
 
           {descriptionText}
-        </BlockStack>
-      );
-    }
 
-    // -------------------------------------------------------
-    // FEEDBACK
-    // -------------------------------------------------------
+          <style>
+            {`
+          .rating-star-button:hover:not(:disabled) {
+            color: var(--rating-active-color) !important;
+            transform: scale(1.08);
+          }
 
-    case "feedback": {
-      const emojis = ["😡", "🙁", "😐", "🙂", "😍"];
+          .rating-star-button:hover:not(:disabled)
+          ~ .rating-star-button {
+            color: inherit;
+          }
 
-      const items =
-        options.length > 0
-          ? options
-          : emojis.map((emoji) => ({
-            label: emoji,
-            value: emoji,
-          }));
+          .rating-custom-icon .Polaris-Icon {
+            width: 100% !important;
+            height: 100% !important;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
 
-      return (
-        <BlockStack gap="200">
-          {fieldLabelWithIcon}
+          .rating-custom-icon .Polaris-Icon svg {
+            width: 100% !important;
+            height: 100% !important;
+            max-width: 68px;
+            max-height: 68px;
+            display: block;
+          }
 
-          <div
-            style={{
-              width: "100%",
-              maxWidth: "100%",
-              minWidth: 0,
-              containerType: "inline-size",
-              containerName: "feedback-container",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                width: "100%",
-                gap: "clamp(2px, 2cqw, 9px)",
-                alignItems: "center",
-                justifyContent: "flex-start",
-                boxSizing: "border-box",
-                minWidth: 0,
-              }}
-            >
-              {items.map((item) => (
-                <div
-                  key={item.value}
-                  style={{
-                    flex: "1 1 0",
-                    minWidth: 0,
-                    display: "flex",
-                    justifyContent: "center",
-                    alignItems: "center",
-                  }}
-                >
-                  <button
-                    type="button"
-                    disabled={isReadOnly}
-                    onClick={() => setSelected([item.value])}
-                    style={{
-                      width: "100%",
-                      aspectRatio: "1 / 1",
-                      maxWidth: "90px",
-                      minWidth: 0,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: "clamp(18px, 12cqw, 54px)",
-                      lineHeight: 1,
-                      background: "transparent",
-                      cursor: isReadOnly ? "default" : "pointer",
-                      padding: "2px",
-                      boxSizing: "border-box",
-                      overflow: "hidden",
-                      borderRadius: "8px",
-                      border:
-                        selected[0] === item.value
-                          ? "2px solid #303030"
-                          : "1px solid transparent",
-                    }}
-                  >
-                    {item.label}
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {descriptionText}
+          .rating-custom-icon svg {
+            color: inherit;
+          }
+        `}
+          </style>
         </BlockStack>
       );
     }
@@ -2838,21 +3029,19 @@ export default function PreviewField({
     // DIVIDER
     // -------------------------------------------------------
 
-   case "divider":
-  return (
-    <hr
-      style={{
-        border: "none",
-        borderTop: `2px ${
-          normalizedElement.dividerStyle || "solid"
-        } ${
-          normalizedElement.dividerColor || "currentColor"
-        }`,
-        width: "100%",
-        margin: 0,
-      }}
-    />
-  );
+    case "divider":
+      return (
+        <hr
+          style={{
+            border: "none",
+            borderTop: `2px ${normalizedElement.dividerStyle || "solid"
+              } ${normalizedElement.dividerColor || "currentColor"
+              }`,
+            width: "100%",
+            margin: 0,
+          }}
+        />
+      );
     // -------------------------------------------------------
     // FILE UPLOAD
     // -------------------------------------------------------
@@ -2867,12 +3056,6 @@ export default function PreviewField({
       const hint =
         normalizedElement.hint || "PNG, GIF, SVG.";
 
-      const acceptedFileTypes = Array.isArray(
-        normalizedElement.acceptedFileTypes
-      )
-        ? normalizedElement.acceptedFileTypes
-        : [];
-
       return (
         <BlockStack gap="200">
           {!hideLabel && (
@@ -2886,7 +3069,17 @@ export default function PreviewField({
             </Text>
           )}
 
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept={acceptAttribute || undefined}
+            multiple={Boolean(normalizedElement.allowMultiple)}
+            onChange={handleFileSelection}
+            style={{ display: "none" }}
+          />
+
           <div
+            onClick={() => fileInputRef.current?.click()}
             style={{
               width: "100%",
               minHeight: "150px",
@@ -2900,6 +3093,7 @@ export default function PreviewField({
               gap: "10px",
               padding: "16px",
               boxSizing: "border-box",
+              cursor: "pointer",
             }}
           >
             <Text as="p" variant="bodyMd">
@@ -2908,9 +3102,7 @@ export default function PreviewField({
 
             <Text as="p" variant="bodySm" tone="subdued">
               {acceptedFileTypes.length > 0
-                ? `Supported formats: ${acceptedFileTypes
-                  .join(", ")
-                  .toUpperCase()}`
+                ? `Supported formats: ${acceptedFileTypes.join(", ").toUpperCase()}`
                 : hint}
             </Text>
 
@@ -2927,6 +3119,36 @@ export default function PreviewField({
               {buttonText}
             </div>
           </div>
+
+          {fileError && (
+            <Text as="p" variant="bodySm" tone="critical">
+              {fileError}
+            </Text>
+          )}
+
+          {selectedFiles.length > 0 && (
+            <BlockStack gap="100">
+              {selectedFiles.map((file, index) => (
+                <InlineStack key={`${file.name}-${index}`} align="space-between">
+                  <Text as="span" variant="bodySm">
+                    {file.name}
+                  </Text>
+
+                  <Button
+                    variant="plain"
+                    tone="critical"
+                    onClick={() =>
+                      setSelectedFiles((previous) =>
+                        previous.filter((_, fileIndex) => fileIndex !== index)
+                      )
+                    }
+                  >
+                    Remove
+                  </Button>
+                </InlineStack>
+              ))}
+            </BlockStack>
+          )}
 
           {descriptionText}
         </BlockStack>
@@ -3468,87 +3690,231 @@ export default function PreviewField({
     // -------------------------------------------------------
 
     case "matrix": {
-      const toLabel = (item, index, prefix) =>
-        typeof item === "string"
-          ? item
-          : item?.label || item?.value || `${prefix} ${index + 1}`;
+      const normalizeMatrixItems = (list, fallback, prefix) => {
+        const source = Array.isArray(list) && list.length
+          ? list
+          : fallback;
 
-      const matrixRows = (
-        normalizedElement.rows?.length
-          ? normalizedElement.rows
-          : ["Row 1", "Row 2"]
-      ).map((row, index) => toLabel(row, index, "Row"));
+        return source.map((item, index) => {
+          if (typeof item === "string") {
+            return {
+              label: item,
+              value: item,
+            };
+          }
 
-      const matrixCols = (
-        normalizedElement.columns?.length
-          ? normalizedElement.columns
-          : options.length
-            ? options
-            : ["Poor", "Good", "Great"]
-      ).map((column, index) =>
-        toLabel(column, index, "Column")
+          return {
+            label: item?.label ?? `${prefix} ${index + 1}`,
+            value: item?.value ?? item?.label ?? `${prefix} ${index + 1}`,
+          };
+        });
+      };
+
+      // New settings names with backward compatibility
+      const matrixQuestions = normalizeMatrixItems(
+        normalizedElement.questions ?? normalizedElement.rows,
+        [
+          "How likely are you to watch movies?",
+          "How likely are you to listen to music?",
+        ],
+        "Question"
       );
+
+      const matrixAnswers = normalizeMatrixItems(
+        normalizedElement.answers ?? normalizedElement.columns,
+        ["Rarely", "Seldom", "Often", "Always"],
+        "Answer"
+      );
+
+      const allowMultiple = Boolean(normalizedElement.allowMultiple);
+
+      const selectedValues = Array.isArray(selected)
+        ? selected
+        : selected
+          ? [selected]
+          : [];
+
+      const getQuestionPrefix = (question) =>
+        `${question.value}::`;
+
+      const getAnswerValue = (question, answer) =>
+        `${question.value}::${answer.value}`;
+
+      const isAnswerSelected = (question, answer) =>
+        selectedValues.includes(getAnswerValue(question, answer));
+
+      const handleMatrixSelection = (question, answer) => {
+        if (isReadOnly) return;
+
+        const questionPrefix = getQuestionPrefix(question);
+        const answerValue = getAnswerValue(question, answer);
+
+        setSelected((previous) => {
+          const previousValues = Array.isArray(previous)
+            ? previous
+            : previous
+              ? [previous]
+              : [];
+
+          const alreadySelected = previousValues.includes(answerValue);
+
+          if (allowMultiple) {
+            if (alreadySelected) {
+              return previousValues.filter(
+                (item) => item !== answerValue
+              );
+            }
+
+            return [...previousValues, answerValue];
+          }
+
+          return [
+            ...previousValues.filter(
+              (item) =>
+                !String(item).startsWith(questionPrefix)
+            ),
+            answerValue,
+          ];
+        });
+      };
 
       return (
         <BlockStack gap="200">
           {fieldLabelWithIcon}
 
-          <div style={{ overflowX: "auto" }}>
+          <div
+            style={{
+              width: "100%",
+              minWidth: 0,
+              overflowX: "auto",
+              WebkitOverflowScrolling: "touch",
+              border: "1px solid #E1E3E5",
+              borderRadius: "8px",
+            }}
+          >
             <table
               style={{
                 width: "100%",
+                minWidth: `${Math.max(420, 150 + matrixAnswers.length * 90)}px`,
                 borderCollapse: "collapse",
+                tableLayout: "auto",
                 fontSize: "13px",
+                background: "#FFFFFF",
               }}
             >
               <thead>
-                <tr>
-                  <th />
+                <tr
+                  style={{
+                    background: "#F6F6F7",
+                    borderBottom: "1px solid #E1E3E5",
+                  }}
+                >
+                  <th
+                    scope="col"
+                    style={{
+                      padding: "12px",
+                      textAlign: "left",
+                      fontWeight: 600,
+                      minWidth: "150px",
+                      color: "#303030",
+                    }}
+                  >
+                    Questions
+                  </th>
 
-                  {matrixCols.map((column) => (
+                  {matrixAnswers.map((answer, index) => (
                     <th
-                      key={column}
-                      style={{ padding: "6px", fontWeight: 500 }}
+                      key={`matrix-answer-${index}`}
+                      scope="col"
+                      style={{
+                        padding: "12px 8px",
+                        textAlign: "center",
+                        fontWeight: 600,
+                        color: "#303030",
+                        minWidth: "85px",
+                        overflowWrap: "anywhere",
+                      }}
                     >
-                      {column}
+                      {answer.label}
                     </th>
                   ))}
                 </tr>
               </thead>
 
               <tbody>
-                {matrixRows.map((row) => (
+                {matrixQuestions.map((question, questionIndex) => (
                   <tr
-                    key={row}
-                    style={{ borderTop: "1px solid #e1e3e5" }}
+                    key={`matrix-question-${questionIndex}`}
+                    style={{
+                      borderBottom:
+                        questionIndex !== matrixQuestions.length - 1
+                          ? "1px solid #E1E3E5"
+                          : "none",
+                      background:
+                        questionIndex % 2 === 0
+                          ? "#FFFFFF"
+                          : "#FAFAFA",
+                    }}
                   >
-                    <td style={{ padding: "8px 6px" }}>
-                      {row}
-                    </td>
+                    <th
+                      scope="row"
+                      style={{
+                        padding: "12px",
+                        textAlign: "left",
+                        fontWeight: 500,
+                        color: "#303030",
+                        overflowWrap: "anywhere",
+                      }}
+                    >
+                      {question.label}
+                    </th>
 
-                    {matrixCols.map((column) => (
-                      <td
-                        key={column}
-                        style={{ textAlign: "center" }}
-                      >
-                        <input
-                          type="radio"
-                          name={`matrix-${normalizedElement.id}-${row}`}
-                          checked={selected.includes(
-                            `${row}::${column}`
-                          )}
-                          disabled={isReadOnly}
-                          onChange={() =>
-                            setSelected((previous) => [
-                              ...previous.filter(
-                                (item) => !item.startsWith(`${row}::`)
-                              ),
-                              `${row}::${column}`,
-                            ])
-                          }
-                        />
-                      </td>
-                    ))}
+                    {matrixAnswers.map((answer, answerIndex) => {
+                      const checked = isAnswerSelected(
+                        question,
+                        answer
+                      );
+
+                      return (
+                        <td
+                          key={`matrix-cell-${questionIndex}-${answerIndex}`}
+                          style={{
+                            padding: "12px 8px",
+                            textAlign: "center",
+                            verticalAlign: "middle",
+                          }}
+                        >
+                          <input
+                            type={allowMultiple ? "checkbox" : "radio"}
+                            name={
+                              `matrix-${normalizedElement.id || "field"}-${questionIndex}`
+                            }
+                            value={answer.value}
+                            checked={checked}
+                            disabled={isReadOnly}
+                            required={
+                              !allowMultiple &&
+                              Boolean(required) &&
+                              matrixAnswers.length > 0
+                            }
+                            aria-label={`${question.label}: ${answer.label}`}
+                            onChange={() =>
+                              handleMatrixSelection(question, answer)
+                            }
+                            style={{
+                              width: "17px",
+                              height: "17px",
+                              margin: 0,
+                              accentColor: "#303030",
+                              cursor: isReadOnly
+                                ? "default"
+                                : "pointer",
+                              verticalAlign: "middle",
+                            }}
+                          />
+                        </td>
+                      );
+                    })}
                   </tr>
                 ))}
               </tbody>

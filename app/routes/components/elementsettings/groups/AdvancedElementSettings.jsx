@@ -10,7 +10,9 @@ import {
   Select,
   Button,
   Divider,
+  
 } from "@shopify/polaris";
+import * as PolarisIcons from "@shopify/polaris-icons";
 import ColorPickerField from "../../RichTextEditor/ColorPickerField";
 import RichTextEditor from "../../RichTextEditor/RichTextEditor";
 import ColorInput from "../../RichTextEditor/ColorInput.jsx";
@@ -700,131 +702,423 @@ export function ProductSettings({
 }
 
 // MATRIX
-export function MatrixSettings({ element, onChange }) {
-  const rows = Array.isArray(element.rows)
-    ? element.rows
-    : ["Row 1", "Row 2"];
 
-  const columns = Array.isArray(element.columns)
-    ? element.columns
-    : ["Poor", "Good", "Great"];
+export function MatrixSettings({ element, onChange }) {
+  const [expandedQuestions, setExpandedQuestions] = useState(false);
+  const [expandedAnswers, setExpandedAnswers] = useState(false);
+  const [bulkQuestions, setBulkQuestions] = useState("");
+  const [bulkAnswers, setBulkAnswers] = useState("");
 
   const update = (key, value) =>
     updateElement(element, onChange, key, value);
 
-  const editListItem = (list, key, index, value) =>
-    update(key, list.map((item, i) => i === index ? value : item));
+  const normalizeList = (list, fallback, prefix) => {
+    const source = Array.isArray(list) && list.length
+      ? list
+      : fallback;
 
-  return (
+    return source.map((item, index) => {
+      if (typeof item === "string") {
+        return {
+          label: item,
+          value: item,
+        };
+      }
+
+      return {
+        ...item,
+        label: item?.label ?? `${prefix} ${index + 1}`,
+        value: item?.value ?? item?.label ?? `${prefix} ${index + 1}`,
+      };
+    });
+  };
+
+  const questions = normalizeList(
+    element.questions ?? element.rows,
+    ["How likely are you to watch movies?", "How likely are you to listen to music?"],
+    "Question"
+  );
+
+  const answers = normalizeList(
+    element.answers ?? element.columns,
+    ["Rarely", "Seldom", "Often", "Always"],
+    "Answer"
+  );
+
+  const updateListItem = (list, key, index, property, value) => {
+    const updated = list.map((item, i) =>
+      i === index
+        ? { ...item, [property]: value }
+        : item
+    );
+
+    update(key, updated);
+  };
+
+  const addItem = (list, key, prefix) => {
+    update(key, [
+      ...list,
+      {
+        label: `${prefix} ${list.length + 1}`,
+        value: `${prefix} ${list.length + 1}`,
+      },
+    ]);
+  };
+
+  const removeItem = (list, key, index) => {
+    if (list.length <= 1) return;
+
+    update(
+      key,
+      list.filter((_, i) => i !== index)
+    );
+  };
+
+  const moveItem = (list, key, index, direction) => {
+    const nextIndex = index + direction;
+
+    if (nextIndex < 0 || nextIndex >= list.length) return;
+
+    const updated = [...list];
+    [updated[index], updated[nextIndex]] = [
+      updated[nextIndex],
+      updated[index],
+    ];
+
+    update(key, updated);
+  };
+
+  const bulkAdd = (list, key, text, setText) => {
+    const newItems = text
+      .split(/\r?\n/)
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .map((item) => ({
+        label: item,
+        value: item,
+      }));
+
+    if (!newItems.length) return;
+
+    update(key, [...list, ...newItems]);
+    setText("");
+  };
+
+  const renderList = ({
+    title,
+    description,
+    list,
+    keyName,
+    expanded,
+    setExpanded,
+    bulkValue,
+    setBulkValue,
+    prefix,
+  }) => (
     <BlockStack gap="300">
-      <Text as="h3" variant="headingSm">Rows</Text>
+      <BlockStack gap="100">
+        <Text as="p" variant="headingSm">
+          {title}
+        </Text>
+        <Text as="p" variant="bodySm" tone="subdued">
+          {description}
+        </Text>
+      </BlockStack>
 
-      {rows.map((row, index) => (
-        <InlineStack key={index} gap="200" blockAlign="center">
-          <div style={{ flex: 1 }}>
-            <TextField
-              label={`Row ${index + 1}`}
-              labelHidden
-              value={row}
-              onChange={(value) => editListItem(rows, "rows", index, value)}
-              autoComplete="off"
-            />
-          </div>
-          <Button
-            variant="plain"
-            tone="critical"
-            onClick={() => update("rows", rows.filter((_, i) => i !== index))}
+      {list.map((item, index) => (
+        <BlockStack
+          key={`${keyName}-${index}`}
+          gap="100"
+        >
+          <InlineStack
+            gap="200"
+            blockAlign="center"
+            wrap={false}
           >
-            Remove
-          </Button>
-        </InlineStack>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <TextField
+                label={`${prefix} ${index + 1}`}
+                labelHidden
+                value={item.label}
+                onChange={(value) =>
+                  updateListItem(
+                    list,
+                    keyName,
+                    index,
+                    "label",
+                    value
+                  )
+                }
+                placeholder={`${prefix} ${index + 1}`}
+                autoComplete="off"
+              />
+            </div>
+
+            <Button
+              variant="plain"
+              icon={PolarisIcons.ChevronUpIcon}
+              disabled={index === 0}
+              onClick={() =>
+                moveItem(list, keyName, index, -1)
+              }
+            />
+
+            <Button
+              variant="plain"
+              icon={PolarisIcons.ChevronDownIcon}
+              disabled={index === list.length - 1}
+              onClick={() =>
+                moveItem(list, keyName, index, 1)
+              }
+            />
+
+            <Button
+              variant="plain"
+              tone="critical"
+              disabled={list.length <= 1}
+              onClick={() =>
+                removeItem(list, keyName, index)
+              }
+            >
+              Remove
+            </Button>
+          </InlineStack>
+
+          {expanded && (
+            <div style={{ paddingLeft: "12px" }}>
+              <TextField
+                label="Value"
+                value={String(item.value ?? "")}
+                onChange={(value) =>
+                  updateListItem(
+                    list,
+                    keyName,
+                    index,
+                    "value",
+                    value
+                  )
+                }
+                autoComplete="off"
+                helpText="This value is stored in form submissions."
+              />
+            </div>
+          )}
+        </BlockStack>
       ))}
 
-      <Button onClick={() => update("rows", [...rows, `Row ${rows.length + 1}`])}>
-        Add row
-      </Button>
+      <InlineStack gap="200" wrap="wrap">
+        <Button
+          variant="secondary"
+          onClick={() => addItem(list, keyName, prefix)}
+        >
+          Add {prefix}
+        </Button>
+
+        <Button
+          variant="plain"
+          onClick={() => setExpanded(!expanded)}
+        >
+          {expanded ? "Collapse values" : "Expand values"}
+        </Button>
+      </InlineStack>
 
       <Divider />
 
-      <Text as="h3" variant="headingSm">Columns</Text>
+      <BlockStack gap="200">
+        <Text as="p" variant="bodySm" fontWeight="medium">
+          Bulk add {prefix.toLowerCase()}s
+        </Text>
 
-      {columns.map((column, index) => (
-        <InlineStack key={index} gap="200" blockAlign="center">
-          <div style={{ flex: 1 }}>
-            <TextField
-              label={`Column ${index + 1}`}
-              labelHidden
-              value={column}
-              onChange={(value) => editListItem(columns, "columns", index, value)}
-              autoComplete="off"
-            />
-          </div>
+        <TextField
+          label={`Bulk add ${prefix.toLowerCase()}s`}
+          labelHidden
+          multiline={4}
+          value={bulkValue}
+          onChange={setBulkValue}
+          placeholder={`Enter one ${prefix.toLowerCase()} per line`}
+          autoComplete="off"
+        />
+
+        <div>
           <Button
-            variant="plain"
-            tone="critical"
+            variant="secondary"
+            disabled={!bulkValue.trim()}
             onClick={() =>
-              update("columns", columns.filter((_, i) => i !== index))
+              bulkAdd(
+                list,
+                keyName,
+                bulkValue,
+                setBulkValue
+              )
             }
           >
-            Remove
+            Add values
           </Button>
-        </InlineStack>
-      ))}
+        </div>
+      </BlockStack>
+    </BlockStack>
+  );
 
-      <Button
-        onClick={() =>
-          update("columns", [...columns, `Column ${columns.length + 1}`])
-        }
-      >
-        Add column
-      </Button>
+  return (
+    <BlockStack gap="400">
+      {renderList({
+        title: "Questions",
+        description: "These appear as rows in your matrix.",
+        list: questions,
+        keyName: "questions",
+        expanded: expandedQuestions,
+        setExpanded: setExpandedQuestions,
+        bulkValue: bulkQuestions,
+        setBulkValue: setBulkQuestions,
+        prefix: "Question",
+      })}
 
-      <Checkbox
-        label="Require an answer for every row"
-        checked={Boolean(element.requireEveryRow)}
-        onChange={(value) => update("requireEveryRow", value)}
-      />
+      <Divider />
+
+      {renderList({
+        title: "Answers",
+        description: "These appear as shared columns for every question.",
+        list: answers,
+        keyName: "answers",
+        expanded: expandedAnswers,
+        setExpanded: setExpandedAnswers,
+        bulkValue: bulkAnswers,
+        setBulkValue: setBulkAnswers,
+        prefix: "Answer",
+      })}
+
+      <Divider />
+
+      <BlockStack gap="200">
+        <Text as="p" variant="headingSm">
+          Selection behavior
+        </Text>
+
+        <Checkbox
+          label="Multiple selection"
+          checked={Boolean(element.allowMultiple)}
+          onChange={(value) =>
+            update("allowMultiple", value)
+          }
+        />
+
+        <Text as="p" variant="bodySm" tone="subdued">
+          When enabled, visitors can select multiple answers within the same question.
+        </Text>
+      </BlockStack>
     </BlockStack>
   );
 }
 
+
 // FEEDBACK
+
+
 export function FeedbackSettings({ element, onChange }) {
+  const update = (key, value) =>
+    updateElement(element, onChange, key, value);
+
+  const allowMultiple = Boolean(element.allowMultiple);
+
+  const feedbackStyles = [
+    { label: "Experience", value: "experience" },
+    { label: "Satisfaction", value: "satisfaction" },
+    { label: "Agreement", value: "agreement" },
+    { label: "Effort", value: "effort" },
+    { label: "Likelihood", value: "likelihood" },
+  ];
+
   return (
-    <BlockStack gap="300">
+    <BlockStack gap="400">
       <TextField
         label="Feedback question"
         value={element.content || ""}
-        onChange={(value) =>
-          updateElement(element, onChange, "content", value)
-        }
+        onChange={(value) => update("content", value)}
+        placeholder="How was your experience?"
         autoComplete="off"
       />
 
-      <OptionEditor element={element} onChange={onChange} />
-
-      <Checkbox
-        label="Allow multiple selections"
-        checked={Boolean(element.allowMultiple)}
-        onChange={(value) =>
-          updateElement(element, onChange, "allowMultiple", value)
-        }
+      <Select
+        label="Feedback style"
+        options={feedbackStyles}
+        value={element.feedbackStyle || "experience"}
+        onChange={(value) => update("feedbackStyle", value)}
       />
+
+      <Divider />
+
+      <BlockStack gap="300">
+        <Text as="p" variant="headingSm">
+          Selection behavior
+        </Text>
+
+        {/* <Checkbox
+          label="Allow multiple selections"
+          checked={allowMultiple}
+          onChange={(value) => {
+            update("allowMultiple", value);
+
+            if (!value) {
+              update("maxSelections", "");
+            }
+          }}
+        /> */}
+
+        {allowMultiple && (
+          <TextField
+            label="Maximum selections"
+            type="number"
+            value={String(element.maxSelections ?? "")}
+            onChange={(value) =>
+              update(
+                "maxSelections",
+                value === "" ? "" : Math.max(1, Number(value) || 1)
+              )
+            }
+            placeholder="No limit"
+            helpText="Leave empty to allow all five options."
+            autoComplete="off"
+          />
+        )}
+      </BlockStack>
     </BlockStack>
   );
 }
 
 
+
+
 // REPEATER
+
 export function RepeaterSettings({ element, onChange }) {
   const update = (key, value) =>
     updateElement(element, onChange, key, value);
+
+  const minItems = Number(element.minItems ?? 1);
+  const maxItems = Number(element.maxItems ?? 5);
+
+  const handleMinChange = (value) => {
+    const newMin = Math.max(0, Number(value) || 0);
+
+    update("minItems", newMin);
+
+    // Ensure maximum is never smaller than minimum
+    if (maxItems < newMin) {
+      update("maxItems", newMin);
+    }
+  };
+
+  const handleMaxChange = (value) => {
+    const newMax = Math.max(minItems, Number(value) || minItems);
+
+    update("maxItems", newMax);
+  };
 
   return (
     <BlockStack gap="300">
       <TextField
         label="Add button text"
-        value={element.addButtonText || "Add more"}
+        value={element.addButtonText ?? "Add more"}
         onChange={(value) => update("addButtonText", value)}
         autoComplete="off"
       />
@@ -832,21 +1126,26 @@ export function RepeaterSettings({ element, onChange }) {
       <TextField
         label="Minimum items"
         type="number"
-        value={String(element.minItems ?? 1)}
-        onChange={(value) => update("minItems", value)}
+        value={String(minItems)}
+        onChange={handleMinChange}
+        min={0}
         autoComplete="off"
+        helpText="Minimum number of items required."
       />
 
       <TextField
         label="Maximum items"
         type="number"
-        value={String(element.maxItems ?? 5)}
-        onChange={(value) => update("maxItems", value)}
+        value={String(maxItems)}
+        onChange={handleMaxChange}
+        min={minItems}
         autoComplete="off"
+        helpText="Maximum number of items a customer can add."
       />
     </BlockStack>
   );
 }
+
 
 // SIGNATURE
 
