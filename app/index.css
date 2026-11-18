@@ -2444,3 +2444,45 @@
   align-items: center;
   padding-right: 8px;
 }
+
+/* =====================================================================
+   18. CUSTOMER PREVIEW - HIDE EDITOR-ONLY UI
+===================================================================== */
+
+/* Remove hover border and background */
+.live-preview--customer .preview-element:hover {
+  border-color: transparent !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/* Remove selected element styling */
+.live-preview--customer .preview-element--selected,
+.live-preview--customer .preview-element--selected:hover {
+  border-color: transparent !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/* Hide floating toolbar */
+.live-preview--customer .element-floating-toolbar {
+  display: none !important;
+}
+
+/* Hide drag and drop zones */
+.live-preview--customer .preview-drop-zone {
+  display: none !important;
+}
+
+/* Hide row insertion buttons */
+.live-preview--customer .preview-row-insert {
+  display: none !important;
+}
+
+/* Remove active drop area styling */
+.live-preview--customer .preview-root-drop-area--active {
+  outline: none !important;
+  box-shadow: none !important;
+}

@@ -511,6 +511,7 @@ export default function PreviewField({
   onSubmit,
   isFirstCustomerPage = true,
   isLastCustomerPage = false,
+  error, //show validation error 
 }) {
   // =========================================================
   // 1. ELEMENT DATA

@@ -62,6 +62,7 @@ import {
 } from "@dnd-kit/core";
 
 import PreviewField from "./PreviewField";
+import { validateElement } from "./elementValidation.js";
 import { getElementSettingsType } from "../components/elementsettings/utils/elementSettingsConfig";
 
 
@@ -216,6 +217,8 @@ function DraggablePreviewElement({
   products = [],
   productsLoading = false,
   isModelPreview = false,
+  //error valiadtions
+   error,
 }) {
   //This prevents the editor's selection toolbar from appearing in customer preview mode.
   const isSelected =
@@ -233,7 +236,7 @@ function DraggablePreviewElement({
     isDragging,
   } = useDraggable({
     id: `preview-element-${pageId}-${collection}-${element.id}`,
-    disabled: isHidden,
+    disabled: isHidden || isModelPreview,
     data: {
       type: "previewElement",
       pageId,
@@ -466,7 +469,20 @@ function DraggablePreviewElement({
         products={products}
         productsLoading={productsLoading}
         isModelPreview={isModelPreview}
+        error={error}
       />
+      {error && (
+        <div
+          role="alert"
+          style={{
+            color: "#D72C0D",
+            fontSize: "13px",
+            marginTop: "4px",
+          }}
+        >
+          {error}
+        </div>
+      )}
     </div>
   );
 }
@@ -624,17 +640,32 @@ export default function LivePreview({
   console.log("=======================================");
 
   //states 
+  // Stores validation errors using each field's ID.
+  const [validationErrors, setValidationErrors] = React.useState({});
   // Stores all answers entered by the customer.
   const [formValues, setFormValues] = React.useState({});
-
   // Stores whether the form has been submitted.
   const [isSubmitted, setIsSubmitted] = React.useState(false);
-  //fn to store these values in a obj
+
+  //fn to store these values in a obj Now, when the customer corrects a field, its previous error is cleared.
   const handleFieldChange = (fieldId, nextValue) => {
+    // Update the customer's answer.
     setFormValues((previousValues) => ({
       ...previousValues,
       [fieldId]: nextValue,
     }));
+
+    // Clear this field's old error when the customer edits it.
+    setValidationErrors((previousErrors) => {
+      if (!previousErrors[fieldId]) {
+        return previousErrors;
+      }
+
+      const updatedErrors = { ...previousErrors };
+      delete updatedErrors[fieldId];
+
+      return updatedErrors;
+    });
   };
   React.useEffect(() => {
     console.log("Customer answers:", formValues);
@@ -678,6 +709,15 @@ export default function LivePreview({
   };
   // Move to the next visible customer page.
   const handleNextPage = () => {
+    // First, validate the currently displayed customer page.
+    const isPageValid = validatePage(currentCustomerPage);
+
+    // If any field has an error, stop here.
+    if (!isPageValid) {
+      return;
+    }
+
+    // All fields are valid, so move to the next page.
     setCurrentCustomerPageIndex((previousIndex) =>
       Math.min(customerPages.length - 1, previousIndex + 1)
     );
@@ -698,7 +738,50 @@ export default function LivePreview({
 
   // Submit will be connected to validation in our next step.
   const handleSubmitForm = () => {
+    // Collect fields from every visible customer page.
+    const allFields = getCustomerFields();
+
+    // Store all validation errors here.
+    const allErrors = {};
+
+    // Validate every field.
+    allFields.forEach((field) => {
+      const error = validateElement(
+        field,
+        formValues[field.id]
+      );
+
+      if (error) {
+        allErrors[field.id] = error;
+      }
+    });
+
+    // Update the validation errors shown in the preview.
+    setValidationErrors(allErrors);
+
+    // Check whether any field is invalid.
+    if (Object.keys(allErrors).length > 0) {
+      // Find the first page that contains an invalid field.
+      const firstInvalidPageIndex = customerPages.findIndex((page) => {
+        const pageFields = getCustomerFields(page);
+
+        return pageFields.some(
+          (field) => allErrors[field.id]
+        );
+      });
+
+      // Navigate to that page.
+      if (firstInvalidPageIndex !== -1) {
+        setCurrentCustomerPageIndex(firstInvalidPageIndex);
+      }
+
+      // Stop submission.
+      return;
+    }
+
+    // All fields are valid.
     setIsSubmitted(true);
+
     console.log("Form submitted:", formValues);
   };
   // Check whether an element should be rendered.
@@ -715,7 +798,128 @@ export default function LivePreview({
 
     return element.visible !== false;
   };
+  // =====================================================================
+  // Get all customer-facing fields that need validation.
+  //
+  // Collects fields from:
+  // 1. Visible customer pages
+  // 2. Visible rows
+  // 3. Visible row fields and elements
+  // 4. Visible root elements
+  //
+  // Excludes static and hidden elements.
+  // =====================================================================
 
+  const getCustomerFields = (pageToCollect = null) => {
+    const pagesToCollect = pageToCollect
+      ? [pageToCollect]
+      : customerPages;
+    const nonInputTypes = [
+      "heading",
+      "paragraph",
+      "html",
+      "divider",
+      "form_header",
+      "form_footer",
+      "hidden",
+    ];
+
+    const customerFields = [];
+
+    pagesToCollect.forEach((page) => {
+      // Skip hidden pages.
+      if (page.visible === false) {
+        return;
+      }
+
+      // Collect fields from rows.
+      (page.rows || []).forEach((row) => {
+        // Skip hidden rows.
+        if (row.visible === false) {
+          return;
+        }
+
+        const rowElements = [
+          ...(row.fields || []),
+          ...(row.elements || []),
+        ];
+
+        rowElements.forEach((element) => {
+          const type = String(element?.type || "")
+            .toLowerCase()
+            .trim()
+            .replace(/[\s-]+/g, "_");
+
+          if (!element?.id) return;
+          if (!shouldRenderElement(element)) return;
+          if (nonInputTypes.includes(type)) return;
+
+          customerFields.push(element);
+        });
+      });
+
+      // Collect standalone root elements.
+      (page.rootElements || []).forEach((element) => {
+        const type = String(element?.type || "")
+          .toLowerCase()
+          .trim()
+          .replace(/[\s-]+/g, "_");
+
+        if (!element?.id) return;
+        if (!shouldRenderElement(element)) return;
+        if (nonInputTypes.includes(type)) return;
+
+        customerFields.push(element);
+      });
+    });
+
+    return customerFields;
+  };
+  // =====================================================================
+  // Validate all customer-facing fields on one page.
+  // Returns true when every field on that page is valid.
+  // =====================================================================
+
+  const validatePage = (page = currentCustomerPage) => {
+    if (!page) {
+      return true;
+    }
+
+    // Get only the fields belonging to this page.
+    const fields = getCustomerFields(page);
+
+    const pageErrors = {};
+    const currentFieldIds = fields.map((field) => field.id);
+
+    // Validate each field using its current value.
+    fields.forEach((field) => {
+      const error = validateElement(
+        field,
+        formValues[field.id]
+      );
+
+      if (error) {
+        pageErrors[field.id] = error;
+      }
+    });
+
+    // Remove old errors for this page and store the new errors.
+    setValidationErrors((previousErrors) => {
+      const updatedErrors = { ...previousErrors };
+
+      currentFieldIds.forEach((fieldId) => {
+        delete updatedErrors[fieldId];
+      });
+
+      return {
+        ...updatedErrors,
+        ...pageErrors,
+      };
+    });
+
+    // If there are no errors, the page is valid.
+    return Object.keys(pageErrors).length === 0;
+  };
   // Renders one draggable element. Used for both:
   //   - elements inside a row   (rowId = row.id, collection = "fields" / "elements")
   //   - standalone root elements (rowId = null,  collection = "rootElements")
@@ -744,6 +948,7 @@ export default function LivePreview({
       products={products}
       productsLoading={productsLoading}
       isModelPreview={isModelPreview}
+      error={validationErrors[element.id]}
     />
   );
 
