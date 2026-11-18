@@ -4537,11 +4537,11 @@ export default function PreviewField({
                 {normalizedElement.showPreviousButton && (
                   <button
                     type="button"
-                    disabled={isReadOnly}
+                    // disabled={isReadOnly}
                     onClick={(event) => event.stopPropagation()}
                     style={{
                       ...footerButtonStyle,
-                      cursor: "not-allowed",
+                      cursor: "pointer",
                     }}
                   >
                     {normalizedElement.previousText || "Previous"}
@@ -4551,11 +4551,11 @@ export default function PreviewField({
                 {normalizedElement.showNextButton && (
                   <button
                     type="button"
-                    disabled={isReadOnly}
+                   
                     onClick={(event) => event.stopPropagation()}
                     style={{
                       ...footerButtonStyle,
-                      cursor: "not-allowed",
+                     cursor: "pointer",
                     }}
                   >
                     {normalizedElement.nextText || "Next"}
@@ -4565,11 +4565,11 @@ export default function PreviewField({
                 {normalizedElement.showResetButton && (
                   <button
                     type="button"
-                    disabled={isReadOnly}
+                    
                     onClick={(event) => event.stopPropagation()}
                     style={{
                       ...footerButtonStyle,
-                      cursor: "not-allowed",
+                      cursor: "pointer",
                     }}
                   >
                     {normalizedElement.resetButtonText || "Reset"}
@@ -4578,23 +4578,11 @@ export default function PreviewField({
 
                 <button
                   type="button"
-                  disabled={isReadOnly}
                   onClick={(event) => event.stopPropagation()}
-                  style={{
-                    width: normalizedElement.fullWidthButton
-                      ? "100%"
-                      : "auto",
-                    backgroundColor:
-                      normalizedElement.buttonBackgroundColor || "#303030",
-                    color:
-                      normalizedElement.buttonTextColor || "#ffffff",
-                    border: "none",
-                    borderRadius: "6px",
-                    padding: "12px 20px",
-                    fontSize: "14px",
-                    fontWeight: 600,
-                    cursor: "not-allowed",
-                  }}
+                 style={{
+                      ...footerButtonStyle,
+                      cursor: "pointer",
+                    }}
                 >
                   {normalizedElement.submitText || "Submit"}
                 </button>

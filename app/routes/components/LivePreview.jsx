@@ -339,44 +339,52 @@ function DraggablePreviewElement({
       {/* Standalone/root elements can have top and bottom insertion. */}
       {rowId === null && (
         <>
-          <PreviewDropZone
-            pageId={pageId}
-            rowId={rowId}
-            elementId={element.id}
-            collection={collection}
-            placement="top"
-            onOpenElementPicker={onOpenElementPicker}
-          />
+          {!isModelPreview && (
+            <PreviewDropZone
+              pageId={pageId}
+              rowId={rowId}
+              elementId={element.id}
+              collection={collection}
+              placement="top"
+              onOpenElementPicker={onOpenElementPicker}
+            />
+          )}
 
-          <PreviewDropZone
-            pageId={pageId}
-            rowId={rowId}
-            elementId={element.id}
-            collection={collection}
-            placement="bottom"
-            onOpenElementPicker={onOpenElementPicker}
-          />
+          {!isModelPreview && (
+            <PreviewDropZone
+              pageId={pageId}
+              rowId={rowId}
+              elementId={element.id}
+              collection={collection}
+              placement="bottom"
+              onOpenElementPicker={onOpenElementPicker}
+            />
+          )}
         </>
       )}
 
       {/* Every element can have left and right insertion. */}
-      <PreviewDropZone
-        pageId={pageId}
-        rowId={rowId}
-        elementId={element.id}
-        collection={collection}
-        placement="left"
-        onOpenElementPicker={onOpenElementPicker}
-      />
+      {!isModelPreview && (
+        <PreviewDropZone
+          pageId={pageId}
+          rowId={rowId}
+          elementId={element.id}
+          collection={collection}
+          placement="left"
+          onOpenElementPicker={onOpenElementPicker}
+        />
+      )}
 
-      <PreviewDropZone
-        pageId={pageId}
-        rowId={rowId}
-        elementId={element.id}
-        collection={collection}
-        placement="right"
-        onOpenElementPicker={onOpenElementPicker}
-      />
+      {!isModelPreview && (
+        <PreviewDropZone
+          pageId={pageId}
+          rowId={rowId}
+          elementId={element.id}
+          collection={collection}
+          placement="right"
+          onOpenElementPicker={onOpenElementPicker}
+        />
+      )}
 
       {/* ---------- FLOATING TOOLBAR (selected element only) ---------- */}
 
@@ -509,9 +517,8 @@ function FixedPreviewElement({
       ]
         .filter(Boolean)
         .join(" ")}
-      onClick={(event) => {
+      onPointerDownCapture={(event) => {
         if (!isModelPreview) {
-          event.stopPropagation();
           onSelectElement?.(element);
         }
       }}
@@ -755,6 +762,7 @@ export default function LivePreview({
       className={[
         `live-preview live-preview--${formSettings.theme || "classic"}`,
         isMobilePreview ? "live-preview--mobile-preview" : "",
+        isModelPreview ? "live-preview--customer" : "live-preview--editor",
       ]
         .filter(Boolean)
         .join(" ")}
@@ -850,12 +858,14 @@ export default function LivePreview({
                           <React.Fragment key={row.id}>
 
                             {/* Add element before this row */}
-                            <PreviewRowInsert
-                              pageId={page.id}
-                              rowId={row.id}
-                              placement="before"
-                              onOpenElementPicker={onOpenElementPicker}
-                            />
+                            {!isModelPreview && (
+                              <PreviewRowInsert
+                                pageId={page.id}
+                                rowId={row.id}
+                                placement="before"
+                                onOpenElementPicker={onOpenElementPicker}
+                              />
+                            )}
 
                             {/* Standalone elements positioned before this row */}
                             {(page.rootElements ?? [])
@@ -896,7 +906,7 @@ export default function LivePreview({
                               .map((element) => renderRootElement(element, page))}
 
                             {/* Add element after the last row */}
-                            {index === allRows.length - 1 && (
+                            {!isModelPreview && index === allRows.length - 1 && (
                               <PreviewRowInsert
                                 pageId={page.id}
                                 rowId={row.id}
