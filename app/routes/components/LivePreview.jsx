@@ -207,6 +207,7 @@ function DraggablePreviewElement({
   collection,
   selectedElementId,
   onSelectElement,
+  onFieldChange, // recive new prop 
   onDuplicateElement,
   onToggleElementVisibility,
   onDeleteElement,
@@ -447,6 +448,7 @@ function DraggablePreviewElement({
       <PreviewField
         element={element}
         pages={pages}
+        onChange={onFieldChange} //pass here to track changes form
         products={products}
         productsLoading={productsLoading}
         isModelPreview={isModelPreview}
@@ -469,8 +471,15 @@ function FixedPreviewElement({
   selectedElementId,
   onSelectElement,
   products = [],
+  isFirstCustomerPage,
+  isLastCustomerPage,
   productsLoading = false,
   isModelPreview = false,
+  // Footer navigation actions
+  onPrevious,
+  onNext,
+  onReset,
+  onSubmit,
 }) {
   if (!element) return null;
 
@@ -509,6 +518,12 @@ function FixedPreviewElement({
         products={products}
         productsLoading={productsLoading}
         isModelPreview={isModelPreview}
+        onPrevious={onPrevious}
+        onNext={onNext}
+        onReset={onReset}
+        onSubmit={onSubmit}
+        isFirstCustomerPage={isFirstCustomerPage}
+        isLastCustomerPage={isLastCustomerPage}
       />
     </div>
   );
@@ -589,7 +604,72 @@ export default function LivePreview({
   console.log("Complete Element:", selectedElement);
   console.log("=======================================");
 
-  //
+  //states 
+  // Stores all answers entered by the customer.
+  const [formValues, setFormValues] = React.useState({});
+
+  // Stores whether the form has been submitted.
+  const [isSubmitted, setIsSubmitted] = React.useState(false);
+  //fn to store these values in a obj
+  const handleFieldChange = (fieldId, nextValue) => {
+    setFormValues((previousValues) => ({
+      ...previousValues,
+      [fieldId]: nextValue,
+    }));
+  };
+  React.useEffect(() => {
+    console.log("Customer answers:", formValues);
+  }, [formValues]);
+
+  // use to get the info about the cirrent opage for navigation 
+  // Customer's current page (separate from editor page selection).
+  const [currentCustomerPageIndex, setCurrentCustomerPageIndex] =
+    React.useState(0);
+
+  // Only pages visible to customers.
+  const customerPages = pages.filter(
+    (page) => page.visible !== false
+  );
+
+  // Current customer page.
+  const currentCustomerPage =
+    customerPages[currentCustomerPageIndex];
+
+  // Check whether customer is on first or last page.
+  const isFirstCustomerPage = currentCustomerPageIndex === 0;
+
+  const isLastCustomerPage =
+    currentCustomerPageIndex === customerPages.length - 1;
+
+  // Go to previous page.
+  const handlePreviousPage = () => {
+    setCurrentCustomerPageIndex((previousIndex) =>
+      Math.max(0, previousIndex - 1)
+    );
+  };
+
+  // Go to next page.
+const handleNextPage = () => {
+  console.log("NEXT clicked", { currentCustomerPageIndex, total: customerPages.length });
+  setCurrentCustomerPageIndex((i) => Math.min(customerPages.length - 1, i + 1));
+};
+
+React.useEffect(() => {
+  console.log("page index now:", currentCustomerPageIndex, customerPages.map(p => p.id));
+}, [currentCustomerPageIndex]);
+
+  // Reset customer answers.
+  const handleResetForm = () => {
+    setFormValues({});
+    setIsSubmitted(false);
+    setCurrentCustomerPageIndex(0);
+  };
+
+  // Submit will be connected to validation in our next step.
+  const handleSubmitForm = () => {
+    console.log("Form submitted:", formValues);
+  };
+
   // Check whether an element should be rendered.
   const shouldRenderElement = (element) => {
     const type = String(element?.type || "")
@@ -618,6 +698,7 @@ export default function LivePreview({
     <DraggablePreviewElement
       key={key}
       element={element}
+      onFieldChange={handleFieldChange}
       pageId={page.id}
       pages={pages}
       rowId={rowId}
@@ -687,140 +768,144 @@ export default function LivePreview({
                   or footer. Only the open page is shown.
               ========================================= */}
 
-              {pages
-                .filter(
-                  (page) =>
-                    page.visible !== false && page.open
-                )
-                .map((page) => (
-                  <div
-                    key={page.id}
-                    className="preview-page"
-                  >
+              {(
+                isModelPreview
+                  ? currentCustomerPage
+                    ? [currentCustomerPage]
+                    : []
+                  : pages.filter(
+                    (page) =>
+                      page.visible !== false && page.open
+                  )
+              ).map((page) => (
+                <div
+                  key={page.id}
+                  className="preview-page"
+                >
 
-                    <PreviewRootDropArea pageId={page.id}>
-                      <BlockStack gap="">
+                  <PreviewRootDropArea pageId={page.id}>
+                    <BlockStack gap="">
 
-                        {/* =========================================
+                      {/* =========================================
                             ROWS
                             Only rows that contain visible elements
                             are rendered.
                         ========================================= */}
 
-                        {(page.rows ?? [])
+                      {(page.rows ?? [])
 
-                          // Hide the complete row when its visibility is false.
-                          .filter((row) => row.visible !== false)
+                        // Hide the complete row when its visibility is false.
+                        .filter((row) => row.visible !== false)
 
-                          .map((row) => {
-                            // Combine fields and elements into one list.
-                            // This lets the grid support any number of items.
-                            const rowItems = [
-                              ...(row.fields ?? []).map((field) => ({
-                                element: field,
-                                collection: "fields",
-                              })),
+                        .map((row) => {
+                          // Combine fields and elements into one list.
+                          // This lets the grid support any number of items.
+                          const rowItems = [
+                            ...(row.fields ?? []).map((field) => ({
+                              element: field,
+                              collection: "fields",
+                            })),
 
-                              ...(row.elements ?? []).map((element) => ({
-                                element,
-                                collection: "elements",
-                              })),
-                            ].filter(({ element }) => shouldRenderElement(element));
+                            ...(row.elements ?? []).map((element) => ({
+                              element,
+                              collection: "elements",
+                            })),
+                          ].filter(({ element }) => shouldRenderElement(element));
 
-                            return {
-                              row,
-                              rowItems,
-                            };
-                          })
+                          return {
+                            row,
+                            rowItems,
+                          };
+                        })
 
-                          // IMPORTANT: Empty rows are not rendered.
-                          // This removes the empty row and its spacing.
-                          .filter(({ rowItems }) => rowItems.length > 0)
+                        // IMPORTANT: Empty rows are not rendered.
+                        // This removes the empty row and its spacing.
+                        .filter(({ rowItems }) => rowItems.length > 0)
 
-                          .map(({ row, rowItems }, index, allRows) => (
-                            <React.Fragment key={row.id}>
+                        .map(({ row, rowItems }, index, allRows) => (
+                          <React.Fragment key={row.id}>
 
-                              {/* Add element before this row */}
+                            {/* Add element before this row */}
+                            <PreviewRowInsert
+                              pageId={page.id}
+                              rowId={row.id}
+                              placement="before"
+                              onOpenElementPicker={onOpenElementPicker}
+                            />
+
+                            {/* Standalone elements positioned before this row */}
+                            {(page.rootElements ?? [])
+                              .filter(
+                                (element) =>
+                                  shouldRenderElement(element) &&
+                                  element.insertBeforeRowId === row.id
+                              )
+                              .map((element) => renderRootElement(element, page))}
+
+                            {/* The row itself (grid of elements) */}
+                            <div className="preview-row">
+                              <div
+                                className="preview-row-grid"
+                                style={{
+                                  "--preview-column-count": rowItems.length,
+                                }}
+                              >
+                                {rowItems.map(({ element, collection }) =>
+                                  renderPreviewElement({
+                                    element,
+                                    page,
+                                    rowId: row.id,
+                                    collection,
+                                    key: `${collection}-${element.id}`,
+                                  })
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Standalone elements positioned after this row */}
+                            {(page.rootElements ?? [])
+                              .filter(
+                                (element) =>
+                                  shouldRenderElement(element) &&
+                                  element.insertAfterRowId === row.id
+                              )
+                              .map((element) => renderRootElement(element, page))}
+
+                            {/* Add element after the last row */}
+                            {index === allRows.length - 1 && (
                               <PreviewRowInsert
                                 pageId={page.id}
                                 rowId={row.id}
-                                placement="before"
+                                placement="after"
                                 onOpenElementPicker={onOpenElementPicker}
                               />
+                            )}
 
-                              {/* Standalone elements positioned before this row */}
-                              {(page.rootElements ?? [])
-                                .filter(
-                                  (element) =>
-                                    shouldRenderElement(element) &&
-                                    element.insertBeforeRowId === row.id
-                                )
-                                .map((element) => renderRootElement(element, page))}
+                          </React.Fragment>
+                        ))}
 
-                              {/* The row itself (grid of elements) */}
-                              <div className="preview-row">
-                                <div
-                                  className="preview-row-grid"
-                                  style={{
-                                    "--preview-column-count": rowItems.length,
-                                  }}
-                                >
-                                  {rowItems.map(({ element, collection }) =>
-                                    renderPreviewElement({
-                                      element,
-                                      page,
-                                      rowId: row.id,
-                                      collection,
-                                      key: `${collection}-${element.id}`,
-                                    })
-                                  )}
-                                </div>
-                              </div>
-
-                              {/* Standalone elements positioned after this row */}
-                              {(page.rootElements ?? [])
-                                .filter(
-                                  (element) =>
-                                    shouldRenderElement(element) &&
-                                    element.insertAfterRowId === row.id
-                                )
-                                .map((element) => renderRootElement(element, page))}
-
-                              {/* Add element after the last row */}
-                              {index === allRows.length - 1 && (
-                                <PreviewRowInsert
-                                  pageId={page.id}
-                                  rowId={row.id}
-                                  placement="after"
-                                  onOpenElementPicker={onOpenElementPicker}
-                                />
-                              )}
-
-                            </React.Fragment>
-                          ))}
-
-                        {/* =========================================
+                      {/* =========================================
                             ROOT ELEMENTS
                             Standalone elements that are not tied to
                             a row position. They remain full width.
                         ========================================= */}
 
-                        <BlockStack gap="300">
-                          {(page.rootElements ?? [])
-                            .filter(
-                              (element) =>
-                                shouldRenderElement(element) &&
-                                !element.insertBeforeRowId &&
-                                !element.insertAfterRowId
-                            )
-                            .map((element) => renderRootElement(element, page))}
-                        </BlockStack>
-
+                      <BlockStack gap="300">
+                        {(page.rootElements ?? [])
+                          .filter(
+                            (element) =>
+                              shouldRenderElement(element) &&
+                              !element.insertBeforeRowId &&
+                              !element.insertAfterRowId
+                          )
+                          .map((element) => renderRootElement(element, page))}
                       </BlockStack>
-                    </PreviewRootDropArea>
 
-                  </div>
-                ))}
+                    </BlockStack>
+                  </PreviewRootDropArea>
+
+                </div>
+              ))}
 
               {/* =========================================
                   SHARED FOOTER
@@ -833,9 +918,17 @@ export default function LivePreview({
                 <FixedPreviewElement
                   element={footer}
                   activePageId={activePageId}
+                  pages={pages}
                   selectedElementId={selectedElementId}
                   onSelectElement={onSelectElement}
                   isModelPreview={isModelPreview}
+                  //new
+                  isFirstCustomerPage={isFirstCustomerPage}
+                  isLastCustomerPage={isLastCustomerPage}
+                  onPrevious={handlePreviousPage}
+                  onNext={handleNextPage}
+                  onReset={handleResetForm}
+                  onSubmit={handleSubmitForm}
                 />
               )}
 

@@ -44,6 +44,7 @@ import {
 // Hooks must live inside a component, not inside a switch case.
 // =============================================================
 
+
 function SignaturePreview({
   element,
   label,
@@ -51,11 +52,19 @@ function SignaturePreview({
   required,
   descriptionText,
   isReadOnly,
+  onChange,
 }) {
   const canvasRef = useRef(null);
   const signaturePadRef = useRef(null);
 
   const [uploadedSignature, setUploadedSignature] = useState(null);
+
+  // Keep the latest parent callback without recreating the signature pad.
+  const onChangeRef = useRef(onChange);
+
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
 
   const showCanvas = element.showCanvas !== false;
   const allowFileUpload = element.allowFileUpload === true;
@@ -78,6 +87,21 @@ function SignaturePreview({
     });
 
     signaturePadRef.current = signaturePad;
+
+    // Report the drawn signature to the parent.
+    const handleEndStroke = () => {
+      if (signaturePad.isEmpty()) {
+        onChangeRef.current?.(null);
+        return;
+      }
+
+      onChangeRef.current?.({
+        type: "drawn",
+        dataUrl: signaturePad.toDataURL("image/png"),
+      });
+    };
+
+    signaturePad.addEventListener("endStroke", handleEndStroke);
 
     const resizeCanvas = () => {
       const ratio = Math.max(window.devicePixelRatio || 1, 1);
@@ -111,6 +135,7 @@ function SignaturePreview({
 
     return () => {
       resizeObserver?.disconnect();
+      signaturePad.removeEventListener("endStroke", handleEndStroke);
       signaturePad.off();
       signaturePadRef.current = null;
     };
@@ -126,6 +151,7 @@ function SignaturePreview({
   // Clear the signature drawing.
   const clearSignature = () => {
     signaturePadRef.current?.clear();
+    onChange?.(null);
   };
 
   // Validate and preview an uploaded signature image.
@@ -139,17 +165,34 @@ function SignaturePreview({
       return;
     }
 
+    const previewUrl = URL.createObjectURL(file);
+
     setUploadedSignature((previous) => {
-      if (previous) URL.revokeObjectURL(previous);
-      return URL.createObjectURL(file);
+      if (previous?.previewUrl) {
+        URL.revokeObjectURL(previous.previewUrl);
+      }
+
+      return {
+        file,
+        previewUrl,
+      };
     });
+
+    // Send the actual File object to the parent.
+    onChange?.({
+      type: "uploaded",
+      file,
+    });
+
+    // Allow selecting the same file again.
+    event.target.value = "";
   };
 
   // Release the uploaded image URL when the component unmounts.
   useEffect(() => {
     return () => {
-      if (uploadedSignature) {
-        URL.revokeObjectURL(uploadedSignature);
+      if (uploadedSignature?.previewUrl) {
+        URL.revokeObjectURL(uploadedSignature.previewUrl);
       }
     };
   }, [uploadedSignature]);
@@ -218,7 +261,7 @@ function SignaturePreview({
           {uploadedSignature ? (
             <BlockStack gap="200">
               <img
-                src={uploadedSignature}
+                src={uploadedSignature.previewUrl}
                 alt="Uploaded signature"
                 style={{
                   maxWidth: "100%",
@@ -298,6 +341,7 @@ function SignaturePreview({
     </BlockStack>
   );
 }
+
 
 // =============================================================
 // REUSABLE FLATPICKR FIELD
@@ -460,12 +504,44 @@ export default function PreviewField({
   products = [],
   isModelPreview = false,
   productsLoading = false,
+  // Footer navigation actions
+  onPrevious,
+  onNext,
+  onReset,
+  onSubmit,
+    isFirstCustomerPage = true,
+  isLastCustomerPage = false,
 }) {
   // =========================================================
   // 1. ELEMENT DATA
   // =========================================================
 
   const currentElement = element ?? field;
+  // this is a small healper fn its main work is to track changes in fields alraedy define and new elents crete and send that to live preiew
+  const reportChange = (nextValue) => {
+    if (currentElement?.id == null) return;
+
+    onChange?.(currentElement.id, nextValue);
+  };
+
+  const updateValue = (nextValue) => {
+    setValue(nextValue);
+    reportChange(nextValue);
+  };
+  //phone values hepler 
+  const reportPhoneValue = (nextNumber, countryCode = phoneCountry) => {
+    const selectedCountry = phoneCountryList.find(
+      (country) =>
+        country.value.toLowerCase() === String(countryCode).toLowerCase()
+    );
+
+    reportChange({
+      country: selectedCountry?.value?.toLowerCase() || countryCode,
+      dialCode: selectedCountry?.dialCode || "",
+      number: nextNumber,
+    });
+  };
+  //end
   const isReadOnly = !isModelPreview;
 
   const normalizedElement =
@@ -656,23 +732,16 @@ export default function PreviewField({
     const input = String(newValue ?? "");
 
     if (normalizedElement.numbersOnly) {
-      setValue(input.replace(/[^0-9]/g, ""));
+      updateValue(input.replace(/[^0-9]/g, ""));
       setNameError("");
       return;
     }
 
-    setValue(input);
+    updateValue(input);
 
-    if (
-      normalizedElement.nameValidation !== false &&
-      input
-    ) {
+    if (normalizedElement.nameValidation !== false && input) {
       const validName = /^[\p{L}\p{M}\s'.-]+$/u.test(input);
-
-      setNameError(
-        validName ? "" : "Please enter a valid name."
-      );
-
+      setNameError(validName ? "" : "Please enter a valid name.");
       return;
     }
 
@@ -684,12 +753,12 @@ export default function PreviewField({
     const input = String(newValue ?? "");
 
     if (input !== "" && !/^\d+$/.test(input)) {
-      setValue(input);
+      updateValue(input);
       setNumberError("Please enter numbers only.");
       return;
     }
 
-    setValue(input);
+    updateValue(input);
     setNumberError("");
   };
   const [imageDropdownOpen, setImageDropdownOpen] = useState(false);
@@ -849,11 +918,15 @@ export default function PreviewField({
     normalizedElement.phoneValidation !== false;
 
   // Change selected phone country.
+  // Change selected phone country.
   const handlePhoneCountryChange = (countryCode) => {
     setPhoneCountry(countryCode.toLowerCase());
     setPhoneError("");
+
+    reportPhoneValue(value, countryCode);
   };
 
+  // Handle phone input and detect international calling codes.
   // Handle phone input and detect international calling codes.
   const handlePhoneChange = (newValue) => {
     const input = String(newValue ?? "");
@@ -888,12 +961,15 @@ export default function PreviewField({
             (country) => country.value.toLowerCase() === phoneCountry
           ) || sameCodeMatches[0];
 
-        const dialDigits =
-          matchedCountry.dialCode.replace(/\D/g, "");
+        const dialDigits = matchedCountry.dialCode.replace(/\D/g, "");
+
+        const phoneNumber = digits.slice(dialDigits.length);
 
         setPhoneCountry(matchedCountry.value.toLowerCase());
-        setValue(digits.slice(dialDigits.length));
+        setValue(phoneNumber);
         setPhoneError("");
+
+        reportPhoneValue(phoneNumber, matchedCountry.value);
 
         return;
       }
@@ -901,12 +977,19 @@ export default function PreviewField({
       // Preserve an incomplete international number while typing.
       setValue(internationalInput);
       setPhoneError("");
+
+      reportPhoneValue(internationalInput);
+
       return;
     }
 
     // National phone number: digits only.
-    setValue(input.replace(/\D/g, ""));
+    const phoneNumber = input.replace(/\D/g, "");
+
+    setValue(phoneNumber);
     setPhoneError("");
+
+    reportPhoneValue(phoneNumber);
   };
 
   // Validate the current phone number.
@@ -1096,12 +1179,19 @@ export default function PreviewField({
       ? [...selectedFiles, ...validFiles]
       : validFiles.slice(0, 1);
 
+    let finalFiles;
+
     if (maxFiles > 0 && combinedFiles.length > maxFiles) {
       setFileError(`You can select a maximum of ${maxFiles} files.`);
-      setSelectedFiles(combinedFiles.slice(0, maxFiles));
+      finalFiles = combinedFiles.slice(0, maxFiles);
     } else {
-      setSelectedFiles(combinedFiles);
+      finalFiles = combinedFiles;
     }
+
+    setSelectedFiles(finalFiles);
+
+    // Send actual File objects to parent.
+    reportChange(finalFiles);
 
     // Allow selecting the same file again.
     event.target.value = "";
@@ -1190,41 +1280,41 @@ export default function PreviewField({
     ).padStart(2, "0")}`;
   };
 
- 
-const getTimeOptions = (element) => {
-  const step = Math.max(
-    1,
-    Math.min(60, Number(element.timeStep) || 15)
-  );
 
-  const timeFormat = element.timeFormat || "24h";
+  const getTimeOptions = (element) => {
+    const step = Math.max(
+      1,
+      Math.min(60, Number(element.timeStep) || 15)
+    );
 
-  // Apply start/end restrictions only when explicitly enabled.
-  const start = element.enableStartTime === true
-    ? getTimeMinutes(element.startTime)
-    : 0;
+    const timeFormat = element.timeFormat || "24h";
 
-  const end = element.enableEndTime === true
-    ? getTimeMinutes(element.endTime)
-    : 23 * 60 + 59;
+    // Apply start/end restrictions only when explicitly enabled.
+    const start = element.enableStartTime === true
+      ? getTimeMinutes(element.startTime)
+      : 0;
 
-  if (start === null || end === null || start > end) {
-    return [];
-  }
+    const end = element.enableEndTime === true
+      ? getTimeMinutes(element.endTime)
+      : 23 * 60 + 59;
 
-  const options = [];
+    if (start === null || end === null || start > end) {
+      return [];
+    }
 
-  for (let minutes = start; minutes <= end; minutes += step) {
-    const formattedTime = formatTimeOption(minutes, timeFormat);
+    const options = [];
 
-    options.push({
-      label: formattedTime,
-      value: formattedTime,
-    });
-  }
+    for (let minutes = start; minutes <= end; minutes += step) {
+      const formattedTime = formatTimeOption(minutes, timeFormat);
 
-  return options;
-};
+      options.push({
+        label: formattedTime,
+        value: formattedTime,
+      });
+    }
+
+    return options;
+  };
 
 
 
@@ -1250,7 +1340,7 @@ const getTimeOptions = (element) => {
             type="email"
             autoComplete="email"
             value={value}
-            onChange={setValue}
+            onChange={updateValue} // set value and set to live 
             readOnly={isReadOnly}
             prefix:inputIconPrefix
             minLength={
@@ -1324,8 +1414,6 @@ const getTimeOptions = (element) => {
     // -------------------------------------------------------
     // PHONE
     // -------------------------------------------------------
-
-
 
     case "phone":
       return (
@@ -1590,12 +1678,10 @@ const getTimeOptions = (element) => {
         </BlockStack>
       );
 
-
-
-
     // -------------------------------------------------------
     // PASSWORD
     // -------------------------------------------------------
+
 
 
     case "password": {
@@ -1650,7 +1736,14 @@ const getTimeOptions = (element) => {
               autoComplete="new-password"
               value={value}
               onChange={(newValue) => {
-                setValue(newValue);
+                updateValue(newValue);
+
+                if (normalizedElement.confirmPassword) {
+                  reportChange({
+                    password: newValue,
+                    confirmPassword: confirmPasswordValue,
+                  });
+                }
               }}
               readOnly={isReadOnly}
               error={passwordError || undefined}
@@ -1687,7 +1780,14 @@ const getTimeOptions = (element) => {
                   normalizedElement.confirmPasswordDescription || undefined
                 }
                 value={confirmPasswordValue}
-                onChange={setConfirmPasswordValue}
+                onChange={(newValue) => {
+                  setConfirmPasswordValue(newValue);
+
+                  reportChange({
+                    password: value,
+                    confirmPassword: newValue,
+                  });
+                }}
                 autoComplete="new-password"
                 readOnly={isReadOnly}
                 prefix={commonTextFieldProps.prefix}
@@ -1747,6 +1847,7 @@ const getTimeOptions = (element) => {
     }
 
 
+
     // -------------------------------------------------------
     // COUNTRY
     // -------------------------------------------------------
@@ -1767,7 +1868,7 @@ const getTimeOptions = (element) => {
 
       const handleCountrySelect = (country) => {
         setSelectedCountry(country.value);
-        setValue(country.value);
+        updateValue(country.value);
         setCountryDropdownOpen(false);
         setCountrySearch("");
       };
@@ -2034,8 +2135,6 @@ const getTimeOptions = (element) => {
     // DROPDOWN AND SELECT
     // -------------------------------------------------------
 
-
-
     case "dropdown":
     case "select": {
       const dropdownOptions = (normalizedElement.options || []).map((option) => ({
@@ -2058,7 +2157,7 @@ const getTimeOptions = (element) => {
       );
 
       const handleDropdownSelect = (option) => {
-        setValue(option.value);
+        updateValue(option.value);
         setDropdownOpen(false);
         setDropdownSearch("");
       };
@@ -2241,61 +2340,106 @@ const getTimeOptions = (element) => {
     // -------------------------------------------------------
     // CHECKBOX
     // -------------------------------------------------------
-
     case "checkbox":
     case "checkboxes":
     case "checkbox_group": {
       const otherChecked = selected.includes("__other__");
+
+      // Get minimum and maximum selection limits
+      const minSelections = Math.max(
+        0,
+        Number(normalizedElement.minSelections) || 0
+      );
+
+      const maxSelections = Math.max(
+        0,
+        Number(normalizedElement.maxSelections) || 0
+      );
+
+      // 0 means unlimited
+      const isMaxReached =
+        maxSelections > 0 && selected.length >= maxSelections;
 
       return (
         <BlockStack gap="200">
           {fieldLabelWithIcon}
 
           <div style={choiceGridStyle}>
-            {options.map((option, index) => (
-              <Checkbox
-                key={`${option.value}-${index}`}
-                label={option.label}
-                checked={selected.includes(option.value)}
-                disabled={isReadOnly}
-                onChange={(isChecked) => {
-                  const updated = isChecked
-                    ? [...selected, option.value]
-                    : selected.filter(
-                      (selectedValue) => selectedValue !== option.value
-                    );
+            {options.map((option, index) => {
+              const isChecked = selected.includes(option.value);
 
-                  setSelected(updated);
-                  onChange?.(currentElement.id, updated);
-                }}
-              />
-            ))}
+              return (
+                <Checkbox
+                  key={`${option.value}-${index}`}
+                  label={option.label}
+                  checked={isChecked}
+                  disabled={
+                    isReadOnly || (!isChecked && isMaxReached)
+                  }
+                  onChange={(checked) => {
+                    let updated = [...selected];
+
+                    if (checked) {
+                      // Prevent selecting more than maximum
+                      if (
+                        maxSelections > 0 &&
+                        updated.length >= maxSelections
+                      ) {
+                        return;
+                      }
+
+                      updated.push(option.value);
+                    } else {
+                      updated = updated.filter(
+                        (value) => value !== option.value
+                      );
+                    }
+
+                    setSelected(updated);
+                    reportChange(updated);
+                  }}
+                />
+              );
+            })}
 
             {/* OTHER CHECKBOX */}
             {normalizedElement.otherOption && (
               <Checkbox
                 label={normalizedElement.otherLabel || "Other"}
                 checked={otherChecked}
-                disabled={isReadOnly}
+                disabled={
+                  isReadOnly || (!otherChecked && isMaxReached)
+                }
                 onChange={(isChecked) => {
-                  const updated = isChecked
-                    ? [...selected, "__other__"]
-                    : selected.filter(
-                      (selectedValue) => selectedValue !== "__other__"
+                  let updated = [...selected];
+
+                  if (isChecked) {
+                    if (
+                      maxSelections > 0 &&
+                      updated.length >= maxSelections
+                    ) {
+                      return;
+                    }
+
+                    updated.push("__other__");
+                  } else {
+                    updated = updated.filter(
+                      (value) => value !== "__other__"
                     );
+                  }
 
                   setSelected(updated);
 
-                  onChange?.(currentElement.id, {
-                    value: updated,
-                    otherValue: isChecked
-                      ? otherValue
-                      : "",
-                  });
+                  const nextOtherValue = isChecked ? otherValue : "";
 
                   if (!isChecked) {
                     setOtherValue("");
                   }
+
+                  reportChange({
+                    value: updated,
+                    otherValue: nextOtherValue,
+                  });
                 }}
               />
             )}
@@ -2312,7 +2456,7 @@ const getTimeOptions = (element) => {
               onChange={(newValue) => {
                 setOtherValue(newValue);
 
-                onChange?.(currentElement.id, {
+                reportChange({
                   value: selected,
                   otherValue: newValue,
                 });
@@ -2325,6 +2469,7 @@ const getTimeOptions = (element) => {
         </BlockStack>
       );
     }
+
 
     // -------------------------------------------------------
     // RADIO
@@ -2359,7 +2504,8 @@ const getTimeOptions = (element) => {
                   onChange={() => {
                     setSelected([option.value]);
                     setOtherValue("");
-                    onChange?.(currentElement.id, option.value);
+
+                    reportChange(option.value);
                   }}
                 />
 
@@ -2367,6 +2513,7 @@ const getTimeOptions = (element) => {
               </label>
             ))}
 
+            {/* OTHER RADIO */}
             {normalizedElement.otherOption && (
               <label
                 style={{
@@ -2385,7 +2532,7 @@ const getTimeOptions = (element) => {
                   onChange={() => {
                     setSelected(["__other__"]);
 
-                    onChange?.(currentElement.id, {
+                    reportChange({
                       value: "__other__",
                       otherValue,
                     });
@@ -2399,6 +2546,7 @@ const getTimeOptions = (element) => {
             )}
           </div>
 
+          {/* OTHER TEXT FIELD */}
           {normalizedElement.otherOption && otherChecked && (
             <TextField
               placeholder={
@@ -2409,7 +2557,7 @@ const getTimeOptions = (element) => {
               onChange={(newValue) => {
                 setOtherValue(newValue);
 
-                onChange?.(currentElement.id, {
+                reportChange({
                   value: "__other__",
                   otherValue: newValue,
                 });
@@ -2444,16 +2592,20 @@ const getTimeOptions = (element) => {
             }
             checked={checked}
             disabled={isReadOnly}
-            onChange={setChecked}
+            onChange={(isChecked) => {
+              setChecked(isChecked);//send data to liv e preview
+              reportChange(isChecked);
+            }}
           />
 
           {descriptionText}
         </BlockStack>
       );
-
     // -------------------------------------------------------
     // BUTTON
     // -------------------------------------------------------
+
+
     case "button": {
       const buttonSelected = Array.isArray(selected)
         ? selected
@@ -2463,7 +2615,6 @@ const getTimeOptions = (element) => {
 
       const otherChecked = buttonSelected.includes("__other__");
 
-      const min = Number(normalizedElement.minSelections ?? 0);
       const max = Number(normalizedElement.maxSelections ?? 10);
 
       const limitEnabled =
@@ -2475,10 +2626,11 @@ const getTimeOptions = (element) => {
 
         if (normalizedElement.multipleOptions) {
           if (buttonSelected.includes(optionValue)) {
-            updated = buttonSelected.filter((item) => item !== optionValue);
+            updated = buttonSelected.filter(
+              (item) => item !== optionValue
+            );
           } else {
             if (limitEnabled && buttonSelected.length >= max) {
-              setError?.(`You can select a maximum of ${max} options.`);
               return;
             }
 
@@ -2489,10 +2641,14 @@ const getTimeOptions = (element) => {
         }
 
         setSelected(updated);
-        setError?.("");
 
-        if (optionValue !== "__other__" || updated.includes("__other__")) {
-          onChange?.(currentElement.id, updated);
+        if (updated.includes("__other__")) {
+          reportChange({
+            value: updated,
+            otherValue: otherValue,
+          });
+        } else {
+          reportChange(updated);
         }
 
         if (!updated.includes("__other__")) {
@@ -2527,12 +2683,15 @@ const getTimeOptions = (element) => {
 
           {normalizedElement.otherOption && otherChecked && (
             <TextField
-              placeholder={normalizedElement.otherPlaceholder || "Please specify"}
+              placeholder={
+                normalizedElement.otherPlaceholder || "Please specify"
+              }
               value={otherValue}
               disabled={isReadOnly}
               onChange={(newValue) => {
                 setOtherValue(newValue);
-                onChange?.(currentElement.id, {
+
+                reportChange({
                   value: buttonSelected,
                   otherValue: newValue,
                 });
@@ -2546,9 +2705,12 @@ const getTimeOptions = (element) => {
       );
     }
 
+
+
     // -------------------------------------------------------
     // URL
     // -------------------------------------------------------
+
 
     case "url":
       if (
@@ -2556,8 +2718,10 @@ const getTimeOptions = (element) => {
         normalizedElement.minCharacters !== "" &&
         value.length < Number(normalizedElement.minCharacters)
       ) {
-        // Show minimum character validation error
+        // Minimum character validation will be handled
+        // by the central form validation system.
       }
+
       return (
         <BlockStack gap="200">
           {fieldLabelWithIcon}
@@ -2568,7 +2732,7 @@ const getTimeOptions = (element) => {
             type="url"
             placeholder={placeholder || "https://example.com"}
             value={value}
-            onChange={setValue}
+            onChange={updateValue}
             autoComplete="url"
             readOnly={isReadOnly}
             maxLength={
@@ -2579,443 +2743,439 @@ const getTimeOptions = (element) => {
             }
           />
         </BlockStack>
-      );
+      )
 
     // -------------------------------------------------------
     // DATE
     // -------------------------------------------------------
 
+    case "date": {
+      const format = normalizedElement.format || "date_time";
 
+      const dateFormat = normalizedElement.dateFormat || "Y-m-d";
+      const timeFormat = normalizedElement.timeFormat || "24h";
+      const timeType = normalizedElement.timeType || "picker";
 
+      const timeStep = Math.max(
+        1,
+        Math.min(60, Number(normalizedElement.timeStep) || 15)
+      );
 
+      // ===========================================================
+      // LANGUAGE / LOCALE
+      // ===========================================================
 
+      const localeMap = {
+        es: Spanish,
+        spanish: Spanish,
 
-case "date": {
-  const format = normalizedElement.format || "date_time";
+        fr: French,
+        french: French,
 
-  const dateFormat = normalizedElement.dateFormat || "Y-m-d";
-  const timeFormat = normalizedElement.timeFormat || "24h";
-  const timeType = normalizedElement.timeType || "picker";
+        de: German,
+        german: German,
 
-  const timeStep = Math.max(
-    1,
-    Math.min(60, Number(normalizedElement.timeStep) || 15)
-  );
+        it: Italian,
+        italian: Italian,
 
-  // ===========================================================
-  // LANGUAGE / LOCALE
-  // ===========================================================
+        pt: Portuguese,
+        portuguese: Portuguese,
 
-  const localeMap = {
-    es: Spanish,
-    spanish: Spanish,
+        nl: Dutch,
+        dutch: Dutch,
+      };
 
-    fr: French,
-    french: French,
+      const selectedLanguage = normalizedElement.otherLanguage
+        ? String(normalizedElement.localization || "en").toLowerCase()
+        : "en";
 
-    de: German,
-    german: German,
+      const selectedLocale =
+        localeMap[selectedLanguage] || undefined;
 
-    it: Italian,
-    italian: Italian,
+      // ===========================================================
+      // CURRENT DATE
+      // ===========================================================
 
-    pt: Portuguese,
-    portuguese: Portuguese,
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
 
-    nl: Dutch,
-    dutch: Dutch,
-  };
+      // ===========================================================
+      // DATE BOUNDARIES
+      // ===========================================================
 
-  const selectedLanguage = normalizedElement.otherLanguage
-    ? String(normalizedElement.localization || "en").toLowerCase()
-    : "en";
+      let minDate;
+      let maxDate;
 
-  const selectedLocale =
-    localeMap[selectedLanguage] || undefined;
+      if (normalizedElement.startDateType === "today") {
+        minDate = today;
+      } else if (normalizedElement.startDateType === "specificDate") {
+        minDate =
+          parseDateValue(normalizedElement.specificStartDate) || undefined;
+      } else if (normalizedElement.startDateType === "relativeDate") {
+        minDate =
+          addDays(
+            today,
+            Number(normalizedElement.relativeStartDate) || 0
+          ) || undefined;
+      }
 
-  // ===========================================================
-  // CURRENT DATE
-  // ===========================================================
+      if (normalizedElement.endDateType === "today") {
+        maxDate = today;
+      } else if (normalizedElement.endDateType === "specificDate") {
+        maxDate =
+          parseDateValue(normalizedElement.specificDate) || undefined;
+      } else if (normalizedElement.endDateType === "relativeDate") {
+        maxDate =
+          addDays(
+            today,
+            Number(normalizedElement.relativeEndDate) || 0
+          ) || undefined;
+      }
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+      // ===========================================================
+      // DATE RESTRICTIONS
+      // ===========================================================
 
-  // ===========================================================
-  // DATE BOUNDARIES
-  // ===========================================================
+      const limitEnabled = Boolean(
+        normalizedElement.limitDatePicker && format === "date"
+      );
 
-  let minDate;
-  let maxDate;
+      const limitType = normalizedElement.limitDateType || "disable";
 
-  if (normalizedElement.startDateType === "today") {
-    minDate = today;
-  } else if (normalizedElement.startDateType === "specificDate") {
-    minDate =
-      parseDateValue(normalizedElement.specificStartDate) || undefined;
-  } else if (normalizedElement.startDateType === "relativeDate") {
-    minDate =
-      addDays(
-        today,
-        Number(normalizedElement.relativeStartDate) || 0
-      ) || undefined;
-  }
-
-  if (normalizedElement.endDateType === "today") {
-    maxDate = today;
-  } else if (normalizedElement.endDateType === "specificDate") {
-    maxDate =
-      parseDateValue(normalizedElement.specificDate) || undefined;
-  } else if (normalizedElement.endDateType === "relativeDate") {
-    maxDate =
-      addDays(
-        today,
-        Number(normalizedElement.relativeEndDate) || 0
-      ) || undefined;
-  }
-
-  // ===========================================================
-  // DATE RESTRICTIONS
-  // ===========================================================
-
-  const limitEnabled = Boolean(
-    normalizedElement.limitDatePicker && format === "date"
-  );
-
-  const limitType = normalizedElement.limitDateType || "disable";
-
-  const specificDates = String(
-    normalizedElement.specificDates || ""
-  )
-    .split(",")
-    .map((item) => parseDateValue(item.trim()))
-    .filter(Boolean)
-    .map((date) => getDateOnly(date));
-
-  const rangeParts = String(
-    normalizedElement.rangeDates || ""
-  )
-    .split(/\s+to\s+/i)
-    .map((item) => parseDateValue(item.trim()))
-    .filter(Boolean);
-
-  const rangeStart = rangeParts[0]
-    ? getDateOnly(rangeParts[0])
-    : null;
-
-  const rangeEnd = rangeParts[1]
-    ? getDateOnly(rangeParts[1])
-    : rangeStart;
-
-  const selectedDays = Array.isArray(
-    normalizedElement.targetDaysOfWeek
-  )
-    ? normalizedElement.targetDaysOfWeek.map((day) =>
-        String(day).toLowerCase()
+      const specificDates = String(
+        normalizedElement.specificDates || ""
       )
-    : [];
+        .split(",")
+        .map((item) => parseDateValue(item.trim()))
+        .filter(Boolean)
+        .map((date) => getDateOnly(date));
 
-  const weekdayNames = [
-    "sunday",
-    "monday",
-    "tuesday",
-    "wednesday",
-    "thursday",
-    "friday",
-    "saturday",
-  ];
+      const rangeParts = String(
+        normalizedElement.rangeDates || ""
+      )
+        .split(/\s+to\s+/i)
+        .map((item) => parseDateValue(item.trim()))
+        .filter(Boolean);
 
-  const hasSpecificDates = Boolean(
-    limitEnabled && normalizedElement.enableSpecificDates
-  );
+      const rangeStart = rangeParts[0]
+        ? getDateOnly(rangeParts[0])
+        : null;
 
-  const hasRangeDates = Boolean(
-    limitEnabled && normalizedElement.enableRangeDates
-  );
+      const rangeEnd = rangeParts[1]
+        ? getDateOnly(rangeParts[1])
+        : rangeStart;
 
-  const hasWeekdays = Boolean(
-    limitEnabled && normalizedElement.enableDaysOfWeek
-  );
+      const selectedDays = Array.isArray(
+        normalizedElement.targetDaysOfWeek
+      )
+        ? normalizedElement.targetDaysOfWeek.map((day) =>
+          String(day).toLowerCase()
+        )
+        : [];
 
-  const hasAnyRestriction =
-    hasSpecificDates || hasRangeDates || hasWeekdays;
-
-  // ===========================================================
-  // DATE RANGE CHECK
-  // ===========================================================
-
-  const isDateInRange = (dateString) => {
-    if (!rangeStart) return false;
-
-    return (
-      dateString >= rangeStart &&
-      dateString <= (rangeEnd || rangeStart)
-    );
-  };
-
-  // ===========================================================
-  // CHECK CONFIGURED DATES
-  // ===========================================================
-
-  const matchesConfiguredDates = (date) => {
-    const dateString = getDateOnly(date);
-    const weekday = weekdayNames[date.getDay()];
-
-    const matchesSpecific =
-      hasSpecificDates &&
-      specificDates.includes(dateString);
-
-    const matchesRange =
-      hasRangeDates &&
-      isDateInRange(dateString);
-
-    const matchesWeekday =
-      hasWeekdays &&
-      selectedDays.includes(weekday);
-
-    return (
-      matchesSpecific ||
-      matchesRange ||
-      matchesWeekday
-    );
-  };
-
-  // ===========================================================
-  // ENABLE / DISABLE DATES
-  // ===========================================================
-
-  let enableDates;
-  let disableDates;
-
-  if (limitEnabled && hasAnyRestriction) {
-    if (limitType === "enable") {
-      enableDates = [
-        (date) => matchesConfiguredDates(date),
+      const weekdayNames = [
+        "sunday",
+        "monday",
+        "tuesday",
+        "wednesday",
+        "thursday",
+        "friday",
+        "saturday",
       ];
-    } else {
-      disableDates = [
-        (date) => matchesConfiguredDates(date),
-      ];
-    }
-  }
 
-  // ===========================================================
-  // MONTH ONLY
-  // ===========================================================
+      const hasSpecificDates = Boolean(
+        limitEnabled && normalizedElement.enableSpecificDates
+      );
 
-  const onlyShowMonth = Boolean(
-    normalizedElement.onlyShowMonth && format === "date"
-  );
+      const hasRangeDates = Boolean(
+        limitEnabled && normalizedElement.enableRangeDates
+      );
 
-  // ===========================================================
-  // SAFE PICKER VALUES
-  // ===========================================================
+      const hasWeekdays = Boolean(
+        limitEnabled && normalizedElement.enableDaysOfWeek
+      );
 
-  const currentValue =
-    typeof dateValue === "string"
-      ? dateValue.trim()
-      : dateValue;
+      const hasAnyRestriction =
+        hasSpecificDates || hasRangeDates || hasWeekdays;
 
-  const isTimeOnlyValue =
-    typeof currentValue === "string" &&
-    /^\d{1,2}:\d{2}\s?(AM|PM)$/i.test(currentValue);
+      // ===========================================================
+      // DATE RANGE CHECK
+      // ===========================================================
 
-  const isDateOnlyValue =
-    typeof currentValue === "string" &&
-    /^\d{4}-\d{2}-\d{2}$/.test(currentValue);
+      const isDateInRange = (dateString) => {
+        if (!rangeStart) return false;
 
-  const dateOnlyValue = isTimeOnlyValue
-    ? ""
-    : currentValue || "";
+        return (
+          dateString >= rangeStart &&
+          dateString <= (rangeEnd || rangeStart)
+        );
+      };
 
-  const timeOnlyValue = isDateOnlyValue
-    ? ""
-    : currentValue || "";
+      // ===========================================================
+      // CHECK CONFIGURED DATES
+      // ===========================================================
 
-  // ===========================================================
-  // DATE + TIME FORMAT
-  // ===========================================================
+      const matchesConfiguredDates = (date) => {
+        const dateString = getDateOnly(date);
+        const weekday = weekdayNames[date.getDay()];
 
-  const combinedDateFormat =
-    timeFormat === "12h"
-      ? `${dateFormat} h:i K`
-      : `${dateFormat} H:i`;
+        const matchesSpecific =
+          hasSpecificDates &&
+          specificDates.includes(dateString);
 
-  // ===========================================================
-  // COMMON OPTIONS
-  // ===========================================================
+        const matchesRange =
+          hasRangeDates &&
+          isDateInRange(dateString);
 
-  const commonPickerOptions = {
-    clickOpens: true,
-    disableMobile: true,
-    allowInput: false,
-    static: false,
-    animate: true,
+        const matchesWeekday =
+          hasWeekdays &&
+          selectedDays.includes(weekday);
 
-    // Apply selected language.
-    ...(selectedLocale ? { locale: selectedLocale } : {}),
-  };
+        return (
+          matchesSpecific ||
+          matchesRange ||
+          matchesWeekday
+        );
+      };
 
-  // ===========================================================
-  // DATE ONLY OPTIONS
-  // ===========================================================
+      // ===========================================================
+      // ENABLE / DISABLE DATES
+      // ===========================================================
 
-  const datePickerOptions = {
-    ...commonPickerOptions,
+      let enableDates;
+      let disableDates;
 
-    enableTime: false,
-    noCalendar: false,
-
-    dateFormat: onlyShowMonth ? "Y-m" : dateFormat,
-
-    minDate,
-    maxDate,
-
-    ...(enableDates ? { enable: enableDates } : {}),
-    ...(disableDates ? { disable: disableDates } : {}),
-
-    monthSelectorType: "dropdown",
-
-    ...(onlyShowMonth
-      ? {
-          plugins: [
-            new monthSelectPlugin({
-              shorthand: false,
-              dateFormat: "Y-m",
-              altFormat: "F Y",
-              theme: "light",
-            }),
-          ],
+      if (limitEnabled && hasAnyRestriction) {
+        if (limitType === "enable") {
+          enableDates = [
+            (date) => matchesConfiguredDates(date),
+          ];
+        } else {
+          disableDates = [
+            (date) => matchesConfiguredDates(date),
+          ];
         }
-      : {}),
-  };
+      }
 
-  // ===========================================================
-  // DATE + TIME OPTIONS
-  // ===========================================================
+      // ===========================================================
+      // MONTH ONLY
+      // ===========================================================
 
-  const dateTimePickerOptions = {
-    ...commonPickerOptions,
+      const onlyShowMonth = Boolean(
+        normalizedElement.onlyShowMonth && format === "date"
+      );
 
-    enableTime: true,
-    noCalendar: false,
+      // ===========================================================
+      // SAFE PICKER VALUES
+      // ===========================================================
 
-    dateFormat: combinedDateFormat,
+      const currentValue =
+        typeof dateValue === "string"
+          ? dateValue.trim()
+          : dateValue;
 
-    time_24hr: timeFormat !== "12h",
-    minuteIncrement: timeStep,
+      const isTimeOnlyValue =
+        typeof currentValue === "string" &&
+        /^\d{1,2}:\d{2}\s?(AM|PM)$/i.test(currentValue);
 
-    minDate,
-    maxDate,
+      const isDateOnlyValue =
+        typeof currentValue === "string" &&
+        /^\d{4}-\d{2}-\d{2}$/.test(currentValue);
 
-    monthSelectorType: "dropdown",
-  };
+      const dateOnlyValue = isTimeOnlyValue
+        ? ""
+        : currentValue || "";
 
-  // ===========================================================
-  // TIME ONLY OPTIONS
-  // ===========================================================
+      const timeOnlyValue = isDateOnlyValue
+        ? ""
+        : currentValue || "";
 
-  const timePickerOptions = {
-    ...commonPickerOptions,
+      // ===========================================================
+      // DATE + TIME FORMAT
+      // ===========================================================
 
-    enableTime: true,
-    noCalendar: true,
+      const combinedDateFormat =
+        timeFormat === "12h"
+          ? `${dateFormat} h:i K`
+          : `${dateFormat} H:i`;
 
-    dateFormat:
-      timeFormat === "12h" ? "h:i K" : "H:i",
+      // ===========================================================
+      // COMMON OPTIONS
+      // ===========================================================
 
-    time_24hr: timeFormat !== "12h",
-    minuteIncrement: timeStep,
+      const commonPickerOptions = {
+        clickOpens: true,
+        disableMobile: true,
+        allowInput: false,
+        static: false,
+        animate: true,
 
-    defaultHour: 12,
-    defaultMinute: 0,
-  };
+        // Apply selected language.
+        ...(selectedLocale ? { locale: selectedLocale } : {}),
+      };
 
-  // ===========================================================
-  // TIME DROPDOWN OPTIONS
-  // ===========================================================
+      // ===========================================================
+      // DATE ONLY OPTIONS
+      // ===========================================================
 
-  const timeOptions = getTimeOptions(normalizedElement);
+      const datePickerOptions = {
+        ...commonPickerOptions,
 
-  // ===========================================================
-  // UPDATE VALUE
-  // ===========================================================
+        enableTime: false,
+        noCalendar: false,
 
-  const updateDateValue = (nextValue) => {
-    const safeValue = nextValue ?? "";
+        dateFormat: onlyShowMonth ? "Y-m" : dateFormat,
 
-    setDateValue(safeValue);
-    onChange?.(safeValue);
-  };
+        minDate,
+        maxDate,
 
-  // ===========================================================
-  // RENDER
-  // ===========================================================
+        ...(enableDates ? { enable: enableDates } : {}),
+        ...(disableDates ? { disable: disableDates } : {}),
 
-  return (
-    <BlockStack gap="300">
-      {!hideLabel && fieldLabelWithIcon}
+        monthSelectorType: "dropdown",
 
-      {/* DATE + TIME */}
-
-      {format === "date_time" && (
-        <FlatpickrField
-          key={`combined-date-time-${selectedLanguage}`}
-          value={dateValue || ""}
-          options={dateTimePickerOptions}
-          onChange={updateDateValue}
-          placeholder={placeholder || "Select date and time"}
-          className="date-time-flatpickr-input"
-        />
-      )}
-
-      {/* DATE ONLY */}
-
-      {format === "date" && (
-        <FlatpickrField
-          key={`date-picker-${selectedLanguage}-${onlyShowMonth ? "month" : "day"}`}
-          value={dateOnlyValue}
-          options={datePickerOptions}
-          onChange={updateDateValue}
-          placeholder={
-            onlyShowMonth
-              ? placeholder || "Select month"
-              : placeholder || "Select date"
+        ...(onlyShowMonth
+          ? {
+            plugins: [
+              new monthSelectPlugin({
+                shorthand: false,
+                dateFormat: "Y-m",
+                altFormat: "F Y",
+                theme: "light",
+              }),
+            ],
           }
-          className="date-time-flatpickr-input"
-        />
-      )}
+          : {}),
+      };
 
-      {/* TIME PICKER */}
+      // ===========================================================
+      // DATE + TIME OPTIONS
+      // ===========================================================
 
-      {format === "time" && timeType === "picker" && (
-        <FlatpickrField
-          key={`time-picker-${selectedLanguage}`}
-          value={timeOnlyValue}
-          options={timePickerOptions}
-          onChange={updateDateValue}
-          placeholder="Select time"
-          className="date-time-flatpickr-input"
-        />
-      )}
+      const dateTimePickerOptions = {
+        ...commonPickerOptions,
 
-      {/* TIME DROPDOWN */}
+        enableTime: true,
+        noCalendar: false,
 
-      {format === "time" && timeType === "dropdown" && (
-        <Select
-          label="Select time"
-          labelHidden
-          placeholder="Select time"
-          options={timeOptions}
-          value={dateValue || ""}
-          onChange={updateDateValue}
-        />
-      )}
+        dateFormat: combinedDateFormat,
 
-      {descriptionText}
-    </BlockStack>
-  );
-}
+        time_24hr: timeFormat !== "12h",
+        minuteIncrement: timeStep,
 
+        minDate,
+        maxDate,
+
+        monthSelectorType: "dropdown",
+      };
+
+      // ===========================================================
+      // TIME ONLY OPTIONS
+      // ===========================================================
+
+      const timePickerOptions = {
+        ...commonPickerOptions,
+
+        enableTime: true,
+        noCalendar: true,
+
+        dateFormat:
+          timeFormat === "12h" ? "h:i K" : "H:i",
+
+        time_24hr: timeFormat !== "12h",
+        minuteIncrement: timeStep,
+
+        defaultHour: 12,
+        defaultMinute: 0,
+      };
+
+      // ===========================================================
+      // TIME DROPDOWN OPTIONS
+      // ===========================================================
+
+      const timeOptions = getTimeOptions(normalizedElement);
+
+      // ===========================================================
+      // UPDATE VALUE
+      // ===========================================================
+
+      // UPDATE VALUE
+
+      const updateDateValue = (nextValue) => {
+        const safeValue = nextValue ?? "";
+
+        setDateValue(safeValue);
+        reportChange(safeValue);
+      };
+
+      // ===========================================================
+      // RENDER
+      // ===========================================================
+
+      return (
+        <BlockStack gap="300">
+          {!hideLabel && fieldLabelWithIcon}
+
+          {/* DATE + TIME */}
+
+          {format === "date_time" && (
+            <FlatpickrField
+              key={`combined-date-time-${selectedLanguage}`}
+              value={dateValue || ""}
+              options={dateTimePickerOptions}
+              onChange={updateDateValue}
+              placeholder={placeholder || "Select date and time"}
+              className="date-time-flatpickr-input"
+            />
+          )}
+
+          {/* DATE ONLY */}
+
+          {format === "date" && (
+            <FlatpickrField
+              key={`date-picker-${selectedLanguage}-${onlyShowMonth ? "month" : "day"}`}
+              value={dateOnlyValue}
+              options={datePickerOptions}
+              onChange={updateDateValue}
+              placeholder={
+                onlyShowMonth
+                  ? placeholder || "Select month"
+                  : placeholder || "Select date"
+              }
+              className="date-time-flatpickr-input"
+            />
+          )}
+
+          {/* TIME PICKER */}
+
+          {format === "time" && timeType === "picker" && (
+            <FlatpickrField
+              key={`time-picker-${selectedLanguage}`}
+              value={timeOnlyValue}
+              options={timePickerOptions}
+              onChange={updateDateValue}
+              placeholder="Select time"
+              className="date-time-flatpickr-input"
+            />
+          )}
+
+          {/* TIME DROPDOWN */}
+
+          {format === "time" && timeType === "dropdown" && (
+            <Select
+              label="Select time"
+              labelHidden
+              placeholder="Select time"
+              options={timeOptions}
+              value={dateValue || ""}
+              onChange={updateDateValue}
+            />
+          )}
+
+          {descriptionText}
+        </BlockStack>
+      );
+    }
 
     // -------------------------------------------------------
     // NUMBER
@@ -3032,7 +3192,8 @@ case "date": {
 
       const handleNumberChangeWithLimits = (nextValue) => {
         if (nextValue === "") {
-          setValue("");
+          updateValue("");
+          setNumberError("");
           return;
         }
 
@@ -3041,12 +3202,14 @@ case "date": {
         if (!Number.isFinite(numericValue)) return;
 
         if (min !== undefined && numericValue < min) {
-          setValue(String(min));
+          updateValue(String(min));
         } else if (max !== undefined && numericValue > max) {
-          setValue(String(max));
+          updateValue(String(max));
         } else {
-          setValue(nextValue);
+          updateValue(nextValue);
         }
+
+        setNumberError("");
       };
 
       return (
@@ -3065,6 +3228,7 @@ case "date": {
     // -------------------------------------------------------
     // QUANTITY
     // -------------------------------------------------------
+
 
     case "quantity": {
       const parsedMin = Number(normalizedElement.minValue);
@@ -3100,12 +3264,18 @@ case "date": {
 
       const decreaseValue = () => {
         if (isReadOnly || safeValue <= min) return;
-        setValue(String(Math.max(min, safeValue - 1)));
+
+        const nextValue = Math.max(min, safeValue - 1);
+
+        updateValue(String(nextValue));
       };
 
       const increaseValue = () => {
         if (isReadOnly || safeValue >= max) return;
-        setValue(String(Math.min(max, safeValue + 1)));
+
+        const nextValue = Math.min(max, safeValue + 1);
+
+        updateValue(String(nextValue));
       };
 
       return (
@@ -3227,6 +3397,7 @@ case "date": {
     }
 
 
+
     // -------------------------------------------------------
     // REPEATER
     // -------------------------------------------------------
@@ -3255,19 +3426,25 @@ case "date": {
       const handleAddItem = () => {
         if (isReadOnly || items.length >= maxItems) return;
 
-        setValue([...items, ""]);
+        const updatedItems = [...items, ""];
+
+        updateValue(updatedItems);
       };
 
       const handleRemoveItem = (index) => {
         if (isReadOnly || items.length <= minItems) return;
 
-        setValue(items.filter((_, i) => i !== index));
+        const updatedItems = items.filter((_, i) => i !== index);
+
+        updateValue(updatedItems);
       };
 
       const handleItemChange = (index, newValue) => {
         const updatedItems = [...items];
+
         updatedItems[index] = newValue;
-        setValue(updatedItems);
+
+        updateValue(updatedItems);
       };
 
       return (
@@ -3327,6 +3504,7 @@ case "date": {
           >
             {items.length} / {maxItems} items
           </Text>
+
           {normalizedElement.description && (
             <Text as="p" variant="bodySm" tone="subdued">
               {normalizedElement.description}
@@ -3337,9 +3515,11 @@ case "date": {
     }
 
 
+
     // -------------------------------------------------------
     // RATING LEVEL
     // -------------------------------------------------------
+
 
     case "rating_level": {
       const maxLevel = Math.min(
@@ -3357,7 +3537,10 @@ case "date": {
                 key={n}
                 type="button"
                 disabled={isReadOnly}
-                onClick={() => setRating(n)}
+                onClick={() => {
+                  setRating(n);
+                  reportChange(n);
+                }}
                 style={{
                   width: "36px",
                   height: "36px",
@@ -3387,6 +3570,7 @@ case "date": {
         </BlockStack>
       );
     }
+
 
     // -------------------------------------------------------
     // STAR RATING
@@ -3441,7 +3625,10 @@ case "date": {
                     type="button"
                     className="rating-star-button"
                     disabled={isReadOnly}
-                    onClick={() => setRating(star)}
+                    onClick={() => {
+                      setRating(star);
+                      reportChange(star);
+                    }}
                     style={{
                       "--rating-active-color": ratingColor,
                       width: "100%",
@@ -3542,6 +3729,7 @@ case "date": {
     // -------------------------------------------------------
     // FEEDBACK
     // -------------------------------------------------------
+
     case "feedback": {
       const feedbackStyles = {
         experience: ["😡", "🙁", "😐", "🙂", "😍"],
@@ -3570,25 +3758,29 @@ case "date": {
 
         const alreadySelected = selectedValues.includes(emoji);
 
+        let updatedValues;
+
         if (allowMultiple) {
           if (alreadySelected) {
-            setSelected(
-              selectedValues.filter((item) => item !== emoji)
+            updatedValues = selectedValues.filter(
+              (item) => item !== emoji
             );
-            return;
-          }
+          } else {
+            if (
+              maxSelections > 0 &&
+              selectedValues.length >= maxSelections
+            ) {
+              return;
+            }
 
-          if (
-            maxSelections > 0 &&
-            selectedValues.length >= maxSelections
-          ) {
-            return;
+            updatedValues = [...selectedValues, emoji];
           }
-
-          setSelected([...selectedValues, emoji]);
         } else {
-          setSelected([emoji]);
+          updatedValues = [emoji];
         }
+
+        setSelected(updatedValues);
+        reportChange(updatedValues);
       };
 
       return (
@@ -3675,6 +3867,7 @@ case "date": {
     }
 
 
+
     // -------------------------------------------------------
     // SIGNATURE
     // The hooks are now inside SignaturePreview.
@@ -3689,6 +3882,7 @@ case "date": {
           required={required}
           descriptionText={descriptionText}
           isReadOnly={isReadOnly}
+          onChange={reportChange}
         />
       );
 
@@ -3884,7 +4078,10 @@ case "date": {
           {selectedFiles.length > 0 && (
             <BlockStack gap="100">
               {selectedFiles.map((file, index) => (
-                <InlineStack key={`${file.name}-${index}`} align="space-between">
+                <InlineStack
+                  key={`${file.name}-${index}`}
+                  align="space-between"
+                >
                   <Text as="span" variant="bodySm">
                     {file.name}
                   </Text>
@@ -3892,11 +4089,14 @@ case "date": {
                   <Button
                     variant="plain"
                     tone="critical"
-                    onClick={() =>
-                      setSelectedFiles((previous) =>
-                        previous.filter((_, fileIndex) => fileIndex !== index)
-                      )
-                    }
+                    onClick={() => {
+                      const updatedFiles = selectedFiles.filter(
+                        (_, fileIndex) => fileIndex !== index
+                      );
+
+                      setSelectedFiles(updatedFiles);
+                      reportChange(updatedFiles);
+                    }}
                   >
                     Remove
                   </Button>
@@ -3913,6 +4113,7 @@ case "date": {
     // -------------------------------------------------------
     // IMAGE OPTIONS
     // -------------------------------------------------------
+
 
 
     case "image_options": {
@@ -3997,7 +4198,7 @@ case "date": {
                           );
 
                           setImagePreview(updatedImages);
-                          onChange?.(currentElement.id, updatedImages);
+                          reportChange(updatedImages);
                         }}
                         style={{
                           position: "absolute",
@@ -4080,7 +4281,7 @@ case "date": {
                     ];
 
                     setImagePreview(updatedImages);
-                    onChange?.(currentElement.id, updatedImages);
+                    reportChange(updatedImages);
 
                     event.target.value = "";
                   }}
@@ -4124,7 +4325,10 @@ case "date": {
                 type="button"
                 aria-label={`Select ${color}`}
                 disabled={isReadOnly}
-                onClick={() => setColorValue(color)}
+                onClick={() => {
+                  setColorValue(color);
+                  reportChange(color);
+                }}
                 style={{
                   width: "32px",
                   height: "32px",
@@ -4161,14 +4365,16 @@ case "date": {
             <ColorInput
               label={hideLabel ? "" : label}
               value={colorValue}
-              onChange={setColorValue}
+              onChange={(newColor) => {
+                setColorValue(newColor);
+                reportChange(newColor);
+              }}
             />
           </div>
 
           {descriptionText}
         </BlockStack>
       );
-
     // -------------------------------------------------------
     // FORM HEADER
     // -------------------------------------------------------
@@ -4245,6 +4451,14 @@ case "date": {
     // -------------------------------------------------------
 
     case "form_footer":
+      console.log("footer nav", {
+  isReadOnly,
+  isModelPreview,
+  hasOnNext: typeof onNext,
+  isFirstCustomerPage,
+  isLastCustomerPage,
+  showNextButton: normalizedElement.showNextButton,
+});
       return (
         <BlockStack gap="300">
           {normalizedElement.text && (
@@ -4298,7 +4512,8 @@ case "date": {
               >
                 <Button
                   fullWidth={Boolean(normalizedElement.fullWidthButton)}
-                  disabled={isReadOnly}
+                  disabled={isReadOnly || isFirstCustomerPage}
+                  onClick={onPrevious}
                 >
                   {normalizedElement.previousText || "Previous"}
                 </Button>
@@ -4315,7 +4530,8 @@ case "date": {
               >
                 <Button
                   fullWidth={Boolean(normalizedElement.fullWidthButton)}
-                  disabled={isReadOnly}
+                  disabled={isReadOnly || isLastCustomerPage}
+                  onClick={onNext}
                 >
                   {normalizedElement.nextText || "Next"}
                 </Button>
@@ -4333,6 +4549,7 @@ case "date": {
                 <Button
                   fullWidth={Boolean(normalizedElement.fullWidthButton)}
                   disabled={isReadOnly}
+                  onClick={onReset}
                 >
                   {normalizedElement.resetButtonText || "Reset"}
                 </Button>
@@ -4342,6 +4559,10 @@ case "date": {
             <button
               type="button"
               disabled={isReadOnly}
+              onClick={(event) => {
+                event.stopPropagation();
+                onSubmit?.();
+              }}
               style={{
                 width: normalizedElement.fullWidthButton
                   ? "100%"
@@ -4397,6 +4618,7 @@ case "date": {
     // RANGE SLIDER
     // -------------------------------------------------------
 
+
     case "range_slider": {
       const min = Number(normalizedElement.min ?? 0);
       const max = Number(normalizedElement.max ?? 100);
@@ -4423,8 +4645,9 @@ case "date": {
             disabled={isReadOnly}
             onChange={(event) => {
               const newValue = Number(event.target.value);
+
               setRangeValue(newValue);
-              onChange?.(currentElement.id, newValue);
+              reportChange(newValue);
             }}
             style={{ width: "100%" }}
           />
@@ -4440,9 +4663,11 @@ case "date": {
       );
     }
 
+
     // -------------------------------------------------------
     // MATRIX
     // -------------------------------------------------------
+
 
     case "matrix": {
       const normalizeMatrixItems = (list, fallback, prefix) => {
@@ -4504,33 +4729,30 @@ case "date": {
         const questionPrefix = getQuestionPrefix(question);
         const answerValue = getAnswerValue(question, answer);
 
-        setSelected((previous) => {
-          const previousValues = Array.isArray(previous)
-            ? previous
-            : previous
-              ? [previous]
-              : [];
+        let updatedValues;
 
-          const alreadySelected = previousValues.includes(answerValue);
+        const alreadySelected = selectedValues.includes(answerValue);
 
-          if (allowMultiple) {
-            if (alreadySelected) {
-              return previousValues.filter(
-                (item) => item !== answerValue
-              );
-            }
-
-            return [...previousValues, answerValue];
+        if (allowMultiple) {
+          if (alreadySelected) {
+            updatedValues = selectedValues.filter(
+              (item) => item !== answerValue
+            );
+          } else {
+            updatedValues = [...selectedValues, answerValue];
           }
-
-          return [
-            ...previousValues.filter(
+        } else {
+          updatedValues = [
+            ...selectedValues.filter(
               (item) =>
                 !String(item).startsWith(questionPrefix)
             ),
             answerValue,
           ];
-        });
+        }
+
+        setSelected(updatedValues);
+        reportChange(updatedValues);
       };
 
       return (
@@ -4681,6 +4903,7 @@ case "date": {
       );
     }
 
+
     // -------------------------------------------------------
     // SWITCH
     // -------------------------------------------------------
@@ -4696,7 +4919,13 @@ case "date": {
               role="switch"
               aria-checked={switchValue}
               disabled={isReadOnly}
-              onClick={() => setSwitchValue((previous) => !previous)}
+              onClick={() => {
+                setSwitchValue((previous) => {
+                  const nextValue = !previous;
+                  reportChange(nextValue);
+                  return nextValue;
+                });
+              }}
               className={`preview-switch ${switchValue ? "is-on" : "is-off"
                 }`}
             >
@@ -4717,6 +4946,7 @@ case "date": {
     // -------------------------------------------------------
     // IMAGE DROPDOWN
     // -------------------------------------------------------
+
 
     case "image_dropdown": {
       const imageOptions = rawOptions.filter(
@@ -4744,13 +4974,13 @@ case "date": {
               )}
             </Text>
           )}
+
           <div
             style={{
               position: "relative",
               width: "100%",
             }}
           >
-
             {/* DROPDOWN BUTTON */}
             <button
               type="button"
@@ -4821,8 +5051,7 @@ case "date": {
                       key={option.id || optionValue || index}
                       onClick={() => {
                         if (!isReadOnly) {
-                          setValue(optionValue);
-                          onChange?.(currentElement.id, optionValue);
+                          updateValue(optionValue);
                           setImageDropdownOpen(false);
                         }
                       }}
@@ -4880,12 +5109,13 @@ case "date": {
       );
     }
 
+
     // -------------------------------------------------------
     // PRODUCT
     // -------------------------------------------------------
 
-    case "product": {
 
+    case "product": {
       const selectedProductIds = Array.isArray(
         normalizedElement.selectedProductIds
       )
@@ -4961,19 +5191,22 @@ case "date": {
                         onClick={() => {
                           if (isReadOnly) return;
 
+                          let nextSelected;
+
                           if (normalizedElement.allowMultiple) {
-                            setSelected((previous) =>
-                              isSelected
-                                ? previous.filter(
-                                  (id) => id !== product.id
-                                )
-                                : [...previous, product.id]
-                            );
+                            nextSelected = isSelected
+                              ? selected.filter(
+                                (id) => id !== product.id
+                              )
+                              : [...selected, product.id];
                           } else {
-                            setSelected(
-                              isSelected ? [] : [product.id]
-                            );
+                            nextSelected = isSelected
+                              ? []
+                              : [product.id];
                           }
+
+                          setSelected(nextSelected);
+                          reportChange(nextSelected);
                         }}
                         style={{
                           display: isList ? "flex" : "block",
@@ -5074,6 +5307,141 @@ case "date": {
         </BlockStack>
       );
     }
+    //text
+    case "text": {
+      const maxLength = Number(normalizedElement.maxLength ?? 100);
+
+      const hasCharacterLimit =
+        normalizedElement.enableCharacterLimit === true;
+
+      const numbersOnly = normalizedElement.numbersOnly === true;
+      const nameValidation = normalizedElement.nameValidation === true;
+
+      return (
+        <BlockStack gap="200">
+          {fieldLabelWithIcon}
+
+          <TextField
+            value={value || ""}
+            placeholder={placeholder || ""}
+            disabled={isReadOnly}
+            autoComplete="off"
+            maxLength={
+              hasCharacterLimit && maxLength > 0
+                ? maxLength
+                : undefined
+            }
+            error={
+              nameValidation &&
+                value &&
+                !/^[a-zA-Z\s'-]*$/.test(value)
+                ? "Please enter a valid name."
+                : undefined
+            }
+            onChange={(newValue) => {
+              let updatedValue = newValue;
+
+              // Numbers only
+              if (numbersOnly) {
+                updatedValue = updatedValue.replace(/[^0-9]/g, "");
+              }
+
+              // Name validation
+              if (nameValidation) {
+                updatedValue = updatedValue.replace(
+                  /[^a-zA-Z\s'-]/g,
+                  ""
+                );
+              }
+
+              // Maximum character limit
+              if (hasCharacterLimit && maxLength > 0) {
+                updatedValue = updatedValue.slice(0, maxLength);
+              }
+
+              setValue(updatedValue);
+              reportChange(updatedValue);
+            }}
+          />
+
+          {descriptionText}
+        </BlockStack>
+      );
+    }
+    //textaera 
+    case "textarea": {
+      const minCharacters = Number(
+        normalizedElement.minCharacters || 0
+      );
+
+      const maxCharacters = Number(
+        normalizedElement.maxCharacters || 0
+      );
+
+      const hasCharacterLimit =
+        normalizedElement.limitCharacters === true;
+
+      const characterCount = (value || "").length;
+
+      const minError =
+        hasCharacterLimit &&
+        minCharacters > 0 &&
+        characterCount > 0 &&
+        characterCount < minCharacters;
+
+      return (
+        <BlockStack gap="200">
+          {fieldLabelWithIcon}
+
+          <TextField
+            value={value || ""}
+            placeholder={placeholder || ""}
+            multiline={4}
+            disabled={isReadOnly}
+            autoComplete="off"
+            maxLength={
+              hasCharacterLimit && maxCharacters > 0
+                ? maxCharacters
+                : undefined
+            }
+            error={
+              minError
+                ? `Please enter at least ${minCharacters} characters.`
+                : undefined
+            }
+            onChange={(newValue) => {
+              let updatedValue = newValue;
+
+              // Maximum character limit
+              if (
+                hasCharacterLimit &&
+                maxCharacters > 0
+              ) {
+                updatedValue = updatedValue.slice(
+                  0,
+                  maxCharacters
+                );
+              }
+
+              setValue(updatedValue);
+              reportChange(updatedValue);
+            }}
+          />
+
+          {hasCharacterLimit && (
+            <Text as="p" variant="bodySm" tone="subdued">
+              {characterCount}
+              {maxCharacters > 0
+                ? ` / ${maxCharacters}`
+                : " characters"}
+            </Text>
+          )}
+
+          {descriptionText}
+        </BlockStack>
+      );
+    }
+
 
     // -------------------------------------------------------
     // DEFAULT FIELD
@@ -5084,7 +5452,7 @@ case "date": {
         <TextField
           {...commonTextFieldProps}
           value={value}
-          onChange={setValue}
+          onChange={updateValue}
           readOnly={isReadOnly}
         />
       );
