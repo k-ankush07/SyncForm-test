@@ -217,9 +217,10 @@ function DraggablePreviewElement({
   productsLoading = false,
   isModelPreview = false,
 }) {
-  const isSelected = element.id === selectedElementId;
+  //This prevents the editor's selection toolbar from appearing in customer preview mode.
+  const isSelected =
+    !isModelPreview && element.id === selectedElementId;
   const isHidden = element.visible === false;
-
 
 
   // Drag behavior for this element.
@@ -326,7 +327,12 @@ function DraggablePreviewElement({
       ]
         .filter(Boolean)
         .join(" ")}
-      onClick={() => onSelectElement?.(element)}
+      onClick={(event) => {
+        if (!isModelPreview) {
+          event.stopPropagation();
+          onSelectElement?.(element);
+        }
+      }}
     >
       {/* ---------- DROP ZONES AROUND THE ELEMENT ---------- */}
 
@@ -482,8 +488,9 @@ function FixedPreviewElement({
   onSubmit,
 }) {
   if (!element) return null;
-
-  const isSelected = element.id === selectedElementId;
+  //Now clicking the footer in editor mode selects it, but clicking the footer in customer preview mode will not open its settings.
+  const isSelected =
+    !isModelPreview && element.id === selectedElementId;
 
   const type = String(element.type || "")
     .toLowerCase()
@@ -502,7 +509,12 @@ function FixedPreviewElement({
       ]
         .filter(Boolean)
         .join(" ")}
-      onClick={() => onSelectElement?.(element)}
+      onClick={(event) => {
+        if (!isModelPreview) {
+          event.stopPropagation();
+          onSelectElement?.(element);
+        }
+      }}
       style={{
         cursor: "pointer",
 
@@ -641,22 +653,34 @@ export default function LivePreview({
   const isLastCustomerPage =
     currentCustomerPageIndex === customerPages.length - 1;
 
+  // Keep the current page index valid if pages are hidden or deleted.
+  React.useEffect(() => {
+    setCurrentCustomerPageIndex((previousIndex) =>
+      Math.min(
+        Math.max(0, previousIndex),
+        Math.max(0, customerPages.length - 1)
+      )
+    );
+  }, [customerPages.length]);
+
   // Go to previous page.
   const handlePreviousPage = () => {
     setCurrentCustomerPageIndex((previousIndex) =>
       Math.max(0, previousIndex - 1)
     );
   };
+  // Move to the next visible customer page.
+  const handleNextPage = () => {
+    setCurrentCustomerPageIndex((previousIndex) =>
+      Math.min(customerPages.length - 1, previousIndex + 1)
+    );
+  };
 
-  // Go to next page.
-const handleNextPage = () => {
-  console.log("NEXT clicked", { currentCustomerPageIndex, total: customerPages.length });
-  setCurrentCustomerPageIndex((i) => Math.min(customerPages.length - 1, i + 1));
-};
 
-React.useEffect(() => {
-  console.log("page index now:", currentCustomerPageIndex, customerPages.map(p => p.id));
-}, [currentCustomerPageIndex]);
+
+  React.useEffect(() => {
+    console.log("page index now:", currentCustomerPageIndex, customerPages.map(p => p.id));
+  }, [currentCustomerPageIndex]);
 
   // Reset customer answers.
   const handleResetForm = () => {
@@ -667,9 +691,9 @@ React.useEffect(() => {
 
   // Submit will be connected to validation in our next step.
   const handleSubmitForm = () => {
+    setIsSubmitted(true);
     console.log("Form submitted:", formValues);
   };
-
   // Check whether an element should be rendered.
   const shouldRenderElement = (element) => {
     const type = String(element?.type || "")

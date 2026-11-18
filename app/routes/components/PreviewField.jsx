@@ -509,7 +509,7 @@ export default function PreviewField({
   onNext,
   onReset,
   onSubmit,
-    isFirstCustomerPage = true,
+  isFirstCustomerPage = true,
   isLastCustomerPage = false,
 }) {
   // =========================================================
@@ -543,6 +543,12 @@ export default function PreviewField({
   };
   //end
   const isReadOnly = !isModelPreview;
+  // Customer-visible pages determine the footer navigation.
+  const customerPageCount = pages.filter(
+    (page) => page.visible !== false
+  ).length;
+
+  const hasMultiplePages = customerPageCount > 1;
 
   const normalizedElement =
     typeof currentElement === "string"
@@ -4450,15 +4456,32 @@ export default function PreviewField({
     // FORM FOOTER
     // -------------------------------------------------------
 
+
     case "form_footer":
       console.log("footer nav", {
-  isReadOnly,
-  isModelPreview,
-  hasOnNext: typeof onNext,
-  isFirstCustomerPage,
-  isLastCustomerPage,
-  showNextButton: normalizedElement.showNextButton,
-});
+        isReadOnly,
+        isModelPreview,
+        customerPageCount,
+        isFirstCustomerPage,
+        isLastCustomerPage,
+        hasOnNext: typeof onNext,
+      });
+      // Shared styling for Previous, Next, Reset and Submit.
+      const footerButtonStyle = {
+        width: normalizedElement.fullWidthButton ? "100%" : "auto",
+
+        backgroundColor:
+          normalizedElement.buttonBackgroundColor || "#2E4E49",
+
+        color:
+          normalizedElement.buttonTextColor || "#ffffff",
+
+        border: "none",
+        borderRadius: "6px",
+        padding: "12px 20px",
+        fontSize: "14px",
+        fontWeight: 600,
+      };
       return (
         <BlockStack gap="300">
           {normalizedElement.text && (
@@ -4502,85 +4525,147 @@ export default function PreviewField({
               width: "100%",
             }}
           >
-            {normalizedElement.showPreviousButton && (
-              <div
-                style={{
-                  width: normalizedElement.fullWidthButton
-                    ? "100%"
-                    : "auto",
-                }}
-              >
-                <Button
-                  fullWidth={Boolean(normalizedElement.fullWidthButton)}
-                  disabled={isReadOnly || isFirstCustomerPage}
-                  onClick={onPrevious}
-                >
-                  {normalizedElement.previousText || "Previous"}
-                </Button>
-              </div>
-            )}
+            {/* =========================================
+            EDITOR MODE
+            Keep the configured footer buttons.
+            They are disabled because isReadOnly is true.
+        ========================================= */}
 
-            {normalizedElement.showNextButton && (
-              <div
-                style={{
-                  width: normalizedElement.fullWidthButton
-                    ? "100%"
-                    : "auto",
-                }}
-              >
-                <Button
-                  fullWidth={Boolean(normalizedElement.fullWidthButton)}
-                  disabled={isReadOnly || isLastCustomerPage}
-                  onClick={onNext}
-                >
-                  {normalizedElement.nextText || "Next"}
-                </Button>
-              </div>
-            )}
+            {!isModelPreview && (
+              <>
+                {/* //previous  */}
+                {normalizedElement.showPreviousButton && (
+                  <button
+                    type="button"
+                    disabled={isReadOnly}
+                    onClick={(event) => event.stopPropagation()}
+                    style={{
+                      ...footerButtonStyle,
+                      cursor: "not-allowed",
+                    }}
+                  >
+                    {normalizedElement.previousText || "Previous"}
+                  </button>
+                )}
+                {/* //next */}
+                {normalizedElement.showNextButton && (
+                  <button
+                    type="button"
+                    disabled={isReadOnly}
+                    onClick={(event) => event.stopPropagation()}
+                    style={{
+                      ...footerButtonStyle,
+                      cursor: "not-allowed",
+                    }}
+                  >
+                    {normalizedElement.nextText || "Next"}
+                  </button>
+                )}
+                {/* //reset */}
+                {normalizedElement.showResetButton && (
+                  <button
+                    type="button"
+                    disabled={isReadOnly}
+                    onClick={(event) => event.stopPropagation()}
+                    style={{
+                      ...footerButtonStyle,
+                      cursor: "not-allowed",
+                    }}
+                  >
+                    {normalizedElement.resetButtonText || "Reset"}
+                  </button>
+                )}
 
-            {normalizedElement.showResetButton && (
-              <div
-                style={{
-                  width: normalizedElement.fullWidthButton
-                    ? "100%"
-                    : "auto",
-                }}
-              >
-                <Button
-                  fullWidth={Boolean(normalizedElement.fullWidthButton)}
+                <button
+                  type="button"
                   disabled={isReadOnly}
-                  onClick={onReset}
+                  onClick={(event) => event.stopPropagation()}
+                  style={{
+                    width: normalizedElement.fullWidthButton
+                      ? "100%"
+                      : "auto",
+                    backgroundColor:
+                      normalizedElement.buttonBackgroundColor || "#303030",
+                    color:
+                      normalizedElement.buttonTextColor || "#ffffff",
+                    border: "none",
+                    borderRadius: "6px",
+                    padding: "12px 20px",
+                    fontSize: "14px",
+                    fontWeight: 600,
+                    cursor: "not-allowed",
+                  }}
                 >
-                  {normalizedElement.resetButtonText || "Reset"}
-                </Button>
-              </div>
+                  {normalizedElement.submitText || "Submit"}
+                </button>
+              </>
             )}
 
-            <button
-              type="button"
-              disabled={isReadOnly}
-              onClick={(event) => {
-                event.stopPropagation();
-                onSubmit?.();
-              }}
-              style={{
-                width: normalizedElement.fullWidthButton
-                  ? "100%"
-                  : "auto",
-                backgroundColor:
-                  normalizedElement.buttonBackgroundColor || "#303030",
-                color:
-                  normalizedElement.buttonTextColor || "#ffffff",
-                border: "none",
-                borderRadius: "6px",
-                padding: "12px 20px",
-                fontSize: "14px",
-                fontWeight: 600,
-                cursor: isReadOnly ? "not-allowed" : "pointer",
-              }}
-            >
-              {normalizedElement.submitText || "Submit"}
-            </button>
+            {/* =========================================
+            CUSTOMER PREVIEW MODE
+            Navigation is automatically generated
+            from the actual number of visible pages.
+        ========================================= */}
+
+            {isModelPreview && (
+              <>
+                {/* Previous: show on page 2 onwards. */}
+                {hasMultiplePages && !isFirstCustomerPage && (
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onPrevious?.();
+                    }}
+                    style={footerButtonStyle}
+                  >
+                    {normalizedElement.previousText || "Previous"}
+                  </button>
+                )}
+
+                {/* Next: show on every page except the last. */}
+                {hasMultiplePages && !isLastCustomerPage && (
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onNext?.();
+                    }}
+                    style={footerButtonStyle}
+                  >
+                    {normalizedElement.nextText || "Next"}
+                  </button>
+                )}
+
+                {/* Submit: show on a single page or the last page. */}
+                {(!hasMultiplePages || isLastCustomerPage) && (
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onSubmit?.();
+                    }}
+                   style={footerButtonStyle}
+                  >
+                    {normalizedElement.submitText || "Send message"}
+                  </button>
+                )}
+
+                {/* Preserve the optional reset button. */}
+                {normalizedElement.showResetButton && (
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onReset?.();
+                    }}
+                    style={footerButtonStyle}
+                  >
+                    {normalizedElement.resetButtonText || "Reset"}
+                  </button>
+                )}
+              </>
+            )}
           </div>
         </BlockStack>
       );
