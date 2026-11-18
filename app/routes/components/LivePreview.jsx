@@ -471,6 +471,7 @@ function DraggablePreviewElement({
         isModelPreview={isModelPreview}
         error={error}
       />
+      {/* //this show the error for the field that has error */}
       {error && (
         <div
           role="alert"

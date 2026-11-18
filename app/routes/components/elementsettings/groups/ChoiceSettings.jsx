@@ -92,24 +92,7 @@ export default function ChoiceSettings({ element, onChange }) {
       )}
 
       {/* CHECKBOX SETTINGS */}
-      {isCheckbox && (
-        <>
-          <Checkbox
-            label="Limit selections"
-            checked={Boolean(element.limitSelections)}
-            onChange={(value) =>
-              update("limitSelections", value)
-            }
-          />
-
-          {element.limitSelections && (
-            <>
-              {/* Keep your existing minimum and maximum
-                  selection inputs here. */}
-            </>
-          )}
-        </>
-      )}
+     
 
     </BlockStack>
   );

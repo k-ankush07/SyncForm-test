@@ -1347,7 +1347,14 @@ export default function PreviewField({
             type="email"
             autoComplete="email"
             value={value}
-            onChange={updateValue} // set value and set to live 
+            onChange={(nextValue) => {
+              setValue(nextValue);
+
+              reportChange({
+                email: nextValue,
+                confirmEmail: confirmEmailValue,
+              });
+            }}
             readOnly={isReadOnly}
             prefix:inputIconPrefix
             minLength={
@@ -1379,7 +1386,14 @@ export default function PreviewField({
               type="email"
               autoComplete="email"
               value={confirmEmailValue}
-              onChange={setConfirmEmailValue}
+              onChange={(nextValue) => {
+                setConfirmEmailValue(nextValue);
+
+                reportChange({
+                  email: value,
+                  confirmEmail: nextValue,
+                });
+              }}
               readOnly={isReadOnly}
               requiredIndicator={required}
             />
@@ -1745,12 +1759,14 @@ export default function PreviewField({
               onChange={(newValue) => {
                 updateValue(newValue);
 
-                if (normalizedElement.confirmPassword) {
-                  reportChange({
-                    password: newValue,
-                    confirmPassword: confirmPasswordValue,
-                  });
-                }
+                reportChange(
+                  normalizedElement.confirmPassword
+                    ? {
+                      password: newValue,
+                      confirmPassword: confirmPasswordValue,
+                    }
+                    : newValue
+                );
               }}
               readOnly={isReadOnly}
               error={passwordError || undefined}
@@ -1776,8 +1792,10 @@ export default function PreviewField({
               <TextField
                 type={showConfirmPassword ? "text" : "password"}
                 label={
-                  normalizedElement.confirmPasswordLabel ||
-                  "Confirm Password"
+                  normalizedElement.hideLabel
+                    ? ""
+                    : normalizedElement.confirmPasswordLabel ||
+                    "Confirm Password"
                 }
                 placeholder={
                   normalizedElement.confirmPasswordPlaceholder ||
@@ -4552,11 +4570,11 @@ export default function PreviewField({
                 {normalizedElement.showNextButton && (
                   <button
                     type="button"
-                   
+
                     onClick={(event) => event.stopPropagation()}
                     style={{
                       ...footerButtonStyle,
-                     cursor: "pointer",
+                      cursor: "pointer",
                     }}
                   >
                     {normalizedElement.nextText || "Next"}
@@ -4566,7 +4584,7 @@ export default function PreviewField({
                 {normalizedElement.showResetButton && (
                   <button
                     type="button"
-                    
+
                     onClick={(event) => event.stopPropagation()}
                     style={{
                       ...footerButtonStyle,
@@ -4580,10 +4598,10 @@ export default function PreviewField({
                 <button
                   type="button"
                   onClick={(event) => event.stopPropagation()}
-                 style={{
-                      ...footerButtonStyle,
-                      cursor: "pointer",
-                    }}
+                  style={{
+                    ...footerButtonStyle,
+                    cursor: "pointer",
+                  }}
                 >
                   {normalizedElement.submitText || "Submit"}
                 </button>
@@ -4634,7 +4652,7 @@ export default function PreviewField({
                       event.stopPropagation();
                       onSubmit?.();
                     }}
-                   style={footerButtonStyle}
+                    style={footerButtonStyle}
                   >
                     {normalizedElement.submitText || "Send message"}
                   </button>
