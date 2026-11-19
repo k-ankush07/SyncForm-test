@@ -53,6 +53,7 @@ import { ELEMENT_TYPES } from "../../utils/elementsConfig.js";
 import ElementActions from "./ElementActions.jsx";
 
 import { createElementConfig } from "../../utils/elementHelpers.js";
+import * as PolarisIcons from "@shopify/polaris-icons";
 
 import "../../ElementsPanel.css";
 
@@ -1272,6 +1273,7 @@ function SortableRow({
             >
                 {/* FOLDER ICON / DRAG ICON */}
 
+
                 <span
                     className="element-tree__field-icon element-tree__row-drag-icon"
                     onClick={(event) => {
@@ -1288,14 +1290,23 @@ function SortableRow({
                         }
                     }}
                 >
+                    {/* ROW ICON */}
                     <span className="element-tree__default-icon">
-                        <Icon source={FolderIcon} />
+                        <Icon
+                            source={
+                                row.icon
+                                    ? PolarisIcons[row.icon] || FolderIcon
+                                    : FolderIcon
+                            }
+                        />
                     </span>
 
+                    {/* DRAG HANDLE */}
                     <span className="element-tree__drag-icon">
                         <Icon source={DragHandleIcon} />
                     </span>
                 </span>
+
 
                 {/* ROW LABEL */}
 
@@ -1314,8 +1325,10 @@ function SortableRow({
                         }
                     }}
                 >
+                    {/* ROW LABEL */}
+
                     <Text as="span" variant="bodySm">
-                        Row
+                        {row.label || "Row"}
                     </Text>
                 </span>
 

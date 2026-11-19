@@ -1,46 +1,278 @@
+
+/* =====================================================
+   1. MAIN PROGRESS CONTAINER
+===================================================== */
+
 .form-progress {
+    --dot-size: 10px;
+    --dot-radius: 5px;
+
     position: relative;
     width: 100%;
-    padding: 10px 6px;
+
+    padding: 16px 0;
+
+    box-sizing: border-box;
 }
+
+
+/* =====================================================
+   2. LARGE CIRCLES WHEN ANY PAGE HAS AN ICON
+===================================================== */
+
+.form-progress--with-icons {
+    --dot-size: 34px;
+    --dot-radius: 17px;
+}
+
+
+/* =====================================================
+   3. BACKGROUND LINE
+
+   The line uses the full container width.
+
+   N pages = N + 1 equal segments.
+===================================================== */
 
 .form-progress__line {
     position: absolute;
+
     top: 50%;
-    left: 6px;
-    right: 6px;
+    left: 0;
+    right: 0;
+
     height: 3px;
+
     background: #d1d5db;
+
     transform: translateY(-50%);
+
     border-radius: 10px;
+
     overflow: hidden;
 }
 
+
+/* =====================================================
+   4. GREEN PROGRESS LINE
+
+   Width is calculated in JSX.
+   It grows from the left edge to the current circle.
+===================================================== */
+
 .form-progress__line-fill {
+    position: relative;
+
     height: 100%;
+    width: 0%;
+
     background: #008060;
+
     border-radius: 10px;
-    transition: width 0.5s ease;
+
+    transform-origin: left center;
+
+    transition:
+        width 0.65s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
+
+/* =====================================================
+   5. PAGE CIRCLE GRID
+
+   Example for 3 pages:
+
+   Grid columns = 4
+
+   Column 1 ends at 25%
+   Column 2 ends at 50%
+   Column 3 ends at 75%
+
+   The last 25% remains as the final equal gap.
+===================================================== */
 
 .form-progress__steps {
     position: relative;
-    display: flex;
-    justify-content: space-around;
+
+    display: grid;
+
     align-items: center;
+
+    width: 100%;
+
+    padding: 0;
+
+    box-sizing: border-box;
 }
+
+
+/* =====================================================
+   6. PAGE CIRCLES
+
+   Each circle is positioned at the end of its
+   corresponding grid segment.
+===================================================== */
 
 .form-progress__dot {
-    width: 12px;
-    height: 12px;
-    flex-shrink: 0;
+    position: relative;
+
+    z-index: 1;
+
+    justify-self: end;
+
+    width: var(--dot-size);
+    height: var(--dot-size);
+
+    flex: 0 0 var(--dot-size);
+
+    /*
+       Move the circle half its width to the right.
+       This places its centre exactly at the segment end.
+    */
+    transform: translateX(50%);
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    box-sizing: border-box;
+
     border-radius: 50%;
-    background: #d1d5db;
-    border: 2px solid #d1d5db;
-    transition: background 0.5s ease, border-color 0.5s ease;
+
+    /* Hollow circle */
+    background: #ffffff;
+
+    border: 2px solid #008060;
+
+    color: #008060;
+
+    transition:
+        width 0.35s ease,
+        height 0.35s ease,
+        background-color 0.3s ease;
 }
 
-.form-progress__dot--active {
+
+/* =====================================================
+   7. COMPLETED CIRCLES
+
+   Page 2: Circle 1 fills green.
+   Page 3: Circles 1 and 2 fill green.
+
+   Current circle remains hollow.
+===================================================== */
+
+.form-progress__dot--completed {
     background: #008060;
-    border-color: #008060;
+
+    color: #ffffff;
+}
+
+
+/* =====================================================
+   8. POLARIS ICON
+===================================================== */
+
+.form-progress__dot .Polaris-Icon {
+    position: relative;
+
+    z-index: 1;
+
+    width: 18px;
+    height: 18px;
+}
+
+.form-progress__dot .Polaris-Icon svg {
+    width: 100%;
+    height: 100%;
+}
+
+
+/* =====================================================
+   9. HIDE NORMAL BORDER DURING ICON ANIMATION
+===================================================== */
+
+.form-progress__dot--animated {
+    border-color: transparent;
+
+    animation:
+        form-progress-restore-border 0.85s ease-out forwards;
+}
+
+
+/* =====================================================
+   10. ANIMATED CIRCULAR BORDER
+===================================================== */
+
+.form-progress__circle-draw {
+    position: absolute;
+
+    inset: -2px;
+
+    width: calc(100% + 4px);
+    height: calc(100% + 4px);
+
+    pointer-events: none;
+
+    transform: rotate(-90deg);
+}
+
+
+/* =====================================================
+   11. DRAW CIRCLE FROM START TO END
+===================================================== */
+
+.form-progress__circle-draw circle {
+    stroke-dasharray: 100;
+
+    stroke-dashoffset: 100;
+
+    animation:
+        form-progress-draw-circle 0.85s ease-out forwards;
+}
+
+
+@keyframes form-progress-draw-circle {
+    from {
+        stroke-dashoffset: 100;
+    }
+
+    to {
+        stroke-dashoffset: 0;
+    }
+}
+
+
+/* =====================================================
+   12. RESTORE NORMAL BORDER
+===================================================== */
+
+@keyframes form-progress-restore-border {
+    0%,
+    95% {
+        border-color: transparent;
+    }
+
+    100% {
+        border-color: #008060;
+    }
+}
+
+
+/* =====================================================
+   13. MOBILE ADJUSTMENT
+===================================================== */
+
+@media screen and (max-width: 480px) {
+
+    .form-progress--with-icons {
+        --dot-size: 30px;
+        --dot-radius: 15px;
+    }
+
+    .form-progress__dot .Polaris-Icon {
+        width: 16px;
+        height: 16px;
+    }
 }

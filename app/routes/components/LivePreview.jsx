@@ -351,7 +351,7 @@ function DraggablePreviewElement({
               elementId={element.id}
               collection={collection}
               placement="top"
-              
+
               onOpenElementPicker={onOpenElementPicker}
             />
           )}
@@ -473,7 +473,7 @@ function DraggablePreviewElement({
         productsLoading={productsLoading}
         isModelPreview={isModelPreview}
         error={error}
-          savedValue={savedValue} // NEW
+        savedValue={savedValue} // NEW
       />
       {/* //this show the error for the field that has error */}
       {error && (
@@ -994,7 +994,7 @@ export default function LivePreview({
               {header && header.visible !== false && (
                 <FixedPreviewElement
                   element={header}
-                  activePageId={activePageId}
+                     activePageId={currentCustomerPage?.id}
                   pages={pages}
                   selectedElementId={selectedElementId}
                   onSelectElement={onSelectElement}

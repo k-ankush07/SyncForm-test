@@ -124,7 +124,7 @@ export default function RowSettings({
 
                     <TextField
                         label="Label"
-                        value={row.label || ""}
+                        value={row.label ?? "Row"}
                         onChange={(value) => update("label", value)}
                         autoComplete="off"
                     />
