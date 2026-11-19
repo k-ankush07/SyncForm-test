@@ -86,6 +86,8 @@ import ElementsPanel from "../routes/components/ElementsPanel";
 import LivePreview from "../routes/components/LivePreview";
 import ElementSettings from "../routes/components/ElementSettings.jsx";
 import ElementPickerPopover from "../routes/components/ElementPickerPopover.jsx";
+import PageSettings from '../routes/components/elementsettings/groups/PageSettings.jsx'
+import RowSettings from '../routes/components/elementsettings/groups/RowSettings.jsx';
 
 // Project utilities / data
 import { normalizeFormPages } from "../utils/normalizeFormPages.js";
@@ -407,7 +409,9 @@ export default function FormEditor() {
 
   // Element currently opened in the settings panel.
   const [selectedElement, setSelectedElement] = useState(null);
-  
+
+  // This state is for selecting pages and rows.
+  const [selectedTarget, setSelectedTarget] = useState(null);
 
   // Element picker popover state.
   const [elementPickerOpen, setElementPickerOpen] = useState(false);
@@ -465,6 +469,63 @@ export default function FormEditor() {
     hasNextPage: false,
     endCursor: null,
   });
+
+  //
+  // ======================================================
+  // FIND SELECTED PAGE AND ROW
+  // ======================================================
+
+  // Get the latest selected page from pages state.
+  const selectedPage = pages.find(
+    (page) =>
+      String(page.id) === String(selectedTarget?.pageId)
+  );
+
+  // Get the selected row from that page.
+  const selectedRow = selectedPage?.rows?.find(
+    (row) =>
+      String(row.id) === String(selectedTarget?.rowId)
+  );
+
+  // ======================================================
+  // UPDATE SELECTED PAGE
+  // ======================================================
+
+  const updateSelectedPage = (updates) => {
+    setPages((previousPages) =>
+      previousPages.map((page) =>
+        String(page.id) === String(selectedTarget?.pageId)
+          ? {
+            ...page,
+            ...updates,
+          }
+          : page
+      )
+    );
+  };
+  // ======================================================
+  // UPDATE SELECTED ROW
+  // ======================================================
+
+  const updateSelectedRow = (updates) => {
+    setPages((previousPages) =>
+      previousPages.map((page) =>
+        String(page.id) === String(selectedTarget?.pageId)
+          ? {
+            ...page,
+            rows: (page.rows || []).map((row) =>
+              String(row.id) === String(selectedTarget?.rowId)
+                ? {
+                  ...row,
+                  ...updates,
+                }
+                : row
+            ),
+          }
+          : page
+      )
+    );
+  };
 
   // True when the next response should be appended to the list
   // (set by "Load more"), false when it should replace the list.
@@ -798,6 +859,36 @@ export default function FormEditor() {
     setElementPickerOpen(true);
   };
 
+  // Select a page.
+  const handleSelectPage = (page) => {
+    setSelectedElement(null);
+
+    setSelectedTarget({
+      type: "page",
+      pageId: page.id,
+    });
+  };
+
+  // Select a row.
+  const handleSelectRow = (pageId, row) => {
+    setSelectedElement(null);
+
+    setSelectedTarget({
+      type: "row",
+      pageId,
+      rowId: row.id,
+    });
+  };
+  // ======================================================
+  // SELECT AN EXISTING ELEMENT
+  // Used when clicking First Name, Email, Phone, etc.
+  // ======================================================
+
+  const handleSelectExistingElement = (element) => {
+    setSelectedElement(element);
+    setSelectedTarget(null);
+  };
+
   // Adds the picked element at the requested position
   // (or appends it when added from the sidebar).
   const handleSelectElement = (item) => {
@@ -1017,7 +1108,6 @@ export default function FormEditor() {
     setElementPickerOpen(false);
     setElementTarget(null);
   };
-
 
   // -------------------------------------------------------------------
   // 4.5 ELEMENT / ROW / PAGE ACTIONS
@@ -2035,6 +2125,19 @@ export default function FormEditor() {
                 productsLoadingMore={productsLoadingMore}
                 onLoadMoreProducts={loadMoreProducts}
               />
+            ) : selectedTarget?.type === "page" && selectedPage ? (
+              <PageSettings
+                page={selectedPage}
+                onChange={updateSelectedPage}
+                onClose={() => setSelectedTarget(null)}
+              />
+            ) : selectedTarget?.type === "row" && selectedRow ? (
+              <RowSettings
+                row={selectedRow}
+                page={selectedPage}
+                onChange={updateSelectedRow}
+                onClose={() => setSelectedTarget(null)}
+              />
             ) : (
               <Box paddingBlockStart="400">
 
@@ -2065,7 +2168,10 @@ export default function FormEditor() {
                     onDuplicatePage={handleDuplicatePage}
                     header={header}
                     footer={footer}
-                    onSelectElement={setSelectedElement}
+                    //select handlers pass to pannel 
+                    onSelectElement={handleSelectExistingElement}
+                    onSelectPage={handleSelectPage}
+                    onSelectRow={handleSelectRow}
                   />
                 )}
 

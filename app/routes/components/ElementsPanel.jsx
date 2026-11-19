@@ -92,6 +92,9 @@ export default function ElementsPanel({
 
     // Element selection.
     onSelectElement,
+    //page & row 
+    onSelectPage,
+    onSelectRow,
 
     // Element toolbox actions.
     onToggleElementVisibility,
@@ -635,6 +638,10 @@ export default function ElementsPanel({
                                 page={page}
                                 togglePage={togglePage}
 
+                                // handle the page and row setting 
+                                onSelectPage={onSelectPage}
+                                onSelectRow={onSelectRow}
+
                                 // Drag-and-drop handlers.
                                 handleFieldDragEnd={handleFieldDragEnd}
                                 handleElementDragEnd={handleElementDragEnd}
@@ -776,6 +783,10 @@ function SortablePage({
     openElementPicker,
     onSelectElement,
 
+    //on seleect page & row 
+    onSelectPage,
+    onSelectRow,
+
     // Element toolbox actions.
     onToggleElementVisibility,
     onDuplicateElement,
@@ -832,11 +843,10 @@ function SortablePage({
     const renderRootInsertButton = (element, placement) => (
         <button
             type="button"
-            className={`element-tree__item-insert ${
-                placement === "before"
-                    ? "element-tree__item-insert--before"
-                    : "element-tree__item-insert--after"
-            }`}
+            className={`element-tree__item-insert ${placement === "before"
+                ? "element-tree__item-insert--before"
+                : "element-tree__item-insert--after"
+                }`}
             title={
                 placement === "before"
                     ? "Add element above"
@@ -900,9 +910,8 @@ function SortablePage({
             {/* PAGE HEADER */}
 
             <div
-                className={`element-tree__page ${
-                    page.open ? "element-tree__page--active" : ""
-                }`}
+                className={`element-tree__page ${page.open ? "element-tree__page--active" : ""
+                    }`}
                 {...attributes}
                 {...listeners}
             >
@@ -924,7 +933,22 @@ function SortablePage({
 
                 {/* PAGE ICON AND DRAG HANDLE */}
 
-                <span className="element-tree__field-icon element-tree__page-icon">
+                <span
+                    className="element-tree__field-icon element-tree__page-icon"
+                    onClick={(event) => {
+                        event.stopPropagation();
+                        onSelectPage?.(page);
+                    }}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            onSelectPage?.(page);
+                        }
+                    }}
+                >
                     <span className="element-tree__default-icon">
                         <Icon source={FileIcon} />
                     </span>
@@ -939,7 +963,10 @@ function SortablePage({
                 <button
                     type="button"
                     className="element-tree__page-toggle"
-                    onClick={() => togglePage(page.id)}
+                    onClick={(event) => {
+                        event.stopPropagation();
+                        onSelectPage?.(page);
+                    }}
                 >
                     {page.label}
                 </button>
@@ -1024,6 +1051,8 @@ function SortablePage({
 
                                     // Element selection.
                                     onSelectElement={onSelectElement}
+                                    // row selection 
+                                    onSelectRow={onSelectRow}
 
                                     // Row toolbox actions.
                                     onToggleRowVisibility={onToggleRowVisibility}
@@ -1108,6 +1137,9 @@ function SortableRow({
     // Element picker.
     openElementPicker,
 
+    //row 
+    onSelectRow,
+
     // Element toolbox actions.
     onDeleteElement,
     onDuplicateElement,
@@ -1186,11 +1218,10 @@ function SortableRow({
     ) => (
         <button
             type="button"
-            className={`element-tree__item-insert ${
-                placement === "before"
-                    ? "element-tree__item-insert--before"
-                    : "element-tree__item-insert--after"
-            }`}
+            className={`element-tree__item-insert ${placement === "before"
+                ? "element-tree__item-insert--before"
+                : "element-tree__item-insert--after"
+                }`}
             title={
                 placement === "before"
                     ? "Add element above"
@@ -1225,11 +1256,10 @@ function SortableRow({
         <div
             ref={setNodeRef}
             style={rowStyle}
-            className={`element-tree__row ${
-                row.visible === false
-                    ? "element-tree__row--hidden"
-                    : ""
-            }`}
+            className={`element-tree__row ${row.visible === false
+                ? "element-tree__row--hidden"
+                : ""
+                }`}
         >
             {/* ROW HEADING AND DRAG HANDLE */}
 
@@ -1242,7 +1272,22 @@ function SortableRow({
             >
                 {/* FOLDER ICON / DRAG ICON */}
 
-                <span className="element-tree__field-icon element-tree__row-drag-icon">
+                <span
+                    className="element-tree__field-icon element-tree__row-drag-icon"
+                    onClick={(event) => {
+                        event.stopPropagation();
+                        onSelectRow?.(pageId, row);
+                    }}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            onSelectRow?.(pageId, row);
+                        }
+                    }}
+                >
                     <span className="element-tree__default-icon">
                         <Icon source={FolderIcon} />
                     </span>
@@ -1254,9 +1299,25 @@ function SortableRow({
 
                 {/* ROW LABEL */}
 
-                <Text as="span" variant="bodySm">
-                    Row
-                </Text>
+                <span
+                    onClick={(event) => {
+                        event.stopPropagation();
+                        onSelectRow?.(pageId, row);
+                    }}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            onSelectRow?.(pageId, row);
+                        }
+                    }}
+                >
+                    <Text as="span" variant="bodySm">
+                        Row
+                    </Text>
+                </span>
 
                 {/* ROW TOOLBOX */}
 
@@ -1280,11 +1341,10 @@ function SortableRow({
 
             <div
                 ref={setDropRef}
-                className={`element-tree__row-fields ${
-                    isOver
-                        ? "element-tree__row-fields--over"
-                        : ""
-                }`}
+                className={`element-tree__row-fields ${isOver
+                    ? "element-tree__row-fields--over"
+                    : ""
+                    }`}
             >
                 <SortableContext
                     items={[
@@ -1470,11 +1530,10 @@ function SortableSidebarField({
                 ...style,
                 cursor: "pointer",
             }}
-            className={`element-tree__field element-tree__field--draggable ${
-                field?.visible === false
-                    ? "element-tree__field--hidden"
-                    : ""
-            }`}
+            className={`element-tree__field element-tree__field--draggable ${field?.visible === false
+                ? "element-tree__field--hidden"
+                : ""
+                }`}
             {...attributes}
             {...listeners}
             onMouseEnter={() => setIsHovered(true)}
@@ -1599,11 +1658,10 @@ function SortableCreatedElement({
                 ...style,
                 cursor: "pointer",
             }}
-            className={`element-tree__field element-tree__field--draggable ${
-                element.visible === false
-                    ? "element-tree__field--hidden"
-                    : ""
-            }`}
+            className={`element-tree__field element-tree__field--draggable ${element.visible === false
+                ? "element-tree__field--hidden"
+                : ""
+                }`}
             {...attributes}
             {...listeners}
             onClick={() => onSelectElement?.(element)}

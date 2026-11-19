@@ -1,0 +1,96 @@
+
+/* ============================================================
+   ROW SETTINGS PANEL
+   ============================================================ */
+
+/* Main settings wrapper */
+.element-settings {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    height: 100%;
+    overflow: hidden;
+}
+
+/* ============================================================
+   FIXED HEADER
+   ============================================================ */
+
+.element-settings__header {
+    flex-shrink: 0;
+    padding-bottom: 12px;
+    background: #fff;
+    z-index: 2;
+}
+
+/* ============================================================
+   SCROLLABLE CONTENT
+   ============================================================ */
+
+.element-settings__content {
+    flex: 1;
+    min-height: 0;
+    height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 24px !important;
+    scrollbar-width: thin;
+    scrollbar-color: #999 transparent;
+}
+
+/* Scrollbar width */
+.element-settings__content::-webkit-scrollbar {
+    width: 7px;
+}
+
+/* Scrollbar thumb */
+.element-settings__content::-webkit-scrollbar-thumb {
+    background: #999;
+    border-radius: 10px;
+}
+
+/* Scrollbar track */
+.element-settings__content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+/* ============================================================
+   ICON SELECTOR
+   ============================================================ */
+
+.select-icon-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 60px;
+    padding: 12px;
+    background: #f6f6f7;
+    border: 1px solid #e1e3e5;
+    border-radius: 6px;
+    box-sizing: border-box;
+}
+
+.select-icon-wrapper {
+    width: 100%;
+    min-height: 75px;
+    background: #f7f7f7;
+    border: 1px solid #e1e1e1;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+}
+
+/* ============================================================
+   CONDITIONAL DISPLAY
+   ============================================================ */
+
+.row-settings__conditional {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
