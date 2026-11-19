@@ -1145,24 +1145,26 @@ export default function LivePreview({
                           Render shared header
                     ========================================= */}
 
-                    {pageHeader && pageHeader.visible !== false && (
-                      <FixedPreviewElement
-                        element={pageHeader}
-                        pages={pages}
-                        activePageId={page.id}
-                        selectedElementId={selectedElementId}
-                        onSelectElement={onSelectElement}
-                        products={products}
-                        productsLoading={productsLoading}
-                        isModelPreview={isModelPreview}
+                    {pageHeader &&
+                      pageHeader.visible !== false &&
+                      pageHeader.showHeader !== false && (
+                        <FixedPreviewElement
+                          element={pageHeader}
+                          pages={pages}
+                          activePageId={page.id}
+                          selectedElementId={selectedElementId}
+                          onSelectElement={onSelectElement}
+                          products={products}
+                          productsLoading={productsLoading}
+                          isModelPreview={isModelPreview}
 
-                        // Custom header belongs to this page.
-                        // Shared header belongs to the entire form.
-                        selectionPageId={
-                          isCustomHeader ? page.id : null
-                        }
-                      />
-                    )}
+                          // Custom header belongs to this page.
+                          // Shared header belongs to the entire form.
+                          selectionPageId={
+                            isCustomHeader ? page.id : null
+                          }
+                        />
+                      )}
 
 
                     {/* =========================================

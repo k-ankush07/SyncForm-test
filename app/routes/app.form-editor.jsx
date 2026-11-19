@@ -1228,7 +1228,7 @@ export default function FormEditor() {
   // Page-specific headers/footers update inside their own page.
   // Otherwise, headers/footers update the shared default.
   // Normal elements update inside pages.
-  
+
 const updateSelectedElement = (updatedElement) => {
   // Find the page associated with the selected custom element.
   const selectedCustomPage = pages.find(
@@ -2191,6 +2191,15 @@ const updateSelectedElement = (updatedElement) => {
     );
   };
 
+  // Expand settings panel when custom header/footer is enabled
+// and its text editor is displayed in PageSettings.
+const isPageSettingsExpanded =
+  selectedTarget?.type === "page" &&
+  (
+    selectedPage?.useCustomHeader === true ||
+    selectedPage?.useCustomFooter === true
+  );
+
 
   // -------------------------------------------------------------------
   // 4.7 RENDER
@@ -2201,16 +2210,20 @@ const updateSelectedElement = (updatedElement) => {
     <div className="template-editor">
 
       {/* Main content */}
-      <div
-        className={`template-editor__main ${isSidebarCollapsed
-          ? "template-editor__main--collapsed"
-          : ["paragraph", "form_header", "form_footer"].includes(
+     <div
+  className={`template-editor__main ${
+    isSidebarCollapsed
+      ? "template-editor__main--collapsed"
+      : (
+          isPageSettingsExpanded ||
+          ["paragraph", "form_header", "form_footer"].includes(
             selectedElement?.type
           )
-            ? "template-editor__main--paragraph"
-            : "template-editor__main--expanded"
-          }`}
-      >
+        )
+        ? "template-editor__main--paragraph"
+        : "template-editor__main--expanded"
+  }`}
+>
 
         {/* ---------------------------------------------------------- */}
         {/* SIDEBAR                                                    */}
