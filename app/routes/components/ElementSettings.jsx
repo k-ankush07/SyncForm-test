@@ -387,6 +387,11 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
     const showOtherOption = isRadio || isCheckbox;
     const showLimitSelections = isCheckbox;
 
+    const isSwitch = type === "switch";
+const isRangeSlider = type === "range_slider";
+
+const hideRequiredSettings = isSwitch || isRangeSlider;
+
     // ---------------------------------------------------------------
     // CHOICE OPTIONS DATA
     // Options may be plain strings or objects. Normalize them all to
@@ -939,7 +944,7 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
 
                     {/* HIDE LABEL */}
 
-                    {!isConsent && (
+                 {!hideRequiredSettings && (
                         <Checkbox
                             label="Hide label"
                             checked={element.hideLabel || false}
@@ -960,7 +965,7 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
                     )}
 
                     {/* REQUIRED */}
-                    {!isConsent && (
+                 {!hideRequiredSettings && (
                         <>
                             {/* REQUIRED */}
                             <Checkbox

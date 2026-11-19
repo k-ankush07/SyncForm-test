@@ -34,9 +34,6 @@ import ColorInput from "../components/RichTextEditor/ColorInput.jsx";
 import { countries } from "../components/elementsettings/utils/countries.js";
 import FormProgressIndicator from "./RichTextEditor/FormProgressIndicator";
 
-import {
-  isValidPhoneNumber,
-} from "libphonenumber-js";
 
 
 // =============================================================
@@ -660,8 +657,6 @@ export default function PreviewField({
         : "in"
     ).toLowerCase()
   );
-
-  const [phoneError, setPhoneError] = useState("");
   //country satae
   const [countryDropdownOpen, setCountryDropdownOpen] = useState(false);
   // Country dropdown states
@@ -801,7 +796,7 @@ export default function PreviewField({
     );
 
     setValue(String(normalizedElement.defaultValue ?? ""));
-    setPhoneError("");
+
     setCountryDropdownOpen(false);
   }, [
     normalizedElement.id,
@@ -919,16 +914,11 @@ export default function PreviewField({
   const showPhoneCountry =
     normalizedElement.phoneValidation !== false ||
     normalizedElement.showCountryCode !== false;
-
-  // Validate only when validation is enabled.
-  const validatePhone =
-    normalizedElement.phoneValidation !== false;
-
   // Change selected phone country.
   // Change selected phone country.
   const handlePhoneCountryChange = (countryCode) => {
     setPhoneCountry(countryCode.toLowerCase());
-    setPhoneError("");
+
 
     reportPhoneValue(value, countryCode);
   };
@@ -974,7 +964,7 @@ export default function PreviewField({
 
         setPhoneCountry(matchedCountry.value.toLowerCase());
         setValue(phoneNumber);
-        setPhoneError("");
+
 
         reportPhoneValue(phoneNumber, matchedCountry.value);
 
@@ -983,7 +973,7 @@ export default function PreviewField({
 
       // Preserve an incomplete international number while typing.
       setValue(internationalInput);
-      setPhoneError("");
+
 
       reportPhoneValue(internationalInput);
 
@@ -994,40 +984,12 @@ export default function PreviewField({
     const phoneNumber = input.replace(/\D/g, "");
 
     setValue(phoneNumber);
-    setPhoneError("");
+
 
     reportPhoneValue(phoneNumber);
   };
 
-  // Validate the current phone number.
-  const validatePhoneNumber = () => {
-    if (!String(value).trim()) {
-      if (required) {
-        setPhoneError(
-          normalizedElement.requiredMessage ||
-          `${label} is required`
-        );
 
-        return false;
-      }
-
-      setPhoneError("");
-      return true;
-    }
-
-    if (validatePhone) {
-      const fullNumber =
-        `${currentPhoneCountry?.dialCode || ""}${value}`;
-
-      if (!isValidPhoneNumber(fullNumber)) {
-        setPhoneError("Please enter a valid phone number.");
-        return false;
-      }
-    }
-
-    setPhoneError("");
-    return true;
-  };
 
   // Limit radio and checkbox columns to a maximum of five.
   const optionsPerLine = Math.min(
@@ -1042,17 +1004,17 @@ export default function PreviewField({
     width: "100%",
   };
   // validateTextField this gives error if name valdation fails 
-  const validateTextField = (element, value) => {
-    if (
-      element.nameValidation &&
-      value &&
-      !/^[a-zA-Z0-9 ]+$/.test(value)
-    ) {
-      return "Only letters and numbers are allowed.";
-    }
+  // const validateTextField = (element, value) => {
+  //   if (
+  //     element.nameValidation &&
+  //     value &&
+  //     !/^[a-zA-Z0-9 ]+$/.test(value)
+  //   ) {
+  //     return "Only letters and numbers are allowed.";
+  //   }
 
-    return "";
-  };
+  //   return "";
+  // };
 
   // =========================================================
   // 7. HTML SANITIZATION
@@ -1128,11 +1090,7 @@ export default function PreviewField({
   };
 
   // This function will be called by the future Submit handler.
-  const validatePassword = () => {
-    setPasswordValidationTriggered(true);
 
-    return getPasswordError() === "";
-  };
   //Add the file validation logic
   const acceptedFileTypes = Array.isArray(normalizedElement.acceptedFileTypes)
     ? normalizedElement.acceptedFileTypes
@@ -1462,9 +1420,6 @@ export default function PreviewField({
               overflow: "visible",
               isolation: "isolate",
               background: "#F6F6F7",
-              border: phoneError
-                ? "1px solid var(--p-color-border-critical)"
-                : "1px solid #C9CCCF",
               borderRadius: "8px",
               boxSizing: "border-box",
               transition: "border-color 0.15s ease, box-shadow 0.15s ease",
@@ -1678,19 +1633,18 @@ export default function PreviewField({
                 minWidth: 0,
               }}
             >
+
               <TextField
-                labelHidden
-                label={label}
-                type="tel"
-                placeholder={
-                  placeholder ||
-                  (phoneCountry === "in" ? "7876153428" : "Phone number")
-                }
                 value={value}
                 onChange={handlePhoneChange}
-                readOnly={isReadOnly}
-                error={phoneError || undefined}
-                autoComplete="tel-national"
+                placeholder={placeholder}
+                autoComplete="tel"
+                label=""
+                labelHidden
+                disabled={isReadOnly}
+                requiredIndicator={false}
+                error={undefined}
+                borderless
               />
             </div>
           </div>
@@ -5400,139 +5354,146 @@ export default function PreviewField({
       );
     }
     //text
-    case "text": {
-      const maxLength = Number(normalizedElement.maxLength ?? 100);
+  case "text": {
+  const maxLength = Number(normalizedElement.maxLength ?? 100);
 
-      const hasCharacterLimit =
-        normalizedElement.enableCharacterLimit === true;
+  const hasCharacterLimit =
+    normalizedElement.enableCharacterLimit === true;
 
-      const numbersOnly = normalizedElement.numbersOnly === true;
-      const nameValidation = normalizedElement.nameValidation === true;
+  const numbersOnly = normalizedElement.numbersOnly === true;
+  const nameValidation = normalizedElement.nameValidation === true;
 
-      return (
-        <BlockStack gap="200">
-          {fieldLabelWithIcon}
+  return (
+    <BlockStack gap="200">
+      {fieldLabelWithIcon}
 
-          <TextField
-            value={value || ""}
-            placeholder={placeholder || ""}
-            disabled={isReadOnly}
-            autoComplete="off"
-            maxLength={
-              hasCharacterLimit && maxLength > 0
-                ? maxLength
-                : undefined
-            }
-            error={
-              nameValidation &&
-                value &&
-                !/^[a-zA-Z\s'-]*$/.test(value)
-                ? "Please enter a valid name."
-                : undefined
-            }
-            onChange={(newValue) => {
-              let updatedValue = newValue;
+      <TextField
+        value={value || ""}
+        placeholder={placeholder || ""}
+        disabled={isReadOnly}
+        autoComplete="off"
+        maxLength={
+          hasCharacterLimit && maxLength > 0
+            ? maxLength
+            : undefined
+        }
 
-              // Numbers only
-              if (numbersOnly) {
-                updatedValue = updatedValue.replace(/[^0-9]/g, "");
-              }
+    /* 
+        error={
+          nameValidation &&
+            value &&
+            !/^[a-zA-Z\s'-]*$/.test(value)
+            ? "Please enter a valid name."
+            : undefined
+        }
+        */
+       
 
-              // Name validation
-              if (nameValidation) {
-                updatedValue = updatedValue.replace(
-                  /[^a-zA-Z\s'-]/g,
-                  ""
-                );
-              }
+        onChange={(newValue) => {
+          let updatedValue = newValue;
 
-              // Maximum character limit
-              if (hasCharacterLimit && maxLength > 0) {
-                updatedValue = updatedValue.slice(0, maxLength);
-              }
+          // Numbers only
+          if (numbersOnly) {
+            updatedValue = updatedValue.replace(/[^0-9]/g, "");
+          }
 
-              setValue(updatedValue);
-              reportChange(updatedValue);
-            }}
-          />
+          // Name validation
+          if (nameValidation) {
+            updatedValue = updatedValue.replace(
+              /[^a-zA-Z\s'-]/g,
+              ""
+            );
+          }
 
-          {descriptionText}
-        </BlockStack>
-      );
-    }
+          // Maximum character limit
+          if (hasCharacterLimit && maxLength > 0) {
+            updatedValue = updatedValue.slice(0, maxLength);
+          }
+
+          setValue(updatedValue);
+          reportChange(updatedValue);
+        }}
+      />
+
+      {descriptionText}
+    </BlockStack>
+  );
+}
     //textaera 
-    case "textarea": {
-      const minCharacters = Number(
-        normalizedElement.minCharacters || 0
-      );
+   case "textarea": {
+  const minCharacters = Number(
+    normalizedElement.minCharacters || 0
+  );
 
-      const maxCharacters = Number(
-        normalizedElement.maxCharacters || 0
-      );
+  const maxCharacters = Number(
+    normalizedElement.maxCharacters || 0
+  );
 
-      const hasCharacterLimit =
-        normalizedElement.limitCharacters === true;
+  const hasCharacterLimit =
+    normalizedElement.limitCharacters === true;
 
-      const characterCount = (value || "").length;
+  const characterCount = (value || "").length;
 
-      const minError =
-        hasCharacterLimit &&
-        minCharacters > 0 &&
-        characterCount > 0 &&
-        characterCount < minCharacters;
+  // const minError =
+  //   hasCharacterLimit &&
+  //   minCharacters > 0 &&
+  //   characterCount > 0 &&
+  //   characterCount < minCharacters;
 
-      return (
-        <BlockStack gap="200">
-          {fieldLabelWithIcon}
+  return (
+    <BlockStack gap="200">
+      {fieldLabelWithIcon}
 
-          <TextField
-            value={value || ""}
-            placeholder={placeholder || ""}
-            multiline={4}
-            disabled={isReadOnly}
-            autoComplete="off"
-            maxLength={
-              hasCharacterLimit && maxCharacters > 0
-                ? maxCharacters
-                : undefined
-            }
-            error={
-              minError
-                ? `Please enter at least ${minCharacters} characters.`
-                : undefined
-            }
-            onChange={(newValue) => {
-              let updatedValue = newValue;
+      <TextField
+        value={value || ""}
+        placeholder={placeholder || ""}
+        multiline={4}
+        disabled={isReadOnly}
+        autoComplete="off"
+        maxLength={
+          hasCharacterLimit && maxCharacters > 0
+            ? maxCharacters
+            : undefined
+        }
 
-              // Maximum character limit
-              if (
-                hasCharacterLimit &&
-                maxCharacters > 0
-              ) {
-                updatedValue = updatedValue.slice(
-                  0,
-                  maxCharacters
-                );
-              }
+        // error={
+        //   minError
+        //     ? `Please enter at least ${minCharacters} characters.`
+        //     : undefined
+        // }
 
-              setValue(updatedValue);
-              reportChange(updatedValue);
-            }}
-          />
+        onChange={(newValue) => {
+          let updatedValue = newValue;
 
-          {hasCharacterLimit && (
-            <Text as="p" variant="bodySm" tone="subdued">
-              {characterCount}
-              {maxCharacters > 0
-                ? ` / ${maxCharacters}`
-                : " characters"}
-            </Text>
-          )}
+          // Maximum character limit
+          if (
+            hasCharacterLimit &&
+            maxCharacters > 0
+          ) {
+            updatedValue = updatedValue.slice(
+              0,
+              maxCharacters
+            );
+          }
 
-          {descriptionText}
-        </BlockStack>
-      );
-    }
+          setValue(updatedValue);
+          reportChange(updatedValue);
+        }}
+      />
+
+      {hasCharacterLimit && (
+        <Text as="p" variant="bodySm" tone="subdued">
+          {characterCount}
+          {maxCharacters > 0
+            ? ` / ${maxCharacters}`
+            : " characters"}
+        </Text>
+      )}
+
+      {descriptionText}
+    </BlockStack>
+  );
+}
 
 
     // -------------------------------------------------------

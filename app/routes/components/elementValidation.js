@@ -8,6 +8,11 @@
 // =====================================================================
 
 // Check whether a value is empty.
+import {
+  isValidPhoneNumber,
+  validatePhoneNumberLength,
+} from "libphonenumber-js";
+
 export function isEmptyValue(value) {
   if (value === null || value === undefined) {
     return true;
@@ -44,23 +49,28 @@ export function validateElement(element, value) {
   // 1. REQUIRED VALIDATION
   // ---------------------------------------------------
 
-  const actualValue =
-    value && typeof value === "object"
-      ? type === "email"
-        ? value.email
-        : type === "password"
-          ? value.password
-          : value
-      : value;
+ const actualValue =
+  value && typeof value === "object" && !Array.isArray(value)
+    ? type === "email"
+      ? value.email
+      : type === "password"
+        ? value.password
+        : type === "phone"
+          ? value.number
+          : type === "button"
+            ? value.value
+            : value
+    : value;
 
   if (element.required && isEmptyValue(actualValue)) {
     return element.requiredMessage || `${label} is required.`;
   }
 
   // Optional empty fields skip further validation.
-  if (isEmptyValue(actualValue)) {
-    return null;
-  }
+  //except button fields because they may have minimum selections.
+ if (type !== "button" && isEmptyValue(actualValue)) {
+  return null;
+}
 
   // ---------------------------------------------------
   // 2. EMAIL FORMAT VALIDATION
@@ -305,6 +315,174 @@ export function validateElement(element, value) {
       }
     }
   }
-  
+
+  // ---------------------------------------------------
+  // PHONE VALIDATION
+  // ---------------------------------------------------
+
+  if (type === "phone") {
+    const phoneNumber = String(actualValue || "").trim();
+
+    // Required validation has already handled empty values.
+    if (!phoneNumber) {
+      return null;
+    }
+
+    // Only validate the phone format when international
+    // telephone validation is enabled.
+    if (
+      element.phoneValidation !== false &&
+      element.showCountryCode === false
+    ) {
+      const countryCode =
+        typeof value === "object"
+          ? String(value.country || "").toUpperCase()
+          : "";
+
+      const dialCode =
+        typeof value === "object" ? String(value.dialCode || "") : "";
+
+      const fullNumber = phoneNumber.startsWith("+")
+        ? phoneNumber
+        : phoneNumber.startsWith("00")
+          ? `+${phoneNumber.slice(2)}`
+          : `${dialCode}${phoneNumber}`;
+
+      if (!isValidPhoneNumber(fullNumber)) {
+        const lengthError = validatePhoneNumberLength(
+          fullNumber,
+          countryCode || undefined,
+        );
+
+        switch (lengthError) {
+          case "TOO_SHORT":
+            return "Phone number is too short.";
+
+          case "TOO_LONG":
+            return "Phone number is too long.";
+
+          case "INVALID_LENGTH":
+            return "Please enter a valid phone number length.";
+
+          case "NOT_A_NUMBER":
+            return "Please enter a valid phone number.";
+
+          case "INVALID_COUNTRY":
+            return "Please select a valid country.";
+
+          default:
+            return "Please enter a valid phone number.";
+        }
+      }
+    }
+  }
+
+  // ---------------------------------------------------
+// BUTTON VALIDATION
+// ---------------------------------------------------
+
+if (type === "button") {
+  const buttonValue =
+    typeof value === "object" && !Array.isArray(value)
+      ? value.value
+      : value;
+
+  const selectedOptions = Array.isArray(buttonValue)
+    ? buttonValue
+    : buttonValue
+      ? [buttonValue]
+      : [];
+
+  // Check whether Other was selected.
+  const otherSelected = selectedOptions.includes("__other__");
+
+  // Require custom text when a required button field
+  // has the Other option selected.
+  if (
+    element.required &&
+    otherSelected &&
+    !String(value?.otherValue || "").trim()
+  ) {
+    return "Please specify your Other answer.";
+  }
+
+  // Validate selection limits.
+  const limitEnabled =
+    element.multipleOptions && element.limitSelections;
+
+  if (limitEnabled) {
+    const min = Math.max(0, Number(element.minSelections ?? 0));
+    const max = Number(element.maxSelections ?? 10);
+
+    if (selectedOptions.length < min) {
+      return `Please select at least ${min} options.`;
+    }
+
+    if (max > 0 && selectedOptions.length > max) {
+      return `Please select no more than ${max} options.`;
+    }
+  }
+}
+
+  // ---------------------------------------------------
+  // TEXT VALIDATION
+  // ---------------------------------------------------
+
+  if (type === "text") {
+    const text = String(actualValue).trim();
+
+    // Maximum character validation.
+    if (element.enableCharacterLimit) {
+      const maxLength = Number(element.maxLength || 0);
+
+      if (maxLength > 0 && text.length > maxLength) {
+        return `Please enter no more than ${maxLength} characters.`;
+      }
+    }
+
+    // Numbers-only validation.
+    if (element.numbersOnly === true && !/^[0-9]+$/.test(text)) {
+      return "Please enter numbers only.";
+    }
+
+    // Name validation.
+    if (
+      element.nameValidation === true &&
+      element.numbersOnly !== true &&
+      !/^[a-zA-Z\s'-]+$/.test(text)
+    ) {
+      return "Please enter a valid name.";
+    }
+  }
+
+    // ---------------------------------------------------
+  // TEXTAREA VALIDATION
+  // ---------------------------------------------------
+
+  if (type === "textarea") {
+    const text = String(actualValue);
+
+    if (element.limitCharacters) {
+      // Minimum character validation.
+      const minCharacters = Number(element.minCharacters || 0);
+
+      if (minCharacters > 0 && text.length < minCharacters) {
+        return `Please enter at least ${minCharacters} characters.`;
+      }
+
+      // Maximum character validation.
+      const maxLength = Number(element.maxLength || 0);
+
+      if (maxLength > 0 && text.length > maxLength) {
+        return `Please enter no more than ${maxLength} characters.`;
+      }
+    }
+  }
+
+// Optional empty fields skip further validation.
+if (isEmptyValue(actualValue)) {
+  return null;
+}
+
   return null;
 }
