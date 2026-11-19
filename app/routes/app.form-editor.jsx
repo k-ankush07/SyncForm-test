@@ -409,6 +409,8 @@ export default function FormEditor() {
 
   // Element currently opened in the settings panel.
   const [selectedElement, setSelectedElement] = useState(null);
+  // This tells the editor whether the selected header or footer belongs to a particular page.
+  const [selectedElementPageId, setSelectedElementPageId] = useState(null);
 
   // This state is for selecting pages and rows.
   const [selectedTarget, setSelectedTarget] = useState(null);
@@ -445,10 +447,34 @@ export default function FormEditor() {
 
   // Pages state. Header/footer are shared, so they are removed
   // from each page.
+   // Pages state. Header/footer are shared by default.
+  // A page only stores its own header/footer when custom mode is used.
   const [pages, setPages] = useState(() =>
     normalizeFormPages(
       selectedTemplate?.pages ?? [getDefaultPage()]
-    ).map(({ header, footer, ...page }) => page)
+    ).map((page) => ({
+      ...page,
+
+      // Decide whether this page uses its own header/footer.
+      useCustomHeader: page.useCustomHeader ?? false,
+      useCustomFooter: page.useCustomFooter ?? false,
+
+      // Preserve existing custom settings without creating unnecessary
+      // page-specific copies for pages using the shared defaults.
+      ...(page.header ? {
+        header: {
+          ...defaultHeader,
+          ...page.header,
+        },
+      } : {}),
+
+      ...(page.footer ? {
+        footer: {
+          ...defaultFooter,
+          ...page.footer,
+        },
+      } : {}),
+    }))
   );
 
   // The page currently open (visible) in the preview.
@@ -493,14 +519,55 @@ export default function FormEditor() {
 
   const updateSelectedPage = (updates) => {
     setPages((previousPages) =>
-      previousPages.map((page) =>
-        String(page.id) === String(selectedTarget?.pageId)
-          ? {
-            ...page,
-            ...updates,
-          }
-          : page
-      )
+      previousPages.map((page) => {
+        // Only update the page currently selected in PageSettings.
+        if (String(page.id) !== String(selectedTarget?.pageId)) {
+          return page;
+        }
+
+        const updatedPage = {
+          ...page,
+          ...updates,
+        };
+
+        // ---------------------------------------------------
+        // CASE 1: Enable custom header for this page.
+        // Create an independent copy of the shared header.
+        // Preserve an existing custom header when switching
+        // custom mode off and on again.
+        // ---------------------------------------------------
+        if (
+          updates.useCustomHeader === true &&
+          page.useCustomHeader !== true
+        ) {
+          updatedPage.header = page.header
+            ? { ...page.header }
+            : {
+                ...header,
+                id: `custom-header-${page.id}`,
+              };
+        }
+
+        // ---------------------------------------------------
+        // CASE 2: Enable custom footer for this page.
+        // Create an independent copy of the shared footer.
+        // Preserve an existing custom footer when switching
+        // custom mode off and on again.
+        // ---------------------------------------------------
+        if (
+          updates.useCustomFooter === true &&
+          page.useCustomFooter !== true
+        ) {
+          updatedPage.footer = page.footer
+            ? { ...page.footer }
+            : {
+                ...footer,
+                id: `custom-footer-${page.id}`,
+              };
+        }
+
+        return updatedPage;
+      })
     );
   };
   // ======================================================
@@ -881,14 +948,50 @@ export default function FormEditor() {
   };
   // ======================================================
   // SELECT AN EXISTING ELEMENT
-  // Used when clicking First Name, Email, Phone, etc.
+  // Used when clicking First Name, Email, Phone, headers,
+  // footers, and other elements in the preview.
   // ======================================================
 
-  const handleSelectExistingElement = (element) => {
-    setSelectedElement(element);
-    setSelectedTarget(null);
-  };
+ const handleSelectExistingElement = (element, pageId = null) => {
+  const isHeader = element?.type === "form_header";
+  const isFooter = element?.type === "form_footer";
 
+  // Find the page that owns this custom header/footer.
+  const matchingCustomPage = pages.find((page) => {
+    if (isHeader) {
+      return (
+        page.useCustomHeader === true &&
+        String(page.header?.id) === String(element?.id)
+      );
+    }
+
+    if (isFooter) {
+      return (
+        page.useCustomFooter === true &&
+        String(page.footer?.id) === String(element?.id)
+      );
+    }
+
+    return false;
+  });
+
+  // A page ID is used only for a custom header/footer.
+  // Shared header/footer always use null.
+  const resolvedPageId =
+    pageId ?? matchingCustomPage?.id ?? null;
+
+  console.log("HEADER/FOOTER SELECTION:", {
+    elementId: element?.id,
+    elementType: element?.type,
+    receivedPageId: pageId,
+    resolvedPageId,
+    isShared: resolvedPageId === null,
+  });
+
+  setSelectedElement(element);
+  setSelectedElementPageId(resolvedPageId);
+  setSelectedTarget(null);
+};
   // Adds the picked element at the requested position
   // (or appends it when added from the sidebar).
   const handleSelectElement = (item) => {
@@ -1116,33 +1219,115 @@ export default function FormEditor() {
   // UPDATE SELECTED ELEMENT (used by ElementSettings)
   // Header and footer update their shared state.
   // Normal elements update inside pages.
-  const updateSelectedElement = (updatedElement) => {
-    // CASE 1: Update the shared form header.
-    if (updatedElement.type === "form_header") {
-      setHeader(updatedElement);
-      setSelectedElement(updatedElement);
-      return;
-    }
+  // UPDATE SELECTED ELEMENT (used by ElementSettings)
+  // Page-specific headers/footers update inside the selected page.
+  // Otherwise, they update the shared default header/footer.
+  // Normal elements update inside pages.
 
-    // CASE 2: Update the shared form footer.
-    if (updatedElement.type === "form_footer") {
-      setFooter(updatedElement);
-      setSelectedElement(updatedElement);
-      return;
-    }
+  // UPDATE SELECTED ELEMENT (used by ElementSettings)
+  // Page-specific headers/footers update inside their own page.
+  // Otherwise, headers/footers update the shared default.
+  // Normal elements update inside pages.
+  
+const updateSelectedElement = (updatedElement) => {
+  // Find the page associated with the selected custom element.
+  const selectedCustomPage = pages.find(
+    (page) =>
+      String(page.id) === String(selectedElementPageId)
+  );
 
-    // CASE 3: Update a normal page element.
+  // ---------------------------------------------------
+  // PAGE-SPECIFIC HEADER
+  // ---------------------------------------------------
+
+  if (
+    updatedElement.type === "form_header" &&
+    selectedCustomPage?.useCustomHeader === true
+  ) {
     setPages((previousPages) =>
-      updateElementInPages(
-        previousPages,
-        updatedElement.id,
-        () => updatedElement
+      previousPages.map((page) =>
+        String(page.id) === String(selectedElementPageId)
+          ? {
+              ...page,
+              header: updatedElement,
+            }
+          : page
       )
     );
 
     setSelectedElement(updatedElement);
-  };
+    return;
+  }
 
+  // ---------------------------------------------------
+  // PAGE-SPECIFIC FOOTER
+  // ---------------------------------------------------
+
+  if (
+    updatedElement.type === "form_footer" &&
+    selectedCustomPage?.useCustomFooter === true
+  ) {
+    setPages((previousPages) =>
+      previousPages.map((page) =>
+        String(page.id) === String(selectedElementPageId)
+          ? {
+              ...page,
+              footer: updatedElement,
+            }
+          : page
+      )
+    );
+
+    setSelectedElement(updatedElement);
+    return;
+  }
+
+  // ---------------------------------------------------
+  // SHARED HEADER
+  // This works from Page 1, Page 2, Page 3, etc.
+  // ---------------------------------------------------
+
+  if (updatedElement.type === "form_header") {
+    setHeader((previousHeader) => ({
+      ...previousHeader,
+      ...updatedElement,
+    }));
+
+    setSelectedElement(updatedElement);
+    setSelectedElementPageId(null);
+    return;
+  }
+
+  // ---------------------------------------------------
+  // SHARED FOOTER
+  // This works from any page displaying the shared footer.
+  // ---------------------------------------------------
+
+  if (updatedElement.type === "form_footer") {
+    setFooter((previousFooter) => ({
+      ...previousFooter,
+      ...updatedElement,
+    }));
+
+    setSelectedElement(updatedElement);
+    setSelectedElementPageId(null);
+    return;
+  }
+
+  // ---------------------------------------------------
+  // NORMAL PAGE ELEMENT
+  // ---------------------------------------------------
+
+  setPages((previousPages) =>
+    updateElementInPages(
+      previousPages,
+      updatedElement.id,
+      () => updatedElement
+    )
+  );
+
+  setSelectedElement(updatedElement);
+};
   // SHOW OR HIDE ELEMENT
   const handleToggleElementVisibility = (element) => {
     const updatedElement = {
@@ -2323,7 +2508,7 @@ export default function FormEditor() {
               templateTitle={templateTitle}
               formSettings={selectedTemplate}
               selectedElementId={selectedElement?.id}
-              onSelectElement={setSelectedElement}
+              onSelectElement={handleSelectExistingElement}
               onDuplicateElement={handleDuplicateElement}
               onToggleElementVisibility={handleToggleElementVisibility}
               onDeleteElement={handleDeleteElement}

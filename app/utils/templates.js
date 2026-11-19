@@ -9,13 +9,51 @@ export  const templates = [
   theme: "classic",
   layout: "stacked",
   type: "contact",
+
   pages: [
     {
       id: 1,
       label: "Page 1",
       open: true,
 
-      // Form Fields
+      // Page-specific header settings
+      useCustomHeader: false,
+      header: {
+        id: 1001,
+        type: "form_header",
+        label: "form_header",
+        title: "Contact us",
+        description: "Leave your message and we'll get back to you shortly.",
+        showHeader: true,
+        headingTag: "h2",
+        alignment: "center",
+        visible: true,
+      },
+
+      // Page-specific footer settings
+      useCustomFooter: false,
+      footer: {
+        id: 1002,
+        type: "form_footer",
+        label: "form_footer",
+        text: "",
+        content: "",
+        bottomDescription: "",
+        showPreviousButton: false,
+        showNextButton: false,
+        previousText: "Previous",
+        nextText: "Next",
+        submitText: "Send message",
+        showResetButton: false,
+        resetButtonText: "Reset",
+        showDescriptionAtBottom: true,
+        fullWidthButton: true,
+        buttonBackgroundColor: "#2E4E49",
+        buttonTextColor: "#ffffff",
+        buttonAlignment: "left",
+        visible: true,
+      },
+
       rows: [
         {
           id: 101,
@@ -29,7 +67,6 @@ export  const templates = [
         },
       ],
 
-
       rootElements: [
         {
           id: 103,
@@ -38,8 +75,6 @@ export  const templates = [
           elements: [],
         },
       ],
-
-     
     },
   ],
 },

@@ -1,42 +1,43 @@
-//My LivePreview
+
+// =====================================================================
+// My LivePreview
 // =====================================================================
 // LivePreview.jsx
 //
 // FLOW OVERVIEW
 // ---------------------------------------------------------------------
-// LivePreview draws the form exactly as visitors will see it, and lets
+// LivePreview draws the form exactly as visitors will see it and lets
 // the user edit it directly inside the preview:
 //
 //   LivePreview (default export)
-//     |- FixedPreviewElement  -> shared Header (selectable, not draggable)
 //     |- For each open page:
-//     |    |- PreviewRootDropArea     -> drop target for standalone elements
-//     |         |- For each visible row:
-//     |         |    |- PreviewRowInsert (before)   -> "+" between rows
-//     |         |    |- standalone elements placed BEFORE this row
-//     |         |    |- row grid of DraggablePreviewElement items
-//     |         |    |- standalone elements placed AFTER this row
-//     |         |    |- PreviewRowInsert (after, last row only)
-//     |         |- Remaining standalone (root) elements, full width
-//     |- FixedPreviewElement  -> shared Footer (selectable, not draggable)
+//     |    |- FixedPreviewElement -> Page Header
+//     |    |- PreviewRootDropArea -> drop target for standalone elements
+//     |    |    |- For each visible row:
+//     |    |    |    |- PreviewRowInsert (before)
+//     |    |    |    |- standalone elements placed BEFORE this row
+//     |    |    |    |- row grid of DraggablePreviewElement items
+//     |    |    |    |- standalone elements placed AFTER this row
+//     |    |    |    |- PreviewRowInsert (after, last row only)
+//     |    |    |- Remaining standalone (root) elements
+//     |    |- FixedPreviewElement -> Page Footer
 //
 //   DraggablePreviewElement
-//     |- PreviewDropZone x2-4  -> top / bottom / left / right drop + "+"
-//     |- Floating toolbar      -> drag, width, duplicate, hide, delete
-//     |- PreviewField          -> the real rendered field
+//     |- PreviewDropZone x2-4
+//     |- Floating toolbar
+//     |- PreviewField
 //
-// All data changes are sent to the parent through callbacks
-// (onSelectElement, onChangeElement, onDeleteElement ...).
+// All data changes are sent to the parent through callbacks.
 // Drag & drop results are handled by the parent's DndContext.
 //
 // FILE ORDER
 //   1. Imports
-//   2. PreviewDropZone        (drop + insert around an element)
-//   3. PreviewRowInsert       (drop + insert between rows)
+//   2. PreviewDropZone
+//   3. PreviewRowInsert
 //   4. DraggablePreviewElement
-//   5. FixedPreviewElement    (header / footer)
-//   6. PreviewRootDropArea    (drop area for standalone elements)
-//   7. LivePreview            (main component)
+//   5. FixedPreviewElement
+//   6. PreviewRootDropArea
+//   7. LivePreview
 // =====================================================================
 
 
@@ -209,7 +210,7 @@ function DraggablePreviewElement({
   collection,
   selectedElementId,
   onSelectElement,
-  onFieldChange, // recive new prop 
+  onFieldChange,
   onDuplicateElement,
   onToggleElementVisibility,
   onDeleteElement,
@@ -217,16 +218,16 @@ function DraggablePreviewElement({
   onChangeElement,
   products = [],
   productsLoading = false,
-  savedValue, // NEW: previously entered customer value
+  savedValue,
   isModelPreview = false,
-  //error valiadtions
   error,
 }) {
-  //This prevents the editor's selection toolbar from appearing in customer preview mode.
+  // This prevents the editor's selection toolbar from appearing
+  // in customer preview mode.
   const isSelected =
     !isModelPreview && element.id === selectedElementId;
-  const isHidden = element.visible === false;
 
+  const isHidden = element.visible === false;
 
   // Drag behavior for this element.
   const {
@@ -275,7 +276,6 @@ function DraggablePreviewElement({
         [
           ".preview-drop-zone",
           "input:not([readonly])",
-
           "select",
           "button",
           "[role='dialog']",
@@ -351,7 +351,6 @@ function DraggablePreviewElement({
               elementId={element.id}
               collection={collection}
               placement="top"
-
               onOpenElementPicker={onOpenElementPicker}
             />
           )}
@@ -415,8 +414,16 @@ function DraggablePreviewElement({
           {/* Toggle element width (50% <-> 100%) */}
           <button
             type="button"
-            title={columnWidth === 50 ? "Set full width" : "Set half width"}
-            aria-label={columnWidth === 50 ? "Set full width" : "Set half width"}
+            title={
+              columnWidth === 50
+                ? "Set full width"
+                : "Set half width"
+            }
+            aria-label={
+              columnWidth === 50
+                ? "Set full width"
+                : "Set half width"
+            }
             className="element-toolbar-button"
             onClick={() => {
               onChangeElement?.({
@@ -468,14 +475,15 @@ function DraggablePreviewElement({
       <PreviewField
         element={element}
         pages={pages}
-        onChange={onFieldChange} //pass here to track changes form
+        onChange={onFieldChange}
         products={products}
         productsLoading={productsLoading}
         isModelPreview={isModelPreview}
         error={error}
-        savedValue={savedValue} // NEW
+        savedValue={savedValue}
       />
-      {/* //this show the error for the field that has error */}
+
+      {/* This shows the error for the field that has an error. */}
       {error && (
         <div
           role="alert"
@@ -495,7 +503,7 @@ function DraggablePreviewElement({
 
 // =====================================================================
 // 5. FIXED PREVIEW ELEMENT
-// Used for the shared Header and Footer. They are selectable but
+// Used for the page Header and Footer. They are selectable but
 // NOT draggable, and have no drop zones.
 // =====================================================================
 
@@ -510,6 +518,11 @@ function FixedPreviewElement({
   isLastCustomerPage,
   productsLoading = false,
   isModelPreview = false,
+
+  // Identifies the page when this is a custom header/footer.
+  // null means this is the shared header/footer.
+  selectionPageId = null,
+
   // Footer navigation actions
   onPrevious,
   onNext,
@@ -517,7 +530,10 @@ function FixedPreviewElement({
   onSubmit,
 }) {
   if (!element) return null;
-  //Now clicking the footer in editor mode selects it, but clicking the footer in customer preview mode will not open its settings.
+
+  // Now clicking the footer in editor mode selects it,
+  // but clicking the footer in customer preview mode
+  // will not open its settings.
   const isSelected =
     !isModelPreview && element.id === selectedElementId;
 
@@ -538,9 +554,15 @@ function FixedPreviewElement({
       ]
         .filter(Boolean)
         .join(" ")}
-      onPointerDownCapture={(event) => {
+      onPointerDownCapture={() => {
         if (!isModelPreview) {
-          onSelectElement?.(element);
+          console.log("HEADER/FOOTER SELECTED:", {
+            elementId: element.id,
+            elementType: element.type,
+            selectionPageId,
+          });
+
+          onSelectElement?.(element, selectionPageId);
         }
       }}
       style={{
@@ -620,19 +642,29 @@ export default function LivePreview({
   isModelPreview = false,
 }) {
 
-  //for debugging 
-  // DEBUG: Show currently selected element
+  // ---------------------------------------------------------------
+  // DEBUG: Show currently selected element.
+  // Includes shared and page-specific headers/footers.
+  // ---------------------------------------------------------------
+
   const selectedElement = [
     header,
     footer,
+
     ...pages.flatMap((page) => [
+      // Include this page's custom header/footer.
+      page.header,
+      page.footer,
+
       ...(page.rows ?? []).flatMap((row) => [
         ...(row.fields ?? []),
         ...(row.elements ?? []),
       ]),
+
       ...(page.rootElements ?? []),
     ]),
   ].find((element) => element?.id === selectedElementId);
+
   const selectedElementGroup = selectedElement
     ? getElementSettingsType(selectedElement.type)
     : null;
@@ -644,15 +676,26 @@ export default function LivePreview({
   console.log("Complete Element:", selectedElement);
   console.log("=======================================");
 
-  //states 
+
+  // ---------------------------------------------------------------
+  // STATES
+  // ---------------------------------------------------------------
+
   // Stores validation errors using each field's ID.
   const [validationErrors, setValidationErrors] = React.useState({});
+
   // Stores all answers entered by the customer.
   const [formValues, setFormValues] = React.useState({});
+
   // Stores whether the form has been submitted.
   const [isSubmitted, setIsSubmitted] = React.useState(false);
 
-  //fn to store these values in a obj Now, when the customer corrects a field, its previous error is cleared.
+
+  // ---------------------------------------------------------------
+  // HANDLE CUSTOMER FIELD CHANGES
+  // When the customer corrects a field, its previous error is cleared.
+  // ---------------------------------------------------------------
+
   const handleFieldChange = (fieldId, nextValue) => {
     // Update the customer's answer.
     setFormValues((previousValues) => ({
@@ -672,11 +715,16 @@ export default function LivePreview({
       return updatedErrors;
     });
   };
+
   React.useEffect(() => {
     console.log("Customer answers:", formValues);
   }, [formValues]);
 
-  // use to get the info about the cirrent opage for navigation 
+
+  // ---------------------------------------------------------------
+  // CUSTOMER PAGE NAVIGATION
+  // ---------------------------------------------------------------
+
   // Customer's current page (separate from editor page selection).
   const [currentCustomerPageIndex, setCurrentCustomerPageIndex] =
     React.useState(0);
@@ -706,12 +754,15 @@ export default function LivePreview({
     );
   }, [customerPages.length]);
 
+
   // Go to previous page.
   const handlePreviousPage = () => {
     setCurrentCustomerPageIndex((previousIndex) =>
       Math.max(0, previousIndex - 1)
     );
   };
+
+
   // Move to the next visible customer page.
   const handleNextPage = () => {
     // First, validate the currently displayed customer page.
@@ -729,10 +780,14 @@ export default function LivePreview({
   };
 
 
-
   React.useEffect(() => {
-    console.log("page index now:", currentCustomerPageIndex, customerPages.map(p => p.id));
+    console.log(
+      "page index now:",
+      currentCustomerPageIndex,
+      customerPages.map((page) => page.id)
+    );
   }, [currentCustomerPageIndex]);
+
 
   // Reset customer answers.
   const handleResetForm = () => {
@@ -741,7 +796,11 @@ export default function LivePreview({
     setCurrentCustomerPageIndex(0);
   };
 
-  // Submit will be connected to validation in our next step.
+
+  // ---------------------------------------------------------------
+  // SUBMIT FORM
+  // ---------------------------------------------------------------
+
   const handleSubmitForm = () => {
     // Collect fields from every visible customer page.
     const allFields = getCustomerFields();
@@ -789,7 +848,12 @@ export default function LivePreview({
 
     console.log("Form submitted:", formValues);
   };
-  // Check whether an element should be rendered.
+
+
+  // ---------------------------------------------------------------
+  // CHECK WHETHER AN ELEMENT SHOULD BE RENDERED
+  // ---------------------------------------------------------------
+
   const shouldRenderElement = (element) => {
     const type = String(element?.type || "")
       .toLowerCase()
@@ -803,8 +867,30 @@ export default function LivePreview({
 
     return element.visible !== false;
   };
+
+
+  // ---------------------------------------------------------------
+  // PAGE-SPECIFIC HEADER AND FOOTER
+  // ---------------------------------------------------------------
+
+  // Each page uses its custom header when enabled.
+  // Otherwise, it uses the shared default header.
+  const getPageHeader = (page) => {
+    return page.useCustomHeader === true
+      ? page.header
+      : header;
+  };
+
+  // Each page uses its custom footer when enabled.
+  // Otherwise, it uses the shared default footer.
+  const getPageFooter = (page) => {
+    return page.useCustomFooter === true
+      ? page.footer
+      : footer;
+  };
+
   // =====================================================================
-  // Get all customer-facing fields that need validation.
+  // GET ALL CUSTOMER-FACING FIELDS THAT NEED VALIDATION.
   //
   // Collects fields from:
   // 1. Visible customer pages
@@ -819,6 +905,7 @@ export default function LivePreview({
     const pagesToCollect = pageToCollect
       ? [pageToCollect]
       : customerPages;
+
     const nonInputTypes = [
       "heading",
       "paragraph",
@@ -880,8 +967,10 @@ export default function LivePreview({
 
     return customerFields;
   };
+
+
   // =====================================================================
-  // Validate all customer-facing fields on one page.
+  // VALIDATE ALL CUSTOMER-FACING FIELDS ON ONE PAGE.
   // Returns true when every field on that page is valid.
   // =====================================================================
 
@@ -925,9 +1014,16 @@ export default function LivePreview({
     // If there are no errors, the page is valid.
     return Object.keys(pageErrors).length === 0;
   };
-  // Renders one draggable element. Used for both:
-  //   - elements inside a row   (rowId = row.id, collection = "fields" / "elements")
-  //   - standalone root elements (rowId = null,  collection = "rootElements")
+
+
+  // ---------------------------------------------------------------
+  // RENDER ONE DRAGGABLE ELEMENT.
+  //
+  // Used for both:
+  //   - elements inside a row (rowId = row.id)
+  //   - standalone root elements (rowId = null)
+  // ---------------------------------------------------------------
+
   const renderPreviewElement = ({
     element,
     page,
@@ -954,9 +1050,10 @@ export default function LivePreview({
       productsLoading={productsLoading}
       isModelPreview={isModelPreview}
       error={validationErrors[element.id]}
-      savedValue={formValues[element.id]} // NEW
+      savedValue={formValues[element.id]}
     />
   );
+
 
   // Standalone (root) element rendered at full width.
   const renderRootElement = (element, page) =>
@@ -967,6 +1064,11 @@ export default function LivePreview({
       collection: "rootElements",
       key: element.id,
     });
+
+
+  // =====================================================================
+  // MAIN RENDER
+  // =====================================================================
 
   return (
     <div
@@ -985,30 +1087,16 @@ export default function LivePreview({
             <div className="live-preview__content">
 
               {/* =========================================
-                  SHARED HEADER
-                  Rendered only ONCE for the entire form.
-                  It is not inside pages.map().
-                  It is selectable but NOT draggable.
-              ========================================= */}
-
-              {header && header.visible !== false && (
-                <FixedPreviewElement
-                  element={header}
-                     activePageId={currentCustomerPage?.id}
-                  pages={pages}
-                  selectedElementId={selectedElementId}
-                  onSelectElement={onSelectElement}
-                  products={products}
-                  productsLoading={productsLoading}
-                  isModelPreview={isModelPreview}
-                />
-              )}
-
-              {/* =========================================
                   PAGE CONTENT
-                  Each page contains its own rows and
-                  rootElements, but no separate header
-                  or footer. Only the open page is shown.
+
+                  Each page chooses its own header/footer
+                  using its custom header/footer checkboxes.
+
+                  Custom Header OFF -> shared header
+                  Custom Header ON  -> page.header
+
+                  Custom Footer OFF -> shared footer
+                  Custom Footer ON  -> page.footer
               ========================================= */}
 
               {(
@@ -1020,162 +1108,244 @@ export default function LivePreview({
                     (page) =>
                       page.visible !== false && page.open
                   )
-              ).map((page) => (
-                <div
-                  key={page.id}
-                  className="preview-page"
-                >
+              ).map((page) => {
 
-                  <PreviewRootDropArea pageId={page.id}>
-                    <BlockStack gap="">
+                // Get the correct header and footer for this page.
+                const pageHeader = getPageHeader(page);
+                const pageFooter = getPageFooter(page);
+                console.log("PAGE HEADER DEBUG:", {
+                  pageId: page.id,
+                  pageTitle: page.title,
+                  useCustomHeader: page.useCustomHeader,
+                  hasPageHeader: Boolean(page.header),
+                  pageHeaderId: page.header?.id,
+                  sharedHeaderId: header?.id,
+                  isCustomHeader:
+                    page.useCustomHeader === true &&
+                    Boolean(page.header),
+                });
 
-                      {/* =========================================
+                // Determine whether this page uses its custom header/footer.
+                const isCustomHeader = page.useCustomHeader === true;
+                const isCustomFooter = page.useCustomFooter === true;
+
+                return (
+                  <div
+                    key={page.id}
+                    className="preview-page"
+                  >
+
+                    {/* =========================================
+                        PAGE HEADER
+
+                        Custom Header ON:
+                          Render page.header
+
+                        Custom Header OFF:
+                          Render shared header
+                    ========================================= */}
+
+                    {pageHeader && pageHeader.visible !== false && (
+                      <FixedPreviewElement
+                        element={pageHeader}
+                        pages={pages}
+                        activePageId={page.id}
+                        selectedElementId={selectedElementId}
+                        onSelectElement={onSelectElement}
+                        products={products}
+                        productsLoading={productsLoading}
+                        isModelPreview={isModelPreview}
+
+                        // Custom header belongs to this page.
+                        // Shared header belongs to the entire form.
+                        selectionPageId={
+                          isCustomHeader ? page.id : null
+                        }
+                      />
+                    )}
+
+
+                    {/* =========================================
+                        PAGE CONTENT
+                        Each page contains its own rows and
+                        rootElements.
+                    ========================================= */}
+
+                    <PreviewRootDropArea pageId={page.id}>
+                      <BlockStack gap="">
+
+                        {/* =========================================
                             ROWS
                             Only rows that contain visible elements
                             are rendered.
                         ========================================= */}
 
-                      {(page.rows ?? [])
+                        {(page.rows ?? [])
 
-                        // Hide the complete row when its visibility is false.
-                        .filter((row) => row.visible !== false)
+                          // Hide the complete row when its visibility is false.
+                          .filter((row) => row.visible !== false)
 
-                        .map((row) => {
-                          // Combine fields and elements into one list.
-                          // This lets the grid support any number of items.
-                          const rowItems = [
-                            ...(row.fields ?? []).map((field) => ({
-                              element: field,
-                              collection: "fields",
-                            })),
+                          .map((row) => {
+                            // Combine fields and elements into one list.
+                            // This lets the grid support any number of items.
+                            const rowItems = [
+                              ...(row.fields ?? []).map((field) => ({
+                                element: field,
+                                collection: "fields",
+                              })),
 
-                            ...(row.elements ?? []).map((element) => ({
-                              element,
-                              collection: "elements",
-                            })),
-                          ].filter(({ element }) => shouldRenderElement(element));
+                              ...(row.elements ?? []).map((element) => ({
+                                element,
+                                collection: "elements",
+                              })),
+                            ].filter(({ element }) =>
+                              shouldRenderElement(element)
+                            );
 
-                          return {
-                            row,
-                            rowItems,
-                          };
-                        })
+                            return {
+                              row,
+                              rowItems,
+                            };
+                          })
 
-                        // IMPORTANT: Empty rows are not rendered.
-                        // This removes the empty row and its spacing.
-                        .filter(({ rowItems }) => rowItems.length > 0)
+                          // IMPORTANT: Empty rows are not rendered.
+                          // This removes the empty row and its spacing.
+                          .filter(({ rowItems }) => rowItems.length > 0)
 
-                        .map(({ row, rowItems }, index, allRows) => (
-                          <React.Fragment key={row.id}>
+                          .map(({ row, rowItems }, index, allRows) => (
+                            <React.Fragment key={row.id}>
 
-                            {/* Add element before this row */}
-                            {!isModelPreview && (
-                              <PreviewRowInsert
-                                pageId={page.id}
-                                rowId={row.id}
-                                placement="before"
-                                onOpenElementPicker={onOpenElementPicker}
-                              />
-                            )}
+                              {/* Add element before this row */}
+                              {!isModelPreview && (
+                                <PreviewRowInsert
+                                  pageId={page.id}
+                                  rowId={row.id}
+                                  placement="before"
+                                  onOpenElementPicker={onOpenElementPicker}
+                                />
+                              )}
 
-                            {/* Standalone elements positioned before this row */}
-                            {(page.rootElements ?? [])
-                              .filter(
-                                (element) =>
-                                  shouldRenderElement(element) &&
-                                  element.insertBeforeRowId === row.id
-                              )
-                              .map((element) => renderRootElement(element, page))}
-
-                            {/* The row itself (grid of elements) */}
-                            <div className="preview-row">
-                              <div
-                                className="preview-row-grid"
-                                style={{
-                                  "--preview-column-count": rowItems.length,
-                                }}
-                              >
-                                {rowItems.map(({ element, collection }) =>
-                                  renderPreviewElement({
-                                    element,
-                                    page,
-                                    rowId: row.id,
-                                    collection,
-                                    key: `${collection}-${element.id}`,
-                                  })
+                              {/* Standalone elements positioned before this row */}
+                              {(page.rootElements ?? [])
+                                .filter(
+                                  (element) =>
+                                    shouldRenderElement(element) &&
+                                    element.insertBeforeRowId === row.id
+                                )
+                                .map((element) =>
+                                  renderRootElement(element, page)
                                 )}
+
+                              {/* The row itself (grid of elements) */}
+                              <div className="preview-row">
+                                <div
+                                  className="preview-row-grid"
+                                  style={{
+                                    "--preview-column-count": rowItems.length,
+                                  }}
+                                >
+                                  {rowItems.map(({ element, collection }) =>
+                                    renderPreviewElement({
+                                      element,
+                                      page,
+                                      rowId: row.id,
+                                      collection,
+                                      key: `${collection}-${element.id}`,
+                                    })
+                                  )}
+                                </div>
                               </div>
-                            </div>
 
-                            {/* Standalone elements positioned after this row */}
-                            {(page.rootElements ?? [])
-                              .filter(
-                                (element) =>
-                                  shouldRenderElement(element) &&
-                                  element.insertAfterRowId === row.id
-                              )
-                              .map((element) => renderRootElement(element, page))}
+                              {/* Standalone elements positioned after this row */}
+                              {(page.rootElements ?? [])
+                                .filter(
+                                  (element) =>
+                                    shouldRenderElement(element) &&
+                                    element.insertAfterRowId === row.id
+                                )
+                                .map((element) =>
+                                  renderRootElement(element, page)
+                                )}
 
-                            {/* Add element after the last row */}
-                            {!isModelPreview && index === allRows.length - 1 && (
-                              <PreviewRowInsert
-                                pageId={page.id}
-                                rowId={row.id}
-                                placement="after"
-                                onOpenElementPicker={onOpenElementPicker}
-                              />
-                            )}
+                              {/* Add element after the last row */}
+                              {!isModelPreview &&
+                                index === allRows.length - 1 && (
+                                  <PreviewRowInsert
+                                    pageId={page.id}
+                                    rowId={row.id}
+                                    placement="after"
+                                    onOpenElementPicker={onOpenElementPicker}
+                                  />
+                                )}
 
-                          </React.Fragment>
-                        ))}
+                            </React.Fragment>
+                          ))}
 
-                      {/* =========================================
+
+                        {/* =========================================
                             ROOT ELEMENTS
+
                             Standalone elements that are not tied to
                             a row position. They remain full width.
                         ========================================= */}
 
-                      <BlockStack gap="300">
-                        {(page.rootElements ?? [])
-                          .filter(
-                            (element) =>
-                              shouldRenderElement(element) &&
-                              !element.insertBeforeRowId &&
-                              !element.insertAfterRowId
-                          )
-                          .map((element) => renderRootElement(element, page))}
+                        <BlockStack gap="300">
+                          {(page.rootElements ?? [])
+                            .filter(
+                              (element) =>
+                                shouldRenderElement(element) &&
+                                !element.insertBeforeRowId &&
+                                !element.insertAfterRowId
+                            )
+                            .map((element) =>
+                              renderRootElement(element, page)
+                            )}
+                        </BlockStack>
+
                       </BlockStack>
+                    </PreviewRootDropArea>
 
-                    </BlockStack>
-                  </PreviewRootDropArea>
 
-                </div>
-              ))}
+                    {/* =========================================
+                        PAGE FOOTER
 
-              {/* =========================================
-                  SHARED FOOTER
-                  Rendered only ONCE for the entire form.
-                  It is not inside pages.map().
-                  It is selectable but NOT draggable.
-              ========================================= */}
+                        Custom Footer ON:
+                          Render page.footer
 
-              {footer && footer.visible !== false && (
-                <FixedPreviewElement
-                  element={footer}
-                  activePageId={activePageId}
-                  pages={pages}
-                  selectedElementId={selectedElementId}
-                  onSelectElement={onSelectElement}
-                  isModelPreview={isModelPreview}
-                  //new
-                  isFirstCustomerPage={isFirstCustomerPage}
-                  isLastCustomerPage={isLastCustomerPage}
-                  onPrevious={handlePreviousPage}
-                  onNext={handleNextPage}
-                  onReset={handleResetForm}
-                  onSubmit={handleSubmitForm}
-                />
-              )}
+                        Custom Footer OFF:
+                          Render shared footer
+                    ========================================= */}
+
+                    {pageFooter && pageFooter.visible !== false && (
+                      <FixedPreviewElement
+                        element={pageFooter}
+                        pages={pages}
+                        activePageId={page.id}
+                        selectedElementId={selectedElementId}
+                        onSelectElement={onSelectElement}
+                        products={products}
+                        productsLoading={productsLoading}
+                        isModelPreview={isModelPreview}
+
+                        // Custom footer belongs to this page.
+                        // Shared footer belongs to the entire form.
+                        selectionPageId={
+                          isCustomFooter ? page.id : null
+                        }
+
+                        // Keep existing customer navigation.
+                        isFirstCustomerPage={isFirstCustomerPage}
+                        isLastCustomerPage={isLastCustomerPage}
+                        onPrevious={handlePreviousPage}
+                        onNext={handleNextPage}
+                        onReset={handleResetForm}
+                        onSubmit={handleSubmitForm}
+                      />
+                    )}
+
+                  </div>
+                );
+              })}
 
             </div>
           </div>
