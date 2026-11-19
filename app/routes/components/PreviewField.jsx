@@ -3974,120 +3974,129 @@ export default function PreviewField({
     // FILE UPLOAD
     // -------------------------------------------------------
 
-    case "file_upload": {
-      const buttonText =
-        normalizedElement.buttonText || "Browse file";
+  case "file_upload": {
+  const buttonText =
+    normalizedElement.buttonText || "Browse file";
 
-      const filePlaceholder =
-        normalizedElement.placeholder || "Choose file or drag here";
+  const filePlaceholder =
+    normalizedElement.placeholder || "Choose file or drag here";
 
-      const hint =
-        normalizedElement.hint || "PNG, GIF, SVG.";
+  const hint =
+    normalizedElement.hint || "PNG, GIF, SVG.";
 
-      return (
-        <BlockStack gap="200">
-          {!hideLabel && (
-            <Text as="p" variant="bodyMd">
-              {label || "Attachments"}
-              {required && (
-                <span style={{ color: "var(--p-color-text-critical)" }}>
-                  {" "}*
-                </span>
-              )}
-            </Text>
+  return (
+    <BlockStack gap="200">
+      {!hideLabel && (
+        <Text as="p" variant="bodyMd">
+          {label || "Attachments"}
+          {required && (
+            <span style={{ color: "var(--p-color-text-critical)" }}>
+              {" "}*
+            </span>
           )}
+        </Text>
+      )}
 
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept={acceptAttribute || undefined}
-            multiple={Boolean(normalizedElement.allowMultiple)}
-            onChange={handleFileSelection}
-            style={{ display: "none" }}
-          />
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept={acceptAttribute || undefined}
+        multiple={Boolean(normalizedElement.allowMultiple)}
+        onChange={handleFileSelection}
+        disabled={isReadOnly}
+        style={{ display: "none" }}
+      />
 
-          <div
-            onClick={() => fileInputRef.current?.click()}
-            style={{
-              width: "100%",
-              minHeight: "150px",
-              background: "#eeeeee",
-              border: "1px dashed #8c9196",
-              borderRadius: "8px",
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "10px",
-              padding: "16px",
-              boxSizing: "border-box",
-              cursor: "pointer",
-            }}
-          >
-            <Text as="p" variant="bodyMd">
-              {filePlaceholder}
-            </Text>
+      <div
+        onClick={() => {
+          if (!isReadOnly) {
+            fileInputRef.current?.click();
+          }
+        }}
+        style={{
+          width: "100%",
+          minHeight: "150px",
+          background: "#eeeeee",
+          border: "1px dashed #8c9196",
+          borderRadius: "8px",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: "10px",
+          padding: "16px",
+          boxSizing: "border-box",
+          cursor: isReadOnly ? "default" : "pointer",
+          opacity: isReadOnly ? 0.7 : 1,
+        }}
+      >
+        <Text as="p" variant="bodyMd">
+          {filePlaceholder}
+        </Text>
 
-            <Text as="p" variant="bodySm" tone="subdued">
-              {acceptedFileTypes.length > 0
-                ? `Supported formats: ${acceptedFileTypes.join(", ").toUpperCase()}`
-                : hint}
-            </Text>
+        <Text as="p" variant="bodySm" tone="subdued">
+          {acceptedFileTypes.length > 0
+            ? `Supported formats: ${acceptedFileTypes.join(", ").toUpperCase()}`
+            : hint}
+        </Text>
 
-            <div
-              style={{
-                padding: "7px 14px",
-                border: "1px solid #8c9196",
-                borderRadius: "5px",
-                color: "#303030",
-                fontSize: "14px",
-                background: "#ffffff",
-              }}
+        <div
+          style={{
+            padding: "7px 14px",
+            border: "1px solid #8c9196",
+            borderRadius: "5px",
+            color: "#303030",
+            fontSize: "14px",
+            background: "#ffffff",
+            opacity: isReadOnly ? 0.6 : 1,
+          }}
+        >
+          {buttonText}
+        </div>
+      </div>
+
+      {!isReadOnly && fileError && (
+        <Text as="p" variant="bodySm" tone="critical">
+          {fileError}
+        </Text>
+      )}
+
+      {selectedFiles.length > 0 && (
+        <BlockStack gap="100">
+          {selectedFiles.map((file, index) => (
+            <InlineStack
+              key={`${file.name}-${index}`}
+              align="space-between"
             >
-              {buttonText}
-            </div>
-          </div>
+              <Text as="span" variant="bodySm">
+                {file.name}
+              </Text>
 
-          {fileError && (
-            <Text as="p" variant="bodySm" tone="critical">
-              {fileError}
-            </Text>
-          )}
+              {!isReadOnly && (
+                <Button
+                  variant="plain"
+                  tone="critical"
+                  onClick={() => {
+                    const updatedFiles = selectedFiles.filter(
+                      (_, fileIndex) => fileIndex !== index
+                    );
 
-          {selectedFiles.length > 0 && (
-            <BlockStack gap="100">
-              {selectedFiles.map((file, index) => (
-                <InlineStack
-                  key={`${file.name}-${index}`}
-                  align="space-between"
+                    setSelectedFiles(updatedFiles);
+                    reportChange(updatedFiles);
+                  }}
                 >
-                  <Text as="span" variant="bodySm">
-                    {file.name}
-                  </Text>
-
-                  <Button
-                    variant="plain"
-                    tone="critical"
-                    onClick={() => {
-                      const updatedFiles = selectedFiles.filter(
-                        (_, fileIndex) => fileIndex !== index
-                      );
-
-                      setSelectedFiles(updatedFiles);
-                      reportChange(updatedFiles);
-                    }}
-                  >
-                    Remove
-                  </Button>
-                </InlineStack>
-              ))}
-            </BlockStack>
-          )}
-
-          {descriptionText}
+                  Remove
+                </Button>
+              )}
+            </InlineStack>
+          ))}
         </BlockStack>
-      );
-    }
+      )}
+
+      {descriptionText}
+    </BlockStack>
+  );
+}
 
     // -------------------------------------------------------
     // IMAGE OPTIONS

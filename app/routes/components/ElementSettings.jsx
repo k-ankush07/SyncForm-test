@@ -389,8 +389,9 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
 
     const isSwitch = type === "switch";
 const isRangeSlider = type === "range_slider";
+const isHtml = type === "html";
 
-const hideRequiredSettings = isSwitch || isRangeSlider;
+const hideRequiredSettings = isSwitch || isRangeSlider|| isHtml;
 
     // ---------------------------------------------------------------
     // CHOICE OPTIONS DATA
