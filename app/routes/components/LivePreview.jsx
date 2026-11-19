@@ -1,3 +1,4 @@
+//My LivePreview
 // =====================================================================
 // LivePreview.jsx
 //
@@ -216,9 +217,10 @@ function DraggablePreviewElement({
   onChangeElement,
   products = [],
   productsLoading = false,
+  savedValue, // NEW: previously entered customer value
   isModelPreview = false,
   //error valiadtions
-   error,
+  error,
 }) {
   //This prevents the editor's selection toolbar from appearing in customer preview mode.
   const isSelected =
@@ -349,6 +351,7 @@ function DraggablePreviewElement({
               elementId={element.id}
               collection={collection}
               placement="top"
+              
               onOpenElementPicker={onOpenElementPicker}
             />
           )}
@@ -470,6 +473,7 @@ function DraggablePreviewElement({
         productsLoading={productsLoading}
         isModelPreview={isModelPreview}
         error={error}
+          savedValue={savedValue} // NEW
       />
       {/* //this show the error for the field that has error */}
       {error && (
@@ -950,6 +954,7 @@ export default function LivePreview({
       productsLoading={productsLoading}
       isModelPreview={isModelPreview}
       error={validationErrors[element.id]}
+      savedValue={formValues[element.id]} // NEW
     />
   );
 

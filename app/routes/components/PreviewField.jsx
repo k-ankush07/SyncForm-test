@@ -42,6 +42,10 @@ import FormProgressIndicator from "./RichTextEditor/FormProgressIndicator";
 // =============================================================
 
 
+// =============================================================
+// 1. SIGNATURE PREVIEW
+// =============================================================
+
 function SignaturePreview({
   element,
   label,
@@ -53,12 +57,12 @@ function SignaturePreview({
 }) {
   const canvasRef = useRef(null);
   const signaturePadRef = useRef(null);
+  const onChangeRef = useRef(onChange);
+  const uploadedPreviewUrlRef = useRef(null);
 
   const [uploadedSignature, setUploadedSignature] = useState(null);
 
-  // Keep the latest parent callback without recreating the signature pad.
-  const onChangeRef = useRef(onChange);
-
+  // Always use the latest callback without recreating SignaturePad.
   useEffect(() => {
     onChangeRef.current = onChange;
   }, [onChange]);
@@ -69,8 +73,9 @@ function SignaturePreview({
   const canvasHeight = Number(element.canvasHeight) || 150;
   const penColor = element.penColor || "#000000";
   const penWidth = Number(element.penWidth) || 2;
+  const canvasBackground = element.canvasBackground || "#ffffff";
 
-  // Initialize and configure the signature canvas.
+  // Create and configure SignaturePad.
   useEffect(() => {
     if (!showCanvas || !canvasRef.current) return;
 
@@ -80,12 +85,12 @@ function SignaturePreview({
       penColor,
       minWidth: penWidth,
       maxWidth: penWidth,
-      backgroundColor: element.canvasBackground || "#ffffff",
+      backgroundColor: canvasBackground,
     });
 
     signaturePadRef.current = signaturePad;
 
-    // Report the drawn signature to the parent.
+    // Send the completed drawing to the parent.
     const handleEndStroke = () => {
       if (signaturePad.isEmpty()) {
         onChangeRef.current?.(null);
@@ -100,29 +105,30 @@ function SignaturePreview({
 
     signaturePad.addEventListener("endStroke", handleEndStroke);
 
+    // Resize the canvas without losing an existing drawing.
     const resizeCanvas = () => {
       const ratio = Math.max(window.devicePixelRatio || 1, 1);
 
-      const data = signaturePad.isEmpty()
+      const drawingData = signaturePad.isEmpty()
         ? null
         : signaturePad.toData();
 
-      canvas.width = canvas.offsetWidth * ratio;
-      canvas.height = canvasHeight * ratio;
+      canvas.width = Math.max(1, canvas.offsetWidth * ratio);
+      canvas.height = Math.max(1, canvasHeight * ratio);
 
       const context = canvas.getContext("2d");
+
       context.setTransform(ratio, 0, 0, ratio, 0, 0);
 
       signaturePad.clear();
 
-      if (data) {
-        signaturePad.fromData(data);
+      if (drawingData) {
+        signaturePad.fromData(drawingData);
       }
     };
 
     resizeCanvas();
 
-    // Keep canvas resolution correct when its size changes.
     const resizeObserver =
       typeof ResizeObserver !== "undefined"
         ? new ResizeObserver(resizeCanvas)
@@ -134,7 +140,10 @@ function SignaturePreview({
       resizeObserver?.disconnect();
       signaturePad.removeEventListener("endStroke", handleEndStroke);
       signaturePad.off();
-      signaturePadRef.current = null;
+
+      if (signaturePadRef.current === signaturePad) {
+        signaturePadRef.current = null;
+      }
     };
   }, [
     element.id,
@@ -142,41 +151,35 @@ function SignaturePreview({
     canvasHeight,
     penColor,
     penWidth,
-    element.canvasBackground,
+    canvasBackground,
   ]);
 
-  // Clear the signature drawing.
-  const clearSignature = () => {
-    signaturePadRef.current?.clear();
-    onChange?.(null);
-  };
-
-  // Validate and preview an uploaded signature image.
+  // Release the previous upload preview URL when replaced.
   const handleSignatureUpload = (event) => {
     const file = event.target.files?.[0];
 
     if (!file) return;
 
-    if (!file.type.startsWith("image/")) {
+    if (!["image/png", "image/jpeg"].includes(file.type)) {
       event.target.value = "";
       return;
     }
 
     const previewUrl = URL.createObjectURL(file);
 
-    setUploadedSignature((previous) => {
-      if (previous?.previewUrl) {
-        URL.revokeObjectURL(previous.previewUrl);
-      }
+    if (uploadedPreviewUrlRef.current) {
+      URL.revokeObjectURL(uploadedPreviewUrlRef.current);
+    }
 
-      return {
-        file,
-        previewUrl,
-      };
+    uploadedPreviewUrlRef.current = previewUrl;
+
+    setUploadedSignature({
+      file,
+      previewUrl,
     });
 
     // Send the actual File object to the parent.
-    onChange?.({
+    onChangeRef.current?.({
       type: "uploaded",
       file,
     });
@@ -185,14 +188,21 @@ function SignaturePreview({
     event.target.value = "";
   };
 
-  // Release the uploaded image URL when the component unmounts.
+  // Revoke the final preview URL when this component unmounts.
   useEffect(() => {
     return () => {
-      if (uploadedSignature?.previewUrl) {
-        URL.revokeObjectURL(uploadedSignature.previewUrl);
+      if (uploadedPreviewUrlRef.current) {
+        URL.revokeObjectURL(uploadedPreviewUrlRef.current);
+        uploadedPreviewUrlRef.current = null;
       }
     };
-  }, [uploadedSignature]);
+  }, []);
+
+  // Clear the drawing and notify the parent.
+  const clearSignature = () => {
+    signaturePadRef.current?.clear();
+    onChangeRef.current?.(null);
+  };
 
   return (
     <BlockStack gap="200">
@@ -215,7 +225,7 @@ function SignaturePreview({
               border: "1px dashed #8c9196",
               borderRadius: "8px",
               overflow: "hidden",
-              background: element.canvasBackground || "#ffffff",
+              background: canvasBackground,
             }}
           >
             <canvas
@@ -341,11 +351,8 @@ function SignaturePreview({
 
 
 // =============================================================
-// REUSABLE FLATPICKR FIELD
+// 2. REUSABLE FLATPICKR FIELD
 // =============================================================
-
-
-
 
 function FlatpickrField({
   value = "",
@@ -357,22 +364,25 @@ function FlatpickrField({
   const inputRef = useRef(null);
   const instanceRef = useRef(null);
 
+  // Keep the latest props available to Flatpickr callbacks.
   const optionsRef = useRef(options);
   const onChangeRef = useRef(onChange);
 
   optionsRef.current = options;
   onChangeRef.current = onChange;
 
-  // INITIALIZE FLATPICKR
+  // Initialize Flatpickr once.
   useEffect(() => {
     const input = inputRef.current;
+
     if (!input) return;
 
-    // Destroy an old instance if one exists.
-    const existingInstance = input._flatpickr;
-
-    if (existingInstance && typeof existingInstance.destroy === "function") {
-      existingInstance.destroy();
+    // Remove any previous instance attached to this input.
+    if (
+      input._flatpickr &&
+      typeof input._flatpickr.destroy === "function"
+    ) {
+      input._flatpickr.destroy();
     }
 
     const instance = flatpickr(input, {
@@ -387,8 +397,11 @@ function FlatpickrField({
 
     const flatpickrInstance = input._flatpickr || instance;
 
-    if (!flatpickrInstance || typeof flatpickrInstance.destroy !== "function") {
-      console.error("Flatpickr initialization failed:", flatpickrInstance);
+    if (
+      !flatpickrInstance ||
+      typeof flatpickrInstance.destroy !== "function"
+    ) {
+      console.error("Flatpickr initialization failed.");
       return;
     }
 
@@ -406,9 +419,10 @@ function FlatpickrField({
     };
   }, []);
 
-  // UPDATE FLATPICKR OPTIONS
+  // Update options when the parent changes picker settings.
   useEffect(() => {
     const instance = instanceRef.current;
+
     if (!instance || typeof instance.set !== "function") return;
 
     Object.entries(options).forEach(([key, optionValue]) => {
@@ -423,14 +437,18 @@ function FlatpickrField({
       try {
         instance.set(key, optionValue);
       } catch (error) {
-        console.warn(`Could not update Flatpickr option: ${key}`, error);
+        console.warn(
+          `Could not update Flatpickr option: ${key}`,
+          error
+        );
       }
     });
   }, [options]);
 
-  // SYNC VALUE WITH FLATPICKR
+  // Restore or update the displayed date.
   useEffect(() => {
     const instance = instanceRef.current;
+
     if (!instance || typeof instance.setDate !== "function") return;
 
     if (
@@ -443,7 +461,7 @@ function FlatpickrField({
       return;
     }
 
-    // Do not pass a time-only value to a date-only picker.
+    // Avoid passing a time-only value to a date-only picker.
     const isDateOnly =
       optionsRef.current.enableTime === false &&
       optionsRef.current.noCalendar !== true;
@@ -453,7 +471,11 @@ function FlatpickrField({
       typeof value === "string" &&
       /^\d{1,2}:\d{2}\s?(AM|PM)$/i.test(value.trim())
     ) {
-      console.warn("Date-only picker received a time-only value:", value);
+      console.warn(
+        "Date-only picker received a time-only value:",
+        value
+      );
+
       instance.clear(false);
       return;
     }
@@ -461,20 +483,19 @@ function FlatpickrField({
     instance.setDate(value, false);
   }, [value]);
 
-  // OPEN PICKER
+  // Open the picker when the input is clicked.
   const openPicker = () => {
     const input = inputRef.current;
     const instance = input?._flatpickr || instanceRef.current;
 
     if (!instance || typeof instance.open !== "function") {
-      console.error("Flatpickr instance is missing or invalid:", instance);
+      console.error("Flatpickr instance is missing or invalid.");
       return;
     }
 
     instance.open();
   };
 
-  // RENDER
   return (
     <input
       ref={inputRef}
@@ -489,74 +510,46 @@ function FlatpickrField({
 
 
 // =============================================================
-// MAIN PREVIEW FIELD COMPONENT
+// 3. MAIN PREVIEW FIELD COMPONENT
 // =============================================================
 
 export default function PreviewField({
   element,
   field,
+  savedValue,
   pages = [],
-  onChange, // to upadte the val 
+  onChange,
   activePageId = null,
   products = [],
   isModelPreview = false,
   productsLoading = false,
-  // Footer navigation actions
+
+  // Footer navigation actions.
   onPrevious,
   onNext,
   onReset,
   onSubmit,
   isFirstCustomerPage = true,
   isLastCustomerPage = false,
-  error, //show validation error 
+
+  // Validation error from parent.
+  error,
 }) {
-  // =========================================================
-  // 1. ELEMENT DATA
-  // =========================================================
+  // ===========================================================
+  // 3.1 NORMALIZE THE CURRENT ELEMENT
+  // ===========================================================
 
   const currentElement = element ?? field;
-  // this is a small healper fn its main work is to track changes in fields alraedy define and new elents crete and send that to live preiew
-  const reportChange = (nextValue) => {
-    if (currentElement?.id == null) return;
-
-    onChange?.(currentElement.id, nextValue);
-  };
-
-  const updateValue = (nextValue) => {
-    setValue(nextValue);
-    reportChange(nextValue);
-  };
-  //phone values hepler 
-  const reportPhoneValue = (nextNumber, countryCode = phoneCountry) => {
-    const selectedCountry = phoneCountryList.find(
-      (country) =>
-        country.value.toLowerCase() === String(countryCode).toLowerCase()
-    );
-
-    reportChange({
-      country: selectedCountry?.value?.toLowerCase() || countryCode,
-      dialCode: selectedCountry?.dialCode || "",
-      number: nextNumber,
-    });
-  };
-  //end
-  const isReadOnly = !isModelPreview;
-  // Customer-visible pages determine the footer navigation.
-  const customerPageCount = pages.filter(
-    (page) => page.visible !== false
-  ).length;
-
-  const hasMultiplePages = customerPageCount > 1;
 
   const normalizedElement =
     typeof currentElement === "string"
       ? {
-        type: currentElement
-          .toLowerCase()
-          .trim()
-          .replace(/[\s-]+/g, "_"),
-        label: currentElement,
-      }
+          type: currentElement
+            .toLowerCase()
+            .trim()
+            .replace(/[\s-]+/g, "_"),
+          label: currentElement,
+        }
       : currentElement ?? {};
 
   const type = normalizedElement.type
@@ -574,9 +567,688 @@ export default function PreviewField({
   const defaultValue = normalizedElement.defaultValue ?? "";
   const required = Boolean(normalizedElement.required);
 
-  // =========================================================
-  // 2. LABEL AND ICON
-  // =========================================================
+  // In editor mode fields are read-only.
+  // In customer/model preview mode fields can be filled in.
+  const isReadOnly = !isModelPreview;
+
+  // Count visible customer pages.
+  const customerPageCount = pages.filter(
+    (page) => page.visible !== false
+  ).length;
+
+  const hasMultiplePages = customerPageCount > 1;
+
+  // ===========================================================
+  // 3.2 PARENT VALUE HANDLERS
+  // ===========================================================
+
+  // Send a value to LivePreview using this element's ID.
+  const reportChange = (nextValue) => {
+    if (currentElement?.id == null) return;
+
+    onChange?.(currentElement.id, nextValue);
+  };
+
+  // Update local state immediately and save the same value in parent.
+  const updateValue = (nextValue) => {
+    setValue(nextValue);
+    reportChange(nextValue);
+  };
+
+  // ===========================================================
+  // 3.3 RESTORE SAVED TEXT VALUES
+  // ===========================================================
+
+  // Convert the parent's saved value into the text displayed by inputs.
+  // Some field types save objects rather than plain strings.
+  const getSavedTextValue = () => {
+    if (savedValue === undefined || savedValue === null) {
+      return String(defaultValue ?? "");
+    }
+
+    if (typeof savedValue === "object" && !Array.isArray(savedValue)) {
+      if ("email" in savedValue) {
+        return String(savedValue.email ?? "");
+      }
+
+      if ("password" in savedValue) {
+        return String(savedValue.password ?? "");
+      }
+
+      if ("number" in savedValue) {
+        return String(savedValue.number ?? "");
+      }
+
+      return String(defaultValue ?? "");
+    }
+
+    if (Array.isArray(savedValue)) {
+      return "";
+    }
+
+    return String(savedValue);
+  };
+
+  // Local text value used by TextField and other input controls.
+  const [value, setValue] = useState(getSavedTextValue);
+
+  const [nameError, setNameError] = useState("");
+  const [numberError, setNumberError] = useState("");
+
+  // ===========================================================
+  // 3.4 CHOICE FIELD STATE
+  // ===========================================================
+
+  const getSavedSelection = () => {
+    if (savedValue !== undefined && savedValue !== null) {
+      if (Array.isArray(savedValue)) {
+        return savedValue;
+      }
+
+      if (typeof savedValue === "string") {
+        return savedValue ? [savedValue] : [];
+      }
+
+      if (
+        typeof savedValue === "object" &&
+        savedValue.value !== undefined
+      ) {
+        if (Array.isArray(savedValue.value)) {
+          return savedValue.value;
+        }
+
+        return savedValue.value ? [savedValue.value] : [];
+      }
+    }
+
+    return normalizedElement.defaultValue
+      ? [normalizedElement.defaultValue]
+      : [];
+  };
+
+  const getSavedOtherValue = () => {
+    if (
+      savedValue &&
+      typeof savedValue === "object" &&
+      !Array.isArray(savedValue)
+    ) {
+      return savedValue.otherValue || "";
+    }
+
+    return normalizedElement.otherValue || "";
+  };
+
+  const [selected, setSelected] = useState(getSavedSelection);
+  const [otherValue, setOtherValue] = useState(getSavedOtherValue);
+
+  // Restore choice values when the field changes or a saved answer arrives.
+  // Compare first so typing/selecting is not needlessly reset.
+  useEffect(() => {
+    const nextSelection = getSavedSelection();
+    const nextOtherValue = getSavedOtherValue();
+
+    setSelected((previous) =>
+      JSON.stringify(previous) === JSON.stringify(nextSelection)
+        ? previous
+        : nextSelection
+    );
+
+    setOtherValue((previous) =>
+      previous === nextOtherValue ? previous : nextOtherValue
+    );
+  }, [
+    normalizedElement.id,
+    normalizedElement.defaultValue,
+    savedValue,
+  ]);
+
+  // ===========================================================
+  // 3.5 CHECKBOX AND CONSENT STATE
+  // ===========================================================
+
+  const getSavedCheckedValue = () => {
+    if (typeof savedValue === "boolean") {
+      return savedValue;
+    }
+
+    return type === "consent"
+      ? normalizedElement.checkedByDefault ?? true
+      : Boolean(normalizedElement.defaultValue);
+  };
+
+  const [checked, setChecked] = useState(getSavedCheckedValue);
+
+  useEffect(() => {
+    const nextChecked = getSavedCheckedValue();
+
+    setChecked((previous) =>
+      previous === nextChecked ? previous : nextChecked
+    );
+  }, [
+    normalizedElement.id,
+    normalizedElement.defaultValue,
+    normalizedElement.checkedByDefault,
+    savedValue,
+    type,
+  ]);
+
+  // ===========================================================
+  // 3.6 PASSWORD AND EMAIL CONFIRMATION STATE
+  // ===========================================================
+
+  const [confirmPasswordValue, setConfirmPasswordValue] = useState(
+    () =>
+      savedValue && typeof savedValue === "object"
+        ? savedValue.confirmPassword ?? ""
+        : ""
+  );
+
+  const [confirmEmailValue, setConfirmEmailValue] = useState(
+    () =>
+      savedValue && typeof savedValue === "object"
+        ? savedValue.confirmEmail ?? ""
+        : ""
+  );
+
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  const [passwordValidationTriggered, setPasswordValidationTriggered] =
+    useState(false);
+
+  // ===========================================================
+  // 3.7 PHONE STATE
+  // ===========================================================
+
+  const configuredPhoneCountry =
+    normalizedElement.defaultCountryCode &&
+    normalizedElement.defaultCountryCode !== "auto"
+      ? normalizedElement.defaultCountryCode.toLowerCase()
+      : "in";
+
+  const getSavedPhoneCountry = () => {
+    if (
+      savedValue &&
+      typeof savedValue === "object" &&
+      savedValue.country
+    ) {
+      return String(savedValue.country).toLowerCase();
+    }
+
+    return configuredPhoneCountry;
+  };
+
+  const [phoneCountry, setPhoneCountry] = useState(
+    getSavedPhoneCountry
+  );
+
+  const [countryDropdownOpen, setCountryDropdownOpen] = useState(false);
+
+  // ===========================================================
+  // 3.8 COUNTRY AND DROPDOWN STATE
+  // ===========================================================
+
+  const [countrySearch, setCountrySearch] = useState("");
+
+  const [selectedCountry, setSelectedCountry] = useState(() => {
+    if (typeof savedValue === "string") {
+      return savedValue;
+    }
+
+    return typeof normalizedElement.defaultValue === "string"
+      ? normalizedElement.defaultValue
+      : "";
+  });
+
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [dropdownSearch, setDropdownSearch] = useState("");
+
+  useEffect(() => {
+    setDropdownOpen(false);
+    setDropdownSearch("");
+  }, [normalizedElement.id]);
+
+  // ===========================================================
+  // 3.9 DATE AND TIME STATE
+  // ===========================================================
+
+  const getSavedDateValue = () => {
+    if (savedValue !== undefined && savedValue !== null) {
+      return String(savedValue);
+    }
+
+    return String(
+      normalizedElement.defaultDate ??
+      normalizedElement.defaultValue ??
+      ""
+    );
+  };
+
+  const [dateValue, setDateValue] = useState(getSavedDateValue);
+
+  // ===========================================================
+  // 3.10 FILE AND IMAGE STATE
+  // ===========================================================
+
+  const [imagePreview, setImagePreview] = useState([]);
+
+  const fileInputRef = useRef(null);
+
+  const [selectedFiles, setSelectedFiles] = useState(() =>
+    Array.isArray(savedValue) ? savedValue : []
+  );
+
+  const [fileError, setFileError] = useState("");
+
+  // ===========================================================
+  // 3.11 RATING AND RANGE STATE
+  // ===========================================================
+
+  const [rating, setRating] = useState(() =>
+    Number(savedValue ?? normalizedElement.defaultRating ?? 0)
+  );
+
+  const getDefaultRangeValue = () => {
+    const min = Number(normalizedElement.min ?? 0);
+    const max = Number(normalizedElement.max ?? 100);
+
+    const initialValue =
+      savedValue !== undefined && savedValue !== null
+        ? Number(savedValue)
+        : Number(normalizedElement.defaultValue);
+
+    return Number.isFinite(initialValue)
+      ? Math.min(max, Math.max(min, initialValue))
+      : min;
+  };
+
+  const [rangeValue, setRangeValue] = useState(getDefaultRangeValue);
+
+  useEffect(() => {
+    const nextValue = getDefaultRangeValue();
+
+    setRangeValue((previous) =>
+      previous === nextValue ? previous : nextValue
+    );
+  }, [
+    normalizedElement.id,
+    normalizedElement.defaultValue,
+    normalizedElement.min,
+    normalizedElement.max,
+    savedValue,
+  ]);
+
+  // ===========================================================
+  // 3.12 SWITCH STATE
+  // ===========================================================
+
+  const getSavedSwitchValue = () => {
+    if (typeof savedValue === "boolean") {
+      return savedValue;
+    }
+
+    return Boolean(normalizedElement.defaultChecked);
+  };
+
+  const [switchValue, setSwitchValue] = useState(getSavedSwitchValue);
+
+  useEffect(() => {
+    const nextValue = getSavedSwitchValue();
+
+    setSwitchValue((previous) =>
+      previous === nextValue ? previous : nextValue
+    );
+  }, [
+    normalizedElement.id,
+    normalizedElement.defaultChecked,
+    savedValue,
+  ]);
+
+  // ===========================================================
+  // 3.13 COLOR STATE
+  // ===========================================================
+
+  const [colorValue, setColorValue] = useState(
+    normalizedElement.defaultColor || "#563D7C"
+  );
+
+  useEffect(() => {
+    setColorValue(
+      normalizedElement.defaultColor || "#563D7C"
+    );
+  }, [
+    normalizedElement.id,
+    normalizedElement.defaultColor,
+  ]);
+
+  // ===========================================================
+  // 3.14 OTHER UI STATE
+  // ===========================================================
+
+  const [imageDropdownOpen, setImageDropdownOpen] = useState(false);
+
+  useEffect(() => {
+    setImageDropdownOpen(false);
+  }, [normalizedElement.id]);
+
+  // ===========================================================
+  // 4. SYNCHRONIZE SAVED TEXT VALUES
+  // ===========================================================
+
+  // IMPORTANT:
+  // savedValue is a dependency because the parent may restore data
+  // after loading. However, we only update local state when the
+  // incoming value is actually different from the current value.
+  //
+  // During typing, the parent sends back the same value the user
+  // just entered. The comparison prevents that update from resetting
+  // the input or interrupting typing.
+
+  useEffect(() => {
+    const nextTextValue = getSavedTextValue();
+
+    setValue((previous) =>
+      previous === nextTextValue ? previous : nextTextValue
+    );
+
+    const nextConfirmPassword =
+      savedValue && typeof savedValue === "object"
+        ? savedValue.confirmPassword ?? ""
+        : "";
+
+    setConfirmPasswordValue((previous) =>
+      previous === nextConfirmPassword
+        ? previous
+        : nextConfirmPassword
+    );
+
+    const nextConfirmEmail =
+      savedValue && typeof savedValue === "object"
+        ? savedValue.confirmEmail ?? ""
+        : "";
+
+    setConfirmEmailValue((previous) =>
+      previous === nextConfirmEmail
+        ? previous
+        : nextConfirmEmail
+    );
+
+    setPasswordValidationTriggered(false);
+    setShowPassword(false);
+    setShowConfirmPassword(false);
+    setNameError("");
+    setNumberError("");
+  }, [
+    normalizedElement.id,
+    normalizedElement.defaultValue,
+    savedValue,
+  ]);
+
+  // ===========================================================
+  // 5. SYNCHRONIZE PHONE VALUE
+  // ===========================================================
+
+  // Only phone fields may use this effect.
+  // This prevents phone defaults from overwriting name/email/text fields.
+
+  useEffect(() => {
+    if (type !== "phone") return;
+
+    const nextPhoneNumber =
+      savedValue &&
+      typeof savedValue === "object" &&
+      !Array.isArray(savedValue)
+        ? savedValue.number ?? ""
+        : savedValue ?? normalizedElement.defaultValue ?? "";
+
+    const nextCountry = getSavedPhoneCountry();
+
+    setValue((previous) => {
+      const next = String(nextPhoneNumber);
+
+      return previous === next ? previous : next;
+    });
+
+    setPhoneCountry((previous) =>
+      previous === nextCountry ? previous : nextCountry
+    );
+
+    setCountryDropdownOpen(false);
+  }, [
+    type,
+    normalizedElement.id,
+    normalizedElement.defaultCountryCode,
+    normalizedElement.defaultValue,
+    savedValue,
+  ]);
+
+  // ===========================================================
+  // 6. SYNCHRONIZE DATE VALUE
+  // ===========================================================
+
+  useEffect(() => {
+    const nextDateValue = getSavedDateValue();
+
+    setDateValue((previous) =>
+      previous === nextDateValue ? previous : nextDateValue
+    );
+  }, [
+    normalizedElement.id,
+    normalizedElement.defaultDate,
+    normalizedElement.defaultValue,
+    savedValue,
+  ]);
+
+  // ===========================================================
+  // 7. RESTORE COUNTRY SELECTION
+  // ===========================================================
+
+  useEffect(() => {
+    const nextCountry =
+      typeof savedValue === "string"
+        ? savedValue
+        : typeof normalizedElement.defaultValue === "string"
+          ? normalizedElement.defaultValue
+          : "";
+
+    setSelectedCountry((previous) =>
+      previous === nextCountry ? previous : nextCountry
+    );
+
+    setCountrySearch("");
+    setCountryDropdownOpen(false);
+  }, [
+    normalizedElement.id,
+    normalizedElement.defaultValue,
+    savedValue,
+  ]);
+
+  // ===========================================================
+  // 8. FIELD CHANGE HANDLERS
+  // ===========================================================
+
+  // Name validation and optional numbers-only setting.
+  const handleNameChange = (newValue) => {
+    const input = String(newValue ?? "");
+
+    if (normalizedElement.numbersOnly) {
+      updateValue(input.replace(/[^0-9]/g, ""));
+      setNameError("");
+      return;
+    }
+
+    updateValue(input);
+
+    if (normalizedElement.nameValidation !== false && input) {
+      const validName = /^[\p{L}\p{M}\s'.-]+$/u.test(input);
+
+      setNameError(
+        validName ? "" : "Please enter a valid name."
+      );
+
+      return;
+    }
+
+    setNameError("");
+  };
+
+  // Number input: accept digits only and show an error otherwise.
+  const handleNumberChange = (newValue) => {
+    const input = String(newValue ?? "");
+
+    if (input !== "" && !/^\d+$/.test(input)) {
+      updateValue(input);
+      setNumberError("Please enter numbers only.");
+      return;
+    }
+
+    updateValue(input);
+    setNumberError("");
+  };
+
+  // ===========================================================
+  // 9. CHOICE AND PHONE HELPERS
+  // ===========================================================
+
+  const rawOptions = normalizedElement.options || [];
+
+  const options = rawOptions.map((option, index) => {
+    if (typeof option === "string") {
+      return {
+        label: option,
+        value: option,
+      };
+    }
+
+    return {
+      label: option.label || option.value || `Option ${index + 1}`,
+      value: option.value || option.label || `option-${index + 1}`,
+    };
+  });
+
+  // Phone country data.
+  const phoneCountryList = countries;
+
+  const currentPhoneCountry =
+    phoneCountryList.find(
+      (country) => country.value.toLowerCase() === phoneCountry
+    ) ||
+    phoneCountryList.find(
+      (country) => country.value.toLowerCase() === "in"
+    );
+
+  const showPhoneCountry =
+    normalizedElement.phoneValidation !== false ||
+    normalizedElement.showCountryCode !== false;
+
+  // Send the phone number together with its country information.
+  const reportPhoneValue = (
+    nextNumber,
+    countryCode = phoneCountry
+  ) => {
+    const selectedPhoneCountry = phoneCountryList.find(
+      (country) =>
+        country.value.toLowerCase() ===
+        String(countryCode).toLowerCase()
+    );
+
+    reportChange({
+      country:
+        selectedPhoneCountry?.value?.toLowerCase() ||
+        countryCode,
+      dialCode: selectedPhoneCountry?.dialCode || "",
+      number: nextNumber,
+    });
+  };
+
+  // Change selected phone country.
+  const handlePhoneCountryChange = (countryCode) => {
+    const nextCountry = countryCode.toLowerCase();
+
+    setPhoneCountry(nextCountry);
+    reportPhoneValue(value, nextCountry);
+  };
+
+  // Handle phone input and detect international calling codes.
+  const handlePhoneChange = (newValue) => {
+    const input = String(newValue ?? "");
+
+    if (input.startsWith("+") || input.startsWith("00")) {
+      const internationalInput = input.startsWith("00")
+        ? `+${input.slice(2)}`
+        : input;
+
+      const digits = internationalInput
+        .slice(1)
+        .replace(/\D/g, "");
+
+      const matches = phoneCountryList
+        .filter((country) => {
+          const dialCode = country.dialCode.replace(/\D/g, "");
+          return digits.startsWith(dialCode);
+        })
+        .sort(
+          (a, b) =>
+            b.dialCode.replace(/\D/g, "").length -
+            a.dialCode.replace(/\D/g, "").length
+        );
+
+      if (matches.length > 0) {
+        const longestCode = matches[0].dialCode;
+
+        const sameCodeMatches = matches.filter(
+          (country) => country.dialCode === longestCode
+        );
+
+        const matchedCountry =
+          sameCodeMatches.find(
+            (country) =>
+              country.value.toLowerCase() === phoneCountry
+          ) || sameCodeMatches[0];
+
+        const dialDigits = matchedCountry.dialCode.replace(
+          /\D/g,
+          ""
+        );
+
+        const phoneNumber = digits.slice(dialDigits.length);
+
+        setPhoneCountry(matchedCountry.value.toLowerCase());
+        setValue(phoneNumber);
+
+        reportPhoneValue(phoneNumber, matchedCountry.value);
+        return;
+      }
+
+      // Preserve an incomplete international number while typing.
+      setValue(internationalInput);
+      reportPhoneValue(internationalInput);
+      return;
+    }
+
+    // National phone number: digits only.
+    const phoneNumber = input.replace(/\D/g, "");
+
+    setValue(phoneNumber);
+    reportPhoneValue(phoneNumber);
+  };
+
+  // Limit radio and checkbox columns to a maximum of five.
+  const optionsPerLine = Math.min(
+    5,
+    Math.max(1, Number(normalizedElement.optionsPerLine) || 1)
+  );
+
+  const choiceGridStyle = {
+    display: "grid",
+    gridTemplateColumns: `repeat(${optionsPerLine}, minmax(0, 1fr))`,
+    gap: "12px",
+    width: "100%",
+  };
+
+  // ===========================================================
+  // 10. LABEL, ICON AND COMMON FIELD PROPS
+  // ===========================================================
 
   const selectedIcon = normalizedElement.selectIcon
     ? PolarisIcons[normalizedElement.selectIcon]
@@ -596,7 +1268,9 @@ export default function PreviewField({
       </Text>
 
       {required && (
-        <span style={{ color: "var(--p-color-text-critical)" }}>*</span>
+        <span style={{ color: "var(--p-color-text-critical)" }}>
+          *
+        </span>
       )}
     </div>
   );
@@ -606,266 +1280,6 @@ export default function PreviewField({
       {description}
     </Text>
   ) : null;
-
-  // =========================================================
-  // 3. FIELD STATES
-  // =========================================================
-
-  const [value, setValue] = useState(String(defaultValue));
-  const [nameError, setNameError] = useState("");
-  const [numberError, setNumberError] = useState("");
-
-  const [selected, setSelected] = useState(() =>
-    normalizedElement.defaultValue
-      ? [normalizedElement.defaultValue]
-      : []
-  );
-
-  const [otherValue, setOtherValue] = useState(
-    normalizedElement.otherValue || ""
-  );
-  useEffect(() => {
-    setSelected(
-      normalizedElement.defaultValue
-        ? [normalizedElement.defaultValue]
-        : []
-    );
-
-    setOtherValue("");
-  }, [normalizedElement.id, normalizedElement.defaultValue]);
-
-  const [checked, setChecked] = useState(
-    normalizedElement.type === "consent"
-      ? normalizedElement.checkedByDefault ?? true
-      : Boolean(normalizedElement.defaultValue)
-  );
-  //passwords
-  const [confirmPasswordValue, setConfirmPasswordValue] = useState("");
-  const [confirmEmailValue, setConfirmEmailValue] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
-  const [passwordValidationTriggered, setPasswordValidationTriggered] =
-    useState(false);
-
-  // Phone states.
-  const [phoneCountry, setPhoneCountry] = useState(
-    (
-      normalizedElement.defaultCountryCode &&
-        normalizedElement.defaultCountryCode !== "auto"
-        ? normalizedElement.defaultCountryCode
-        : "in"
-    ).toLowerCase()
-  );
-  //country satae
-  const [countryDropdownOpen, setCountryDropdownOpen] = useState(false);
-  // Country dropdown states
-  const [countrySearch, setCountrySearch] = useState("");
-  const [selectedCountry, setSelectedCountry] = useState("");
-
-  // dropdown 
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [dropdownSearch, setDropdownSearch] = useState("");
-  useEffect(() => {
-    setDropdownOpen(false);
-    setDropdownSearch("");
-  }, [normalizedElement.id]);
-
-
-
-  // Date and time.
-  const [dateValue, setDateValue] = useState(
-    normalizedElement.defaultDate || ""
-  );
-
-  // File and image previews.
-  const [imagePreview, setImagePreview] = useState([]);
-
-  // Rating and range values.
-  const [rating, setRating] = useState(0);
-  const [rangeValue, setRangeValue] = useState(() => {
-    const min = Number(normalizedElement.min ?? 0);
-    const max = Number(normalizedElement.max ?? 100);
-    const defaultValue = Number(normalizedElement.defaultValue);
-
-    return Number.isFinite(defaultValue)
-      ? Math.min(max, Math.max(min, defaultValue))
-      : min;
-  });
-
-  // files state 
-  const fileInputRef = useRef(null);
-  const [selectedFiles, setSelectedFiles] = useState([]);
-  const [fileError, setFileError] = useState("");
-  //effects 
-  useEffect(() => {
-    const min = Number(normalizedElement.min ?? 0);
-    const max = Number(normalizedElement.max ?? 100);
-    const defaultValue = Number(normalizedElement.defaultValue);
-
-    const newValue = Number.isFinite(defaultValue)
-      ? defaultValue
-      : min;
-
-    setRangeValue(Math.min(max, Math.max(min, newValue)));
-  }, [
-    normalizedElement.id,
-    normalizedElement.defaultValue,
-    normalizedElement.min,
-    normalizedElement.max,
-  ]);
-
-  // Switch state.
-  const [switchValue, setSwitchValue] = useState(
-    Boolean(normalizedElement.defaultChecked)
-  );
-
-  // Color picker state.
-  const [colorValue, setColorValue] = useState(
-    normalizedElement.defaultColor || "#563D7C"
-  );
-
-  // =========================================================
-  // 4. FIELD CHANGE HANDLERS
-  // =========================================================
-
-  // Name validation and optional numbers-only setting.
-  const handleNameChange = (newValue) => {
-    const input = String(newValue ?? "");
-
-    if (normalizedElement.numbersOnly) {
-      updateValue(input.replace(/[^0-9]/g, ""));
-      setNameError("");
-      return;
-    }
-
-    updateValue(input);
-
-    if (normalizedElement.nameValidation !== false && input) {
-      const validName = /^[\p{L}\p{M}\s'.-]+$/u.test(input);
-      setNameError(validName ? "" : "Please enter a valid name.");
-      return;
-    }
-
-    setNameError("");
-  };
-
-  // Number input: accept digits only and show an error for other characters.
-  const handleNumberChange = (newValue) => {
-    const input = String(newValue ?? "");
-
-    if (input !== "" && !/^\d+$/.test(input)) {
-      updateValue(input);
-      setNumberError("Please enter numbers only.");
-      return;
-    }
-
-    updateValue(input);
-    setNumberError("");
-  };
-  const [imageDropdownOpen, setImageDropdownOpen] = useState(false);
-  useEffect(() => {
-    setImageDropdownOpen(false);
-  }, [normalizedElement.id]);
-
-  // =========================================================
-  // 5. EFFECTS
-  // =========================================================
-
-  // Update common input and confirmation values when the element changes.
-  useEffect(() => {
-    setValue(String(normalizedElement.defaultValue ?? ""));
-    setDateValue(normalizedElement.defaultValue ?? "");
-    setConfirmPasswordValue("");
-    setPasswordValidationTriggered(false);
-    setShowPassword(false);
-    setShowConfirmPassword(false);
-    setConfirmEmailValue("");
-    setNameError("");
-    setNumberError("");
-  }, [normalizedElement.id, normalizedElement.defaultValue]);
-
-  // Reset phone country and value when phone settings change.
-  useEffect(() => {
-    const configuredCountry = normalizedElement.defaultCountryCode;
-
-    setPhoneCountry(
-      configuredCountry && configuredCountry !== "auto"
-        ? configuredCountry.toLowerCase()
-        : "in"
-    );
-
-    setValue(String(normalizedElement.defaultValue ?? ""));
-
-    setCountryDropdownOpen(false);
-  }, [
-    normalizedElement.id,
-    normalizedElement.defaultCountryCode,
-    normalizedElement.defaultValue,
-  ]);
-
-  // Update checkbox and consent defaults.
-  useEffect(() => {
-    setChecked(
-      normalizedElement.type === "consent"
-        ? normalizedElement.checkedByDefault ?? true
-        : Boolean(normalizedElement.defaultValue)
-    );
-  }, [
-    normalizedElement.id,
-    normalizedElement.defaultValue,
-    normalizedElement.checkedByDefault,
-    normalizedElement.type,
-  ]);
-
-  // Update switch default.
-  useEffect(() => {
-    setSwitchValue(Boolean(normalizedElement.defaultChecked));
-  }, [normalizedElement.id, normalizedElement.defaultChecked]);
-
-  // Update color default.
-  useEffect(() => {
-    setColorValue(normalizedElement.defaultColor || "#563D7C");
-  }, [normalizedElement.id, normalizedElement.defaultColor]);
-
-  // Reset country selection when the element changes.
-  useEffect(() => {
-    setSelectedCountry(
-      typeof normalizedElement.defaultValue === "string"
-        ? normalizedElement.defaultValue
-        : ""
-    );
-
-    setCountrySearch("");
-    setCountryDropdownOpen(false);
-  }, [normalizedElement.id, normalizedElement.defaultValue]);
-
-  // Update date default.
-  useEffect(() => {
-    setDateValue(normalizedElement.defaultDate || "");
-  }, [normalizedElement.defaultDate]);
-
-  // =========================================================
-  // 6. OPTIONS AND COMMON FIELD PROPS
-  // =========================================================
-
-  const rawOptions = normalizedElement.options || [];
-
-  const options = rawOptions.map((option, index) => {
-    if (typeof option === "string") {
-      return {
-        label: option,
-        value: option,
-      };
-    }
-
-    return {
-      label: option.label || option.value || `Option ${index + 1}`,
-      value: option.value || option.label || `option-${index + 1}`,
-    };
-  });
-
-  if (!currentElement) return null;
 
   const commonTextFieldProps = {
     label: hideLabel ? "" : label,
@@ -897,128 +1311,14 @@ export default function PreviewField({
   };
 
   const commonSelectProps = {
-    label: label,
+    label,
     labelHidden: hideLabel,
     helpText: description || undefined,
   };
 
-  // Phone country data.
-  const phoneCountryList = countries;
-
-  const currentPhoneCountry =
-    phoneCountryList.find(
-      (country) => country.value.toLowerCase() === phoneCountry
-    ) || phoneCountryList.find((country) => country.value === "in");
-
-  // Show flag and country code if either setting is enabled.
-  const showPhoneCountry =
-    normalizedElement.phoneValidation !== false ||
-    normalizedElement.showCountryCode !== false;
-  // Change selected phone country.
-  // Change selected phone country.
-  const handlePhoneCountryChange = (countryCode) => {
-    setPhoneCountry(countryCode.toLowerCase());
-
-
-    reportPhoneValue(value, countryCode);
-  };
-
-  // Handle phone input and detect international calling codes.
-  // Handle phone input and detect international calling codes.
-  const handlePhoneChange = (newValue) => {
-    const input = String(newValue ?? "");
-
-    if (input.startsWith("+") || input.startsWith("00")) {
-      const internationalInput = input.startsWith("00")
-        ? `+${input.slice(2)}`
-        : input;
-
-      const digits = internationalInput.slice(1).replace(/\D/g, "");
-
-      const matches = phoneCountryList
-        .filter((country) => {
-          const dialCode = country.dialCode.replace(/\D/g, "");
-          return digits.startsWith(dialCode);
-        })
-        .sort(
-          (a, b) =>
-            b.dialCode.replace(/\D/g, "").length -
-            a.dialCode.replace(/\D/g, "").length
-        );
-
-      if (matches.length > 0) {
-        const longestCode = matches[0].dialCode;
-
-        const sameCodeMatches = matches.filter(
-          (country) => country.dialCode === longestCode
-        );
-
-        const matchedCountry =
-          sameCodeMatches.find(
-            (country) => country.value.toLowerCase() === phoneCountry
-          ) || sameCodeMatches[0];
-
-        const dialDigits = matchedCountry.dialCode.replace(/\D/g, "");
-
-        const phoneNumber = digits.slice(dialDigits.length);
-
-        setPhoneCountry(matchedCountry.value.toLowerCase());
-        setValue(phoneNumber);
-
-
-        reportPhoneValue(phoneNumber, matchedCountry.value);
-
-        return;
-      }
-
-      // Preserve an incomplete international number while typing.
-      setValue(internationalInput);
-
-
-      reportPhoneValue(internationalInput);
-
-      return;
-    }
-
-    // National phone number: digits only.
-    const phoneNumber = input.replace(/\D/g, "");
-
-    setValue(phoneNumber);
-
-
-    reportPhoneValue(phoneNumber);
-  };
-
-
-
-  // Limit radio and checkbox columns to a maximum of five.
-  const optionsPerLine = Math.min(
-    5,
-    Math.max(1, Number(normalizedElement.optionsPerLine) || 1)
-  );
-
-  const choiceGridStyle = {
-    display: "grid",
-    gridTemplateColumns: `repeat(${optionsPerLine}, minmax(0, 1fr))`,
-    gap: "12px",
-    width: "100%",
-  };
-  // validateTextField this gives error if name valdation fails 
-  // const validateTextField = (element, value) => {
-  //   if (
-  //     element.nameValidation &&
-  //     value &&
-  //     !/^[a-zA-Z0-9 ]+$/.test(value)
-  //   ) {
-  //     return "Only letters and numbers are allowed.";
-  //   }
-
-  //   return "";
-  // };
-
-  // =========================================================
-  // 7. HTML SANITIZATION
-  // =========================================================
+  // ===========================================================
+  // 11. HTML SANITIZATION
+  // ===========================================================
 
   const sanitizeHTML = (html) => {
     if (typeof window === "undefined") {
@@ -1026,10 +1326,14 @@ export default function PreviewField({
     }
 
     const purifier = createDOMPurify(window);
+
     return purifier.sanitize(html);
   };
 
-  // password valiadtions
+  // ===========================================================
+  // 12. PASSWORD VALIDATION
+  // ===========================================================
+
   const getPasswordError = () => {
     const password = String(value || "");
 
@@ -1037,15 +1341,16 @@ export default function PreviewField({
       return `${label} is required.`;
     }
 
-    // Optional character limits, if enabled in your settings.
     if (normalizedElement.limitCharacters) {
-      const min = normalizedElement.minCharacters !== ""
-        ? Number(normalizedElement.minCharacters)
-        : null;
+      const min =
+        normalizedElement.minCharacters !== ""
+          ? Number(normalizedElement.minCharacters)
+          : null;
 
-      const max = normalizedElement.maxCharacters !== ""
-        ? Number(normalizedElement.maxCharacters)
-        : null;
+      const max =
+        normalizedElement.maxCharacters !== ""
+          ? Number(normalizedElement.maxCharacters)
+          : null;
 
       if (min !== null && password.length < min) {
         return `Password must contain at least ${min} characters.`;
@@ -1056,7 +1361,6 @@ export default function PreviewField({
       }
     }
 
-    // Apply the selected password validation rule.
     const validationRule = normalizedElement.passwordValidation;
 
     if (validationRule && validationRule !== "none") {
@@ -1078,7 +1382,6 @@ export default function PreviewField({
       }
     }
 
-    // Confirm password validation.
     if (
       normalizedElement.confirmPassword &&
       password !== confirmPasswordValue
@@ -1089,10 +1392,13 @@ export default function PreviewField({
     return "";
   };
 
-  // This function will be called by the future Submit handler.
+  // ===========================================================
+  // 13. FILE VALIDATION
+  // ===========================================================
 
-  //Add the file validation logic
-  const acceptedFileTypes = Array.isArray(normalizedElement.acceptedFileTypes)
+  const acceptedFileTypes = Array.isArray(
+    normalizedElement.acceptedFileTypes
+  )
     ? normalizedElement.acceptedFileTypes
     : [];
 
@@ -1100,7 +1406,9 @@ export default function PreviewField({
     .map((extension) => `.${extension}`)
     .join(",");
 
-  const fileSizeLimit = Number(normalizedElement.fileSizeLimit) || 0;
+  const fileSizeLimit =
+    Number(normalizedElement.fileSizeLimit) || 0;
+
   const maxFileSize = fileSizeLimit * 1024 * 1024;
 
   const numberOfFilesLimit =
@@ -1112,13 +1420,16 @@ export default function PreviewField({
 
   const handleFileSelection = (event) => {
     const incomingFiles = Array.from(event.target.files || []);
+
     setFileError("");
 
     const validFiles = [];
 
     for (const file of incomingFiles) {
-      // Check allowed extension.
-      const extension = file.name.split(".").pop().toLowerCase();
+      const extension = file.name
+        .split(".")
+        .pop()
+        .toLowerCase();
 
       if (
         acceptedFileTypes.length > 0 &&
@@ -1128,7 +1439,6 @@ export default function PreviewField({
         continue;
       }
 
-      // Check file size.
       if (maxFileSize > 0 && file.size > maxFileSize) {
         setFileError(
           `${file.name} exceeds the ${fileSizeLimit} MB size limit.`
@@ -1139,7 +1449,6 @@ export default function PreviewField({
       validFiles.push(file);
     }
 
-    // Check number of files.
     const combinedFiles = normalizedElement.allowMultiple
       ? [...selectedFiles, ...validFiles]
       : validFiles.slice(0, 1);
@@ -1147,7 +1456,10 @@ export default function PreviewField({
     let finalFiles;
 
     if (maxFiles > 0 && combinedFiles.length > maxFiles) {
-      setFileError(`You can select a maximum of ${maxFiles} files.`);
+      setFileError(
+        `You can select a maximum of ${maxFiles} files.`
+      );
+
       finalFiles = combinedFiles.slice(0, maxFiles);
     } else {
       finalFiles = combinedFiles;
@@ -1155,13 +1467,16 @@ export default function PreviewField({
 
     setSelectedFiles(finalFiles);
 
-    // Send actual File objects to parent.
+    // Send the actual File objects to the parent.
     reportChange(finalFiles);
 
     // Allow selecting the same file again.
     event.target.value = "";
   };
-  //date ghelper
+
+  // ===========================================================
+  // 14. DATE HELPERS
+  // ===========================================================
 
   const getDateOnly = (date) => {
     const year = date.getFullYear();
@@ -1171,11 +1486,13 @@ export default function PreviewField({
     return `${year}-${month}-${day}`;
   };
 
-  const parseDateValue = (value) => {
-    if (!value) return null;
+  const parseDateValue = (dateValueToParse) => {
+    if (!dateValueToParse) return null;
 
-    // Parse date strings as local dates, avoiding UTC date shifts.
-    const match = String(value).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    // Parse YYYY-MM-DD as a local date to avoid UTC date shifts.
+    const match = String(dateValueToParse).match(
+      /^(\d{4})-(\d{2})-(\d{2})$/
+    );
 
     if (match) {
       return new Date(
@@ -1185,23 +1502,29 @@ export default function PreviewField({
       );
     }
 
-    const parsed = new Date(value);
+    const parsed = new Date(dateValueToParse);
 
     return Number.isNaN(parsed.getTime()) ? null : parsed;
   };
 
   const addDays = (date, days) => {
     const result = new Date(date);
+
     result.setDate(result.getDate() + Number(days || 0));
+
     return result;
   };
 
-  const getTimeMinutes = (value) => {
-    if (!value) return null;
+  // ===========================================================
+  // 15. TIME HELPERS
+  // ===========================================================
 
-    const text = String(value).trim();
+  const getTimeMinutes = (timeValue) => {
+    if (!timeValue) return null;
 
-    // 12-hour format, for example: 01:30 PM
+    const text = String(timeValue).trim();
+
+    // 12-hour format, for example 01:30 PM.
     const twelveHour = text.match(
       /^(\d{1,2}):(\d{2})\s*(AM|PM)$/i
     );
@@ -1216,12 +1539,16 @@ export default function PreviewField({
       return hours * 60 + Number(twelveHour[2]);
     }
 
-    // 24-hour format, for example: 13:30
-    const twentyFourHour = text.match(/^(\d{1,2}):(\d{2})$/);
+    // 24-hour format, for example 13:30.
+    const twentyFourHour = text.match(
+      /^(\d{1,2}):(\d{2})$/
+    );
 
     if (twentyFourHour) {
-      return Number(twentyFourHour[1]) * 60 +
-        Number(twentyFourHour[2]);
+      return (
+        Number(twentyFourHour[1]) * 60 +
+        Number(twentyFourHour[2])
+      );
     }
 
     return null;
@@ -1245,44 +1572,48 @@ export default function PreviewField({
     ).padStart(2, "0")}`;
   };
 
-
-  const getTimeOptions = (element) => {
+  const getTimeOptions = (elementToUse) => {
     const step = Math.max(
       1,
-      Math.min(60, Number(element.timeStep) || 15)
+      Math.min(60, Number(elementToUse.timeStep) || 15)
     );
 
-    const timeFormat = element.timeFormat || "24h";
+    const timeFormat = elementToUse.timeFormat || "24h";
 
-    // Apply start/end restrictions only when explicitly enabled.
-    const start = element.enableStartTime === true
-      ? getTimeMinutes(element.startTime)
-      : 0;
+    const start =
+      elementToUse.enableStartTime === true
+        ? getTimeMinutes(elementToUse.startTime)
+        : 0;
 
-    const end = element.enableEndTime === true
-      ? getTimeMinutes(element.endTime)
-      : 23 * 60 + 59;
+    const end =
+      elementToUse.enableEndTime === true
+        ? getTimeMinutes(elementToUse.endTime)
+        : 23 * 60 + 59;
 
     if (start === null || end === null || start > end) {
       return [];
     }
 
-    const options = [];
+    const timeOptions = [];
 
-    for (let minutes = start; minutes <= end; minutes += step) {
-      const formattedTime = formatTimeOption(minutes, timeFormat);
+    for (
+      let minutes = start;
+      minutes <= end;
+      minutes += step
+    ) {
+      const formattedTime = formatTimeOption(
+        minutes,
+        timeFormat
+      );
 
-      options.push({
+      timeOptions.push({
         label: formattedTime,
         value: formattedTime,
       });
     }
 
-    return options;
+    return timeOptions;
   };
-
-
-
   // =========================================================
   // 8. ELEMENT RENDERING
   // =========================================================
