@@ -2487,3 +2487,22 @@
   box-shadow: none !important;
 }
 /* //end */
+
+/* =====================================================
+   EDITOR PREVIEW - PREVENT INPUT FOCUS AND TYPING
+   ===================================================== */
+/* Remove focus appearance in editor preview */
+/* .preview-element input:focus,
+.preview-element textarea:focus,
+.preview-element select:focus,
+.preview-element .Polaris-TextField:focus-within,
+.preview-element .Polaris-Select:focus-within {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Hide text caret */
+/* .preview-element input,
+.preview-element textarea {
+  caret-color: transparent !important;
+} */ 

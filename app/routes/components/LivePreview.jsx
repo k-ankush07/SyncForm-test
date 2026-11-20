@@ -255,40 +255,91 @@ function DraggablePreviewElement({
   // interactive controls (inputs, selects, buttons, dialogs ...).
   // ---------------------------------------------------------------
 
-  const handlePreviewPointerDown = (event) => {
-    const target = event.target;
 
-    // Ignore the actual popup.
-    if (target.closest(".Polaris-Popover")) {
-      return;
-    }
+// Prevent editor controls from keeping keyboard focus.
+const handlePreviewMouseDown = (event) => {
+  if (isModelPreview) return;
 
-    // Color input is allowed to initiate dragging.
-    const isColorInput = target.closest(".color-input-activator");
+  const target = event.target;
 
-    // Allow dragging directly from Star Rating buttons.
-    const isRatingStarButton = target.closest(".rating-star-button");
+  if (!(target instanceof Element)) return;
 
-    if (
-      !isColorInput &&
-      !isRatingStarButton &&
-      target.closest(
-        [
-          ".preview-drop-zone",
-          "input:not([readonly])",
-          "select",
-          "button",
-          "[role='dialog']",
-          "[contenteditable='true']",
-        ].join(",")
-      )
-    ) {
-      return;
-    }
+  if (
+    target.closest(
+      "input, textarea, select, button, [role='combobox'], [contenteditable='true']"
+    )
+  ) {
+    // Prevent the browser's default focus behavior.
+    // This does not cancel the earlier pointer event used by DnD Kit.
+    event.preventDefault();
+  }
+};
 
-    // Start DnD Kit pointer sensor.
-    listeners?.onPointerDown?.(event);
-  };
+// Remove focus if a control receives it through another interaction.
+const handlePreviewFocus = (event) => {
+  if (isModelPreview) return;
+
+  const target = event.target;
+
+  if (!(target instanceof HTMLElement)) return;
+
+  if (
+    target.matches(
+      "input, textarea, select, button, [role='combobox'], [contenteditable='true']"
+    )
+  ) {
+    target.blur();
+  }
+};
+
+// Prevent editor-mode controls from executing their customer-facing actions.
+const handlePreviewClick = (event) => {
+  if (isModelPreview) return;
+
+  const target = event.target;
+
+  if (!(target instanceof Element)) return;
+
+  if (
+    target.closest(
+      ".preview-drop-zone, .element-floating-toolbar, .Polaris-Popover"
+    )
+  ) {
+    return;
+  }
+
+  if (
+    target.closest(
+      "input, textarea, select, button, [role='combobox'], [contenteditable='true']"
+    )
+  ) {
+    event.preventDefault();
+  }
+};
+
+// ---------------------------------------------------------------
+// START DRAGGING FROM ANYWHERE INSIDE THE PREVIEW FIELD
+// ---------------------------------------------------------------
+
+const handlePreviewPointerDown = (event) => {
+  const target = event.target;
+
+  if (!(target instanceof Element)) return;
+
+  // Do not start dragging from insertion zones or editor popups.
+  if (
+    target.closest(
+      ".preview-drop-zone, .Polaris-Popover, .element-floating-toolbar"
+    )
+  ) {
+    return;
+  }
+
+  // Start DnD Kit pointer sensor.
+  // This also allows dragging directly from inputs and dropdowns.
+  listeners?.onPointerDown?.(event);
+};
+
 
   // ---------------------------------------------------------------
   // STYLE
@@ -313,16 +364,76 @@ function DraggablePreviewElement({
     boxSizing: "border-box",
   };
 
+  // const handlePreviewFocus = (event) => {
+  //   if (isModelPreview) return;
+
+  //   const target = event.target;
+
+  //   if (!(target instanceof Element)) return;
+
+  //   // Prevent text inputs and other controls from keeping focus.
+  //   if (
+  //     target.matches(
+  //       "input:not([type='checkbox']):not([type='radio']), textarea, select"
+  //     )
+  //   ) {
+  //     target.blur();
+  //   }
+  // };
+
+
   return (
+
     <div
       ref={setNodeRef}
       {...attributes}
+
+      // Select the field before its child control handles the pointer.
+
+
+      onPointerDownCapture={(event) => {
+        if (isModelPreview) return;
+
+        const target = event.target;
+
+        if (!(target instanceof Element)) return;
+
+
+
+        // Ignore editor controls.
+        if (
+          target.closest(
+            [
+              ".preview-drop-zone",
+              ".element-floating-toolbar",
+              ".Polaris-Popover",
+            ].join(",")
+          )
+        ) {
+          return;
+        }
+
+        // Select the field when clicking anywhere inside it.
+        onSelectElement?.(element);
+
+        // Do not preventDefault here.
+        // DnD Kit needs the pointer event to start dragging.
+      }}
+
+
+
+      // Keep your existing drag behavior.
+      onMouseDownCapture={handlePreviewMouseDown}
+      onFocusCapture={handlePreviewFocus}
       onPointerDown={handlePreviewPointerDown}
+        onClickCapture={handlePreviewClick}
+
       style={{
         ...dragStyle,
         display: isHidden ? "none" : undefined,
         cursor: isDragging ? "grabbing" : "default",
       }}
+
       className={[
         "preview-element",
         element.customClass || "",
@@ -332,13 +443,8 @@ function DraggablePreviewElement({
       ]
         .filter(Boolean)
         .join(" ")}
-      onClick={(event) => {
-        if (!isModelPreview) {
-          event.stopPropagation();
-          onSelectElement?.(element);
-        }
-      }}
     >
+
       {/* ---------- DROP ZONES AROUND THE ELEMENT ---------- */}
 
       {/* Standalone/root elements can have top and bottom insertion. */}

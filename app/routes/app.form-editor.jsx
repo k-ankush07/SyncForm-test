@@ -30,11 +30,6 @@
 //        4.7 Render
 // =====================================================================
 
-
-// =====================================================================
-// 1. IMPORTS
-// =====================================================================
-
 import React, { useState, useEffect, useRef } from "react";
 import { useFetcher, useSearchParams } from "react-router";
 
@@ -1902,294 +1897,455 @@ const updateSelectedElement = (updatedElement) => {
   // PREVIEW DRAG END
   // Separate from the ElementsPanel drag handler. Moves an element that
   // is dragged inside LivePreview.
-  const handlePreviewDragEnd = ({ active, over }) => {
-    if (!over) return;
 
-    const activeData = active.data.current;
-    const overData = over.data.current;
+// =====================================================================
+// PREVIEW DRAG END
+// Handles moving fields/elements inside LivePreview.
+//
+// Supported destinations:
+// 1. previewDrop      -> Around another element (top/bottom/left/right)
+// 2. previewRowInsert -> Between two rows
+// 3. rootDrop         -> General preview area
+//
+// Important:
+// - Supports fields, elements and rootElements.
+// - Supports moving within the same row.
+// - Supports moving between different rows.
+// - Supports moving between pages.
+// - Does not mutate the original React state.
+// - Does not normalize away newly created single-element rows.
+// =====================================================================
 
-    if (
-      !activeData ||
-      !overData ||
-      activeData.type !== "previewElement"
-    ) {
-      return;
+const handlePreviewDragEnd = ({ active, over }) => {
+  if (!over) return;
+
+  const activeData = active.data.current;
+  const overData = over.data.current;
+
+  // Only handle elements dragged from LivePreview.
+  if (
+    !activeData ||
+    !overData ||
+    activeData.type !== "previewElement"
+  ) {
+    return;
+  }
+
+  // Only allow drops onto supported preview targets.
+  if (
+    !["previewDrop", "previewRowInsert", "rootDrop"].includes(
+      overData.type
+    )
+  ) {
+    return;
+  }
+
+  // Do not move an element to another page accidentally.
+  if (overData.pageId == null) return;
+
+  setPages((previousPages) => {
+    // ---------------------------------------------------------------
+    // STEP 1: Create independent copies of pages, rows and collections.
+    // ---------------------------------------------------------------
+
+    const updatedPages = previousPages.map((page) => ({
+      ...page,
+
+      rows: (page.rows ?? []).map((row) => ({
+        ...row,
+        fields: [...(row.fields ?? [])],
+        elements: [...(row.elements ?? [])],
+      })),
+
+      rootElements: [...(page.rootElements ?? [])],
+    }));
+
+    // ---------------------------------------------------------------
+    // STEP 2: Find the source page and target page.
+    // ---------------------------------------------------------------
+
+    const sourcePage = updatedPages.find(
+      (page) =>
+        String(page.id) === String(activeData.pageId)
+    );
+
+    const targetPage = updatedPages.find(
+      (page) =>
+        String(page.id) === String(overData.pageId)
+    );
+
+    if (!sourcePage || !targetPage) {
+      return previousPages;
     }
 
-    setPages((previousPages) => {
-      // Clone page data to avoid mutating React state.
-      const updatedPages = previousPages.map((page) => ({
-        ...page,
+    // ---------------------------------------------------------------
+    // STEP 3: Find and remove the dragged element.
+    // ---------------------------------------------------------------
 
-        rows: (page.rows ?? []).map((row) => ({
-          ...row,
-          fields: [...(row.fields ?? [])],
-          elements: [...(row.elements ?? [])],
-        })),
+    let draggedElement = null;
 
-        rootElements: [...(page.rootElements ?? [])],
-      }));
-
-      // Find the source page.
-      const sourcePage = updatedPages.find(
-        (page) => page.id === activeData.pageId
+    if (activeData.collection === "rootElements") {
+      const sourceIndex = sourcePage.rootElements.findIndex(
+        (item) =>
+          String(item.id) === String(activeData.elementId)
       );
 
-      if (!sourcePage) return previousPages;
+      if (sourceIndex === -1) return previousPages;
 
-      let draggedElement = null;
-
-      // Remove the element from its original collection.
-      if (activeData.collection === "rootElements") {
-        const index = sourcePage.rootElements.findIndex(
-          (item) => item.id === activeData.elementId
-        );
-
-        if (index !== -1) {
-          [draggedElement] = sourcePage.rootElements.splice(index, 1);
-        }
-      } else {
-        const sourceRow = sourcePage.rows.find(
-          (row) => row.id === activeData.rowId
-        );
-
-        if (!sourceRow) return previousPages;
-
-        const sourceItems = sourceRow[activeData.collection];
-
-        if (!Array.isArray(sourceItems)) return previousPages;
-
-        const index = sourceItems.findIndex(
-          (item) => item.id === activeData.elementId
-        );
-
-        if (index !== -1) {
-          [draggedElement] = sourceItems.splice(index, 1);
-        }
+      [draggedElement] = sourcePage.rootElements.splice(
+        sourceIndex,
+        1
+      );
+    } else {
+      // Only fields and elements are valid row collections.
+      if (
+        !["fields", "elements"].includes(activeData.collection)
+      ) {
+        return previousPages;
       }
 
-      if (!draggedElement) return previousPages;
-
-      // Find the destination page.
-      const targetPage = updatedPages.find(
-        (page) => page.id === overData.pageId
+      const sourceRow = sourcePage.rows.find(
+        (row) =>
+          String(row.id) === String(activeData.rowId)
       );
 
-      if (!targetPage) return previousPages;
+      if (!sourceRow) return previousPages;
 
-      // CASE 0: DROP BETWEEN TWO ROWS
-      // The element stays standalone and remembers its position.
-      if (overData.type === "previewRowInsert") {
-        const targetIndex = targetPage.rows.findIndex(
-          (row) => row.id === overData.targetRowId
-        );
+      const sourceItems = sourceRow[activeData.collection];
 
-        if (targetIndex === -1) return previousPages;
+      const sourceIndex = sourceItems.findIndex(
+        (item) =>
+          String(item.id) === String(activeData.elementId)
+      );
 
-        // Remove any empty source rows left after dragging.
-        // Keep the target row because it is our insertion anchor.
-        targetPage.rows = targetPage.rows.filter(
-          (row) =>
-            row.id === overData.targetRowId ||
-            (row.fields?.length ?? 0) > 0 ||
-            (row.elements?.length ?? 0) > 0
-        );
+      if (sourceIndex === -1) return previousPages;
 
-        // Make sure the target row still exists.
-        const updatedTargetIndex = targetPage.rows.findIndex(
-          (row) => row.id === overData.targetRowId
-        );
+      [draggedElement] = sourceItems.splice(sourceIndex, 1);
+    }
 
-        if (updatedTargetIndex === -1) return previousPages;
+    if (!draggedElement) return previousPages;
 
-        // Remove any old standalone positioning metadata.
-        const {
-          insertBeforeRowId,
-          insertAfterRowId,
-          ...elementWithoutPosition
-        } = draggedElement;
+    // Remove old standalone positioning metadata.
+    // The destination will decide the new position.
+    const {
+      insertBeforeRowId,
+      insertAfterRowId,
+      ...elementWithoutPosition
+    } = draggedElement;
 
-        // Keep the element standalone and remember its position.
-        const standaloneElement = {
-          ...elementWithoutPosition,
+    draggedElement = elementWithoutPosition;
+
+    // ---------------------------------------------------------------
+    // STEP 4: Helper to remove only EMPTY rows.
+    //
+    // We intentionally keep single-element rows.
+    // They must not disappear just because an element was moved.
+    // ---------------------------------------------------------------
+
+    const removeEmptyRows = (page) => {
+      page.rows = page.rows.filter(
+        (row) =>
+          (row.fields?.length ?? 0) > 0 ||
+          (row.elements?.length ?? 0) > 0
+      );
+    };
+
+    // ---------------------------------------------------------------
+    // CASE 1: DROP BETWEEN ROWS.
+    //
+    // Keep the dragged element standalone and position it before
+    // or after the target row.
+    // ---------------------------------------------------------------
+
+    if (overData.type === "previewRowInsert") {
+      const originalTargetRows = [...targetPage.rows];
+
+      const originalTargetIndex = originalTargetRows.findIndex(
+        (row) =>
+          String(row.id) === String(overData.targetRowId)
+      );
+
+      if (originalTargetIndex === -1) {
+        return previousPages;
+      }
+
+      // Remove empty source rows, but keep single-element rows.
+      removeEmptyRows(sourcePage);
+
+      // The target row may have been the source row.
+      // Find it again after removing the dragged element.
+      const targetStillExists = targetPage.rows.some(
+        (row) =>
+          String(row.id) === String(overData.targetRowId)
+      );
+
+      let standaloneElement;
+
+      if (targetStillExists) {
+        standaloneElement = {
+          ...draggedElement,
+
           ...(overData.placement === "before"
             ? { insertBeforeRowId: overData.targetRowId }
             : { insertAfterRowId: overData.targetRowId }),
         };
+      } else {
+        // The dragged element was the only element in the target row.
+        // Use the nearest surviving row as the new insertion anchor.
 
-        targetPage.rootElements = targetPage.rootElements || [];
-        targetPage.rootElements.push(standaloneElement);
-
-        return updatedPages;
-      }
-
-      // CASE 1: Drop outside a row.
-      // Move the element into rootElements (full width).
-      if (overData.type === "rootDrop") {
-        targetPage.rootElements.push(draggedElement);
-
-        return normalizeRows(updatedPages);
-      }
-
-      if (overData.type !== "previewDrop") {
-        return previousPages;
-      }
-
-      const {
-        placement,
-        targetRowId,
-        targetElementId,
-      } = overData;
-
-      // CASE 2: Drop above or below another element.
-      // Creates a new full-width row (or reorders rootElements).
-      if (placement === "top" || placement === "bottom") {
-        // If the target is a root element, insert into rootElements.
-        if (overData.targetCollection === "rootElements") {
-          const targetIndex = targetPage.rootElements.findIndex(
-            (item) => item.id === targetElementId
+        const nextSurvivingRow = originalTargetRows
+          .slice(originalTargetIndex + 1)
+          .find((originalRow) =>
+            targetPage.rows.some(
+              (row) => row.id === originalRow.id
+            )
           );
 
-          if (targetIndex === -1) return previousPages;
-
-          targetPage.rootElements.splice(
-            placement === "top" ? targetIndex : targetIndex + 1,
-            0,
-            draggedElement
+        const previousSurvivingRow = originalTargetRows
+          .slice(0, originalTargetIndex)
+          .reverse()
+          .find((originalRow) =>
+            targetPage.rows.some(
+              (row) => row.id === originalRow.id
+            )
           );
 
-          return normalizeRows(updatedPages);
-        }
-
-        // Find the target row.
-        const targetIndex = targetPage.rows.findIndex(
-          (row) => row.id === targetRowId
-        );
-
-        if (targetIndex === -1) return previousPages;
-
-        // Create a new row using the dragged element's collection.
-        const newRow = {
-          id: crypto.randomUUID(),
-
-          fields:
-            activeData.collection === "fields"
-              ? [draggedElement]
-              : [],
-
-          elements:
-            activeData.collection === "fields"
-              ? []
-              : [draggedElement],
-        };
-
-        targetPage.rows.splice(
-          placement === "top" ? targetIndex : targetIndex + 1,
-          0,
-          newRow
-        );
-
-        return normalizeRows(updatedPages);
-      }
-
-      // CASE 3: Drop to the left or right of another element.
-      if (placement === "left" || placement === "right") {
-        // Beside a ROOT element: create a new row containing both
-        // elements (root elements don't keep a fields/elements
-        // collection, so both go into `elements`).
-        if (overData.targetCollection === "rootElements") {
-          const targetIndex = targetPage.rootElements.findIndex(
-            (item) => item.id === targetElementId
-          );
-
-          if (targetIndex === -1) return previousPages;
-
-          // Get the target element before removing it.
-          const targetElement = targetPage.rootElements[targetIndex];
-
-          // Remove the target element from rootElements.
-          targetPage.rootElements.splice(targetIndex, 1);
-
-          const newRow = {
-            id: crypto.randomUUID(),
-            fields: [],
-            elements:
-              placement === "left"
-                ? [draggedElement, targetElement]
-                : [targetElement, draggedElement],
+        if (nextSurvivingRow) {
+          standaloneElement = {
+            ...draggedElement,
+            insertBeforeRowId: nextSurvivingRow.id,
           };
-
-          targetPage.rows.push(newRow);
-
-          return normalizeRows(updatedPages);
+        } else if (previousSurvivingRow) {
+          standaloneElement = {
+            ...draggedElement,
+            insertAfterRowId: previousSurvivingRow.id,
+          };
+        } else {
+          // No rows remain. Keep it as a normal root element.
+          standaloneElement = draggedElement;
         }
+      }
 
-        // Beside an element inside a row: insert into that row.
-        const targetRow = targetPage.rows.find(
-          (row) => row.id === targetRowId
-        );
+      targetPage.rootElements.push(standaloneElement);
 
-        if (!targetRow) return previousPages;
+      removeEmptyRows(targetPage);
 
-        const targetItems = targetRow[overData.targetCollection];
+      return updatedPages;
+    }
 
-        if (!Array.isArray(targetItems)) return previousPages;
+    // ---------------------------------------------------------------
+    // CASE 2: DROP INTO THE GENERAL PREVIEW AREA.
+    //
+    // Move the element into rootElements (full width).
+    // ---------------------------------------------------------------
 
-        const targetIndex = targetItems.findIndex(
-          (item) => item.id === targetElementId
+    if (overData.type === "rootDrop") {
+      targetPage.rootElements.push(draggedElement);
+
+      removeEmptyRows(sourcePage);
+      removeEmptyRows(targetPage);
+
+      return updatedPages;
+    }
+
+    // ---------------------------------------------------------------
+    // CASE 3: DROP ABOVE OR BELOW ANOTHER ELEMENT.
+    //
+    // For a row element, create a new full-width row.
+    // For a root element, reorder it in rootElements.
+    // ---------------------------------------------------------------
+
+    const {
+      placement,
+      targetRowId,
+      targetElementId,
+      targetCollection,
+    } = overData;
+
+    if (placement === "top" || placement === "bottom") {
+      // CASE 3A: Target is another standalone root element.
+      if (targetCollection === "rootElements") {
+        const targetIndex = targetPage.rootElements.findIndex(
+          (item) =>
+            String(item.id) === String(targetElementId)
         );
 
         if (targetIndex === -1) return previousPages;
 
-        targetItems.splice(
-          placement === "left"
+        targetPage.rootElements.splice(
+          placement === "top"
             ? targetIndex
             : targetIndex + 1,
           0,
           draggedElement
         );
 
-        // IMPORTANT: normalize only AFTER inserting the dragged element.
-        // This allows left/right drops within the same row to work.
-        return normalizeRows(updatedPages);
+        removeEmptyRows(sourcePage);
+
+        return updatedPages;
       }
 
-      return previousPages;
-    });
-  };
+      // CASE 3B: Target is inside a row.
+      const targetIndex = targetPage.rows.findIndex(
+        (row) =>
+          String(row.id) === String(targetRowId)
+      );
 
-  // PREVIEW COLLISION DETECTION
-  // Preview drop zones take priority over the large root drop area
-  // underneath them.
-  const previewCollisionDetection = (args) => {
-    const collisions = pointerWithin(args);
+      if (targetIndex === -1) return previousPages;
 
-    const getType = (collision) =>
-      collision.data?.droppableContainer?.data.current?.type;
+      const newRow = {
+        id: crypto.randomUUID(),
 
-    // Priority 1: Drop between rows.
-    const rowInsertCollisions = collisions.filter(
-      (collision) => getType(collision) === "previewRowInsert"
-    );
+        fields:
+          activeData.collection === "fields"
+            ? [draggedElement]
+            : [],
 
-    if (rowInsertCollisions.length > 0) {
-      return rowInsertCollisions;
+        elements:
+          activeData.collection === "fields"
+            ? []
+            : [draggedElement],
+      };
+
+      targetPage.rows.splice(
+        placement === "top"
+          ? targetIndex
+          : targetIndex + 1,
+        0,
+        newRow
+      );
+
+      removeEmptyRows(sourcePage);
+
+      return updatedPages;
     }
 
-    // Priority 2: Drop around individual elements.
-    const edgeCollisions = collisions.filter(
-      (collision) => getType(collision) === "previewDrop"
-    );
+    // ---------------------------------------------------------------
+    // CASE 4: DROP LEFT OR RIGHT OF ANOTHER ELEMENT.
+    // ---------------------------------------------------------------
 
-    if (edgeCollisions.length > 0) {
-      return edgeCollisions;
+    if (placement === "left" || placement === "right") {
+      // CASE 4A: Target is a standalone root element.
+      // Convert both elements into a new row.
+      if (targetCollection === "rootElements") {
+        const targetIndex = targetPage.rootElements.findIndex(
+          (item) =>
+            String(item.id) === String(targetElementId)
+        );
+
+        if (targetIndex === -1) return previousPages;
+
+        const [targetElement] = targetPage.rootElements.splice(
+          targetIndex,
+          1
+        );
+
+        const newRow = {
+          id: crypto.randomUUID(),
+          fields: [],
+
+          elements:
+            placement === "left"
+              ? [draggedElement, targetElement]
+              : [targetElement, draggedElement],
+        };
+
+        targetPage.rows.push(newRow);
+
+        removeEmptyRows(sourcePage);
+
+        return updatedPages;
+      }
+
+      // CASE 4B: Target is inside an existing row.
+      // Insert directly into the target collection.
+      if (
+        !["fields", "elements"].includes(targetCollection)
+      ) {
+        return previousPages;
+      }
+
+      const targetRow = targetPage.rows.find(
+        (row) =>
+          String(row.id) === String(targetRowId)
+      );
+
+      if (!targetRow) return previousPages;
+
+      const targetItems = targetRow[targetCollection];
+
+      if (!Array.isArray(targetItems)) {
+        return previousPages;
+      }
+
+      const targetIndex = targetItems.findIndex(
+        (item) =>
+          String(item.id) === String(targetElementId)
+      );
+
+      if (targetIndex === -1) return previousPages;
+
+      targetItems.splice(
+        placement === "left"
+          ? targetIndex
+          : targetIndex + 1,
+        0,
+        draggedElement
+      );
+
+      removeEmptyRows(sourcePage);
+
+      return updatedPages;
     }
 
-    // Priority 3: Drop into the general preview area.
-    return collisions.filter(
-      (collision) => getType(collision) === "rootDrop"
-    );
-  };
+    // Unsupported placement.
+    return previousPages;
+  });
+};
+
+
+// =====================================================================
+// PREVIEW COLLISION DETECTION
+//
+// Priority:
+// 1. previewRowInsert
+// 2. previewDrop
+// 3. rootDrop
+//
+// This ensures small insertion zones are selected before the
+// large general preview drop area.
+// =====================================================================
+
+const previewCollisionDetection = (args) => {
+  const collisions = pointerWithin(args);
+
+  const getType = (collision) =>
+    collision.data?.droppableContainer?.data?.current?.type;
+
+  const rowInsertCollisions = collisions.filter(
+    (collision) =>
+      getType(collision) === "previewRowInsert"
+  );
+
+  if (rowInsertCollisions.length > 0) {
+    return rowInsertCollisions;
+  }
+
+  const previewDropCollisions = collisions.filter(
+    (collision) =>
+      getType(collision) === "previewDrop"
+  );
+
+  if (previewDropCollisions.length > 0) {
+    return previewDropCollisions;
+  }
+
+  return collisions.filter(
+    (collision) =>
+      getType(collision) === "rootDrop"
+  );
+};
+
 
   // Expand settings panel when custom header/footer is enabled
 // and its text editor is displayed in PageSettings.

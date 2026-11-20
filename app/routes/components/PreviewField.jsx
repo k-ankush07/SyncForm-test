@@ -507,6 +507,82 @@ function FlatpickrField({
     />
   );
 }
+// =====================================================================
+// REUSABLE TEXT INPUT SHELL
+// ---------------------------------------------------------------------
+// Gives text-based fields the same appearance as the phone field:
+// left icon + divider + input.
+// =====================================================================
+
+function PreviewInputShell({
+  label,
+  required,
+  icon,
+  description,
+  children,
+}) {
+  return (
+    <BlockStack gap="200">
+      {/* FIELD LABEL */}
+      {label && (
+        <Text as="label" variant="bodyMd">
+          {label}
+          {required && (
+            <span style={{ color: "var(--p-color-text-critical)" }}>
+              {" "}*
+            </span>
+          )}
+        </Text>
+      )}
+
+      {/* INPUT WITH LEFT ICON */}
+      <div
+        style={{
+          display: "flex",
+          width: "100%",
+          minWidth: 0,
+          alignItems: "stretch",
+          background: "#F6F6F7",
+          borderRadius: "8px",
+          boxSizing: "border-box",
+          overflow: "hidden",
+        }}
+      >
+        {/* LEFT ICON AREA */}
+        {icon && (
+          <div
+            style={{
+              width: "42px",
+              minWidth: "42px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              background: "#E8E8E9",
+              borderRight: "1px solid #D8DADD",
+              borderRadius: "8px 0 0 8px",
+              boxSizing: "border-box",
+            }}
+          >
+            <Icon source={icon} />
+          </div>
+        )}
+
+        {/* INPUT AREA */}
+        <div
+          style={{
+            flex: 1,
+            minWidth: 0,
+          }}
+        >
+          {children}
+        </div>
+      </div>
+
+      {/* DESCRIPTION */}
+      {description}
+    </BlockStack>
+  );
+}
 
 
 // =============================================================
@@ -930,6 +1006,51 @@ export default function PreviewField({
   useEffect(() => {
     setImageDropdownOpen(false);
   }, [normalizedElement.id]);
+
+
+  // ===========================================================
+  // REPEATER STATE
+  // ===========================================================
+
+  // Repeater values must always be stored as an array.
+  const getInitialRepeaterItems = () => {
+    if (Array.isArray(savedValue)) {
+      return savedValue;
+    }
+
+    if (
+      savedValue !== undefined &&
+      savedValue !== null &&
+      savedValue !== ""
+    ) {
+      return [String(savedValue)];
+    }
+
+    return [""];
+  };
+
+  const [repeaterItems, setRepeaterItems] = useState(
+    getInitialRepeaterItems
+  );
+
+  // Synchronize when the parent loads or changes saved data.
+  // Do not reset local state if the parent sends back the same array.
+  useEffect(() => {
+    const nextItems = getInitialRepeaterItems();
+
+    setRepeaterItems((previous) =>
+      JSON.stringify(previous) === JSON.stringify(nextItems)
+        ? previous
+        : nextItems
+    );
+  }, [normalizedElement.id, savedValue]);
+
+  // Update Repeater locally AND send the array to LivePreview.
+  const updateRepeaterValue = (nextItems) => {
+    setRepeaterItems(nextItems);
+    reportChange(nextItems);
+  };
+
 
   // ===========================================================
   // 4. SYNCHRONIZE SAVED TEXT VALUES
@@ -1628,67 +1749,100 @@ export default function PreviewField({
     // EMAIL
     // -------------------------------------------------------
 
-    case "email":
-      return (
-        <BlockStack gap="300">
+   // -------------------------------------------------------
+// EMAIL
+// -------------------------------------------------------
+
+case "email": {
+  const {
+    label: _label,
+    prefix: _prefix,
+    helpText: _helpText,
+    ...emailFieldProps
+  } = commonTextFieldProps;
+
+  return (
+    <BlockStack gap="300">
+      {/* MAIN EMAIL FIELD */}
+      <PreviewInputShell
+        label={label}
+        required={required}
+        icon={selectedIcon}
+        description={descriptionText}
+      >
+        <TextField
+          {...emailFieldProps}
+          type="email"
+          autoComplete="email"
+          value={value}
+          onChange={(nextValue) => {
+            setValue(nextValue);
+
+            reportChange({
+              email: nextValue,
+              confirmEmail: confirmEmailValue,
+            });
+          }}
+          label=""
+          labelHidden
+          placeholder={placeholder}
+          readOnly={isReadOnly}
+          disabled={isReadOnly}
+          requiredIndicator={false}
+          borderless
+          minLength={
+            normalizedElement.limitCharacters &&
+            normalizedElement.minCharacters !== ""
+              ? Number(normalizedElement.minCharacters)
+              : undefined
+          }
+          maxLength={
+            normalizedElement.limitCharacters &&
+            normalizedElement.maxCharacters !== ""
+              ? Number(normalizedElement.maxCharacters)
+              : undefined
+          }
+        />
+      </PreviewInputShell>
+
+      {/* CONFIRM EMAIL FIELD */}
+      {normalizedElement.confirmEmail && (
+        <PreviewInputShell
+          label={normalizedElement.confirmEmailLabel || "Confirm email"}
+          required={required}
+          icon={selectedIcon}
+          description={
+            normalizedElement.confirmEmailDescription || undefined
+          }
+        >
           <TextField
-            {...commonTextFieldProps}
             type="email"
             autoComplete="email"
-            value={value}
+            value={confirmEmailValue}
             onChange={(nextValue) => {
-              setValue(nextValue);
+              setConfirmEmailValue(nextValue);
 
               reportChange({
-                email: nextValue,
-                confirmEmail: confirmEmailValue,
+                email: value,
+                confirmEmail: nextValue,
               });
             }}
+            label=""
+            labelHidden
+            placeholder={
+              normalizedElement.confirmEmailPlaceholder ||
+              "Confirm your email"
+            }
             readOnly={isReadOnly}
-            prefix:inputIconPrefix
-            minLength={
-              normalizedElement.limitCharacters &&
-                normalizedElement.minCharacters !== ""
-                ? Number(normalizedElement.minCharacters)
-                : undefined
-            }
-            maxLength={
-              normalizedElement.limitCharacters &&
-                normalizedElement.maxCharacters !== ""
-                ? Number(normalizedElement.maxCharacters)
-                : undefined
-            }
+            disabled={isReadOnly}
+            requiredIndicator={false}
+            borderless
           />
-
-          {normalizedElement.confirmEmail && (
-            <TextField
-              label={normalizedElement.confirmEmailLabel || "Confirm email"}
-              labelHidden={hideLabel}
-              prefix={commonTextFieldProps.prefix}
-              placeholder={
-                normalizedElement.confirmEmailPlaceholder ||
-                "Confirm your email"
-              }
-              helpText={
-                normalizedElement.confirmEmailDescription || undefined
-              }
-              type="email"
-              autoComplete="email"
-              value={confirmEmailValue}
-              onChange={(nextValue) => {
-                setConfirmEmailValue(nextValue);
-
-                reportChange({
-                  email: value,
-                  confirmEmail: nextValue,
-                });
-              }}
-              readOnly={isReadOnly}
-              requiredIndicator={required}
-            />
-          )}
-        </BlockStack>
-      );
+        </PreviewInputShell>
+      )}
+    </BlockStack>
+  );
+}
 
     // -------------------------------------------------------
     // NAME
@@ -2476,7 +2630,6 @@ export default function PreviewField({
 
       // =====================================================
       // 3. GET SELECTED ICON
-      // Supports both top-level and nested settings
       // =====================================================
 
       const selectedIconName =
@@ -2511,7 +2664,7 @@ export default function PreviewField({
       };
 
       // =====================================================
-      // 6. FIELD LABEL WITH SELECTED ICON
+      // 6. FIELD LABEL WITH PROPER ICON ALIGNMENT
       // =====================================================
 
       const dropdownLabelWithIcon = (
@@ -2519,18 +2672,55 @@ export default function PreviewField({
           style={{
             display: "flex",
             alignItems: "center",
-            gap: "6px",
+            justifyContent: "flex-start",
+            gap: "7px",
+            width: "100%",
+            minHeight: "20px",
           }}
         >
+          {/* ICON - FIXED WIDTH AND PERFECT CENTER ALIGNMENT */}
+
           {selectedIcon && (
-            <Icon source={selectedIcon} />
+            <span
+              style={{
+                width: "20px",
+                minWidth: "20px",
+                height: "20px",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+              }}
+            >
+              <Icon source={selectedIcon} />
+            </span>
           )}
 
-          <span>{label}</span>
+          {/* LABEL TEXT */}
 
-          {required && (
-            <span style={{ color: "#D72C0D" }}>*</span>
-          )}
+          <span
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "3px",
+              fontSize: "14px",
+              lineHeight: "20px",
+              color: "#303030",
+            }}
+          >
+            {label}
+
+            {required && (
+              <span
+                style={{
+                  color: "#D72C0D",
+                  lineHeight: "20px",
+                }}
+              >
+                *
+              </span>
+            )}
+          </span>
         </div>
       );
 
@@ -2542,6 +2732,7 @@ export default function PreviewField({
         <BlockStack gap="200">
 
           {/* FIELD LABEL */}
+
           {dropdownLabelWithIcon}
 
           <div
@@ -2647,7 +2838,6 @@ export default function PreviewField({
 
                 {/* =====================================
                 SEARCH BAR
-                Only shown when search is enabled
             ===================================== */}
 
                 {normalizedElement.selectWithSearch && (
@@ -2746,8 +2936,6 @@ export default function PreviewField({
 
                   ) : (
 
-                    /* NO SEARCH RESULTS */
-
                     <div
                       style={{
                         padding: "14px",
@@ -2781,12 +2969,21 @@ export default function PreviewField({
     // -------------------------------------------------------
     // CHECKBOX
     // -------------------------------------------------------
+
+
     case "checkbox":
     case "checkboxes":
     case "checkbox_group": {
+      // =====================================================
+      // 1. CHECK OTHER OPTION
+      // =====================================================
+
       const otherChecked = selected.includes("__other__");
 
-      // Get minimum and maximum selection limits
+      // =====================================================
+      // 2. GET MINIMUM AND MAXIMUM SELECTION LIMITS
+      // =====================================================
+
       const minSelections = Math.max(
         0,
         Number(normalizedElement.minSelections) || 0
@@ -2801,11 +2998,50 @@ export default function PreviewField({
       const isMaxReached =
         maxSelections > 0 && selected.length >= maxSelections;
 
+      // =====================================================
+      // 3. CHECK COLUMN WIDTH AND SET OPTIONS PER LINE
+      // =====================================================
+
+      const columnWidth = String(normalizedElement.columnWidth);
+
+      let checkboxColumns = null;
+
+      if (columnWidth === "33") {
+        // 33% width = 2 options per line
+        checkboxColumns = 2;
+      } else if (columnWidth === "50") {
+        // 50% width = 3 options per line
+        checkboxColumns = 3;
+      }
+
+      // =====================================================
+      // 4. FINAL CHECKBOX GRID STYLE
+      // Preserve existing styles for other column widths
+      // =====================================================
+
+      const checkboxGridStyle =
+        checkboxColumns !== null
+          ? {
+            ...choiceGridStyle,
+            display: "grid",
+            gridTemplateColumns: `repeat(${checkboxColumns}, minmax(0, 1fr))`,
+          }
+          : choiceGridStyle;
+
+      // =====================================================
+      // 5. RENDER CHECKBOX GROUP
+      // =====================================================
+
       return (
         <BlockStack gap="200">
+
+          {/* FIELD LABEL */}
+
           {fieldLabelWithIcon}
 
-          <div style={choiceGridStyle}>
+          {/* CHECKBOX OPTIONS GRID */}
+
+          <div style={checkboxGridStyle}>
             {options.map((option, index) => {
               const isChecked = selected.includes(option.value);
 
@@ -2844,6 +3080,7 @@ export default function PreviewField({
             })}
 
             {/* OTHER CHECKBOX */}
+
             {normalizedElement.otherOption && (
               <Checkbox
                 label={normalizedElement.otherLabel || "Other"}
@@ -2887,6 +3124,7 @@ export default function PreviewField({
           </div>
 
           {/* OTHER TEXT FIELD */}
+
           {normalizedElement.otherOption && otherChecked && (
             <TextField
               placeholder={
@@ -2906,10 +3144,14 @@ export default function PreviewField({
             />
           )}
 
+          {/* DESCRIPTION */}
+
           {descriptionText}
+
         </BlockStack>
       );
     }
+
 
 
     // -------------------------------------------------------
@@ -3846,76 +4088,119 @@ export default function PreviewField({
     // REPEATER
     // -------------------------------------------------------
 
-
     case "repeater": {
-      const minItems = Math.max(
-        0,
-        Number(normalizedElement.minItems ?? 1)
-      );
+      // ============================================================
+      // 1. MINIMUM AND MAXIMUM SETTINGS
+      // ============================================================
 
-      const maxItems = Math.max(
-        minItems,
-        Number(normalizedElement.maxItems ?? 5)
-      );
+      const parsedMin = Number(normalizedElement.minItems);
+      const parsedMax = Number(normalizedElement.maxItems);
+
+      const minItems =
+        normalizedElement.minItems !== undefined &&
+          normalizedElement.minItems !== "" &&
+          Number.isFinite(parsedMin)
+          ? Math.max(1, Math.floor(parsedMin))
+          : 1;
+
+      const maxItems =
+        normalizedElement.maxItems !== undefined &&
+          normalizedElement.maxItems !== "" &&
+          Number.isFinite(parsedMax)
+          ? Math.max(minItems, Math.floor(parsedMax))
+          : Math.max(5, minItems);
+
+      // ============================================================
+      // 2. CURRENT REPEATER VALUES
+      // ============================================================
+
+      const items = repeaterItems;
+
+      const filledItemsCount = items.filter(
+        (item) => String(item ?? "").trim() !== ""
+      ).length;
+
+      const hasMinItemsError = filledItemsCount < minItems;
 
       const addButtonText =
         normalizedElement.addButtonText || "Add more";
 
-      const items = Array.isArray(value)
-        ? value
-        : value
-          ? [value]
-          : [];
+      // ============================================================
+      // 3. ADD ITEM
+      // ============================================================
 
       const handleAddItem = () => {
         if (isReadOnly || items.length >= maxItems) return;
 
-        const updatedItems = [...items, ""];
-
-        updateValue(updatedItems);
+        updateRepeaterValue([
+          ...items,
+          "",
+        ]);
       };
+
+      // ============================================================
+      // 4. REMOVE ITEM
+      // ============================================================
 
       const handleRemoveItem = (index) => {
         if (isReadOnly || items.length <= minItems) return;
 
-        const updatedItems = items.filter((_, i) => i !== index);
+        const updatedItems = items.filter(
+          (_, itemIndex) => itemIndex !== index
+        );
 
-        updateValue(updatedItems);
+        updateRepeaterValue(updatedItems);
       };
 
+      // ============================================================
+      // 5. UPDATE ITEM
+      // ============================================================
+
       const handleItemChange = (index, newValue) => {
+        if (isReadOnly) return;
+
         const updatedItems = [...items];
 
         updatedItems[index] = newValue;
 
-        updateValue(updatedItems);
+        updateRepeaterValue(updatedItems);
       };
+
+      // ============================================================
+      // 6. RENDER
+      // ============================================================
 
       return (
         <BlockStack gap="200">
+
           {fieldLabelWithIcon}
 
+          {/* Repeater input rows */}
           {items.map((item, index) => (
             <InlineStack
-              key={index}
+              key={`${normalizedElement.id}-${index}`}
               gap="200"
               blockAlign="center"
               wrap={false}
             >
+
+              {/* Editable input */}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <TextField
                   label=""
                   labelHidden
+                  type="text"
                   placeholder={`${placeholder || "Enter value"} ${index + 1}`}
                   value={String(item ?? "")}
                   onChange={(newValue) =>
                     handleItemChange(index, newValue)
                   }
                   autoComplete="off"
-                  readOnly={isReadOnly}
+                  disabled={isReadOnly}
                 />
               </div>
 
+              {/* Remove button */}
               {items.length > minItems && (
                 <Button
                   icon={PolarisIcons.DeleteIcon}
@@ -3925,9 +4210,11 @@ export default function PreviewField({
                   onClick={() => handleRemoveItem(index)}
                 />
               )}
+
             </InlineStack>
           ))}
 
+          {/* Add button */}
           {items.length < maxItems && (
             <div>
               <Button
@@ -3941,6 +4228,7 @@ export default function PreviewField({
             </div>
           )}
 
+          {/* Item count */}
           <Text
             as="p"
             variant="bodySm"
@@ -3949,11 +4237,29 @@ export default function PreviewField({
             {items.length} / {maxItems} items
           </Text>
 
+          {/* Minimum validation */}
+          {hasMinItemsError && (
+            <Text
+              as="p"
+              variant="bodySm"
+              tone="critical"
+            >
+              Minimum {minItems} items required.
+              Please enter at least {minItems} values.
+            </Text>
+          )}
+
+          {/* Description */}
           {normalizedElement.description && (
-            <Text as="p" variant="bodySm" tone="subdued">
+            <Text
+              as="p"
+              variant="bodySm"
+              tone="subdued"
+            >
               {normalizedElement.description}
             </Text>
           )}
+
         </BlockStack>
       );
     }
@@ -4309,8 +4615,6 @@ export default function PreviewField({
         </BlockStack>
       );
     }
-
-
 
     // -------------------------------------------------------
     // SIGNATURE
@@ -5628,7 +5932,6 @@ export default function PreviewField({
         </BlockStack>
       );
     }
-
 
     // -------------------------------------------------------
     // PRODUCT
