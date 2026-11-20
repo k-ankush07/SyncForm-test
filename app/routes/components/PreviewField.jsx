@@ -544,12 +544,12 @@ export default function PreviewField({
   const normalizedElement =
     typeof currentElement === "string"
       ? {
-          type: currentElement
-            .toLowerCase()
-            .trim()
-            .replace(/[\s-]+/g, "_"),
-          label: currentElement,
-        }
+        type: currentElement
+          .toLowerCase()
+          .trim()
+          .replace(/[\s-]+/g, "_"),
+        label: currentElement,
+      }
       : currentElement ?? {};
 
   const type = normalizedElement.type
@@ -762,7 +762,7 @@ export default function PreviewField({
 
   const configuredPhoneCountry =
     normalizedElement.defaultCountryCode &&
-    normalizedElement.defaultCountryCode !== "auto"
+      normalizedElement.defaultCountryCode !== "auto"
       ? normalizedElement.defaultCountryCode.toLowerCase()
       : "in";
 
@@ -996,8 +996,8 @@ export default function PreviewField({
 
     const nextPhoneNumber =
       savedValue &&
-      typeof savedValue === "object" &&
-      !Array.isArray(savedValue)
+        typeof savedValue === "object" &&
+        !Array.isArray(savedValue)
         ? savedValue.number ?? ""
         : savedValue ?? normalizedElement.defaultValue ?? "";
 
@@ -2445,26 +2445,64 @@ export default function PreviewField({
     // DROPDOWN AND SELECT
     // -------------------------------------------------------
 
+
     case "dropdown":
     case "select": {
-      const dropdownOptions = (normalizedElement.options || []).map((option) => ({
-        label:
-          typeof option === "string"
-            ? option
-            : option.label || option.value,
-        value:
-          typeof option === "string"
-            ? option
-            : option.value || option.label,
-      }));
+      // =====================================================
+      // 1. PREPARE DROPDOWN OPTIONS
+      // =====================================================
+
+      const dropdownOptions = (normalizedElement.options || []).map(
+        (option) => ({
+          label:
+            typeof option === "string"
+              ? option
+              : option.label || option.value,
+
+          value:
+            typeof option === "string"
+              ? option
+              : option.value || option.label,
+        })
+      );
+
+      // =====================================================
+      // 2. FIND CURRENTLY SELECTED OPTION
+      // =====================================================
 
       const selectedOption = dropdownOptions.find(
         (option) => option.value === value
       );
 
+      // =====================================================
+      // 3. GET SELECTED ICON
+      // Supports both top-level and nested settings
+      // =====================================================
+
+      const selectedIconName =
+        normalizedElement.selectIcon ||
+        normalizedElement.settings?.selectIcon ||
+        element?.selectIcon ||
+        element?.settings?.selectIcon ||
+        "";
+
+      const selectedIcon = selectedIconName
+        ? PolarisIcons[selectedIconName]
+        : null;
+
+      // =====================================================
+      // 4. FILTER OPTIONS FOR SEARCH
+      // =====================================================
+
       const filteredOptions = dropdownOptions.filter((option) =>
-        option.label.toLowerCase().includes(dropdownSearch.toLowerCase())
+        String(option.label || "")
+          .toLowerCase()
+          .includes(dropdownSearch.toLowerCase())
       );
+
+      // =====================================================
+      // 5. HANDLE OPTION SELECTION
+      // =====================================================
 
       const handleDropdownSelect = (option) => {
         updateValue(option.value);
@@ -2472,16 +2510,57 @@ export default function PreviewField({
         setDropdownSearch("");
       };
 
+      // =====================================================
+      // 6. FIELD LABEL WITH SELECTED ICON
+      // =====================================================
+
+      const dropdownLabelWithIcon = (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "6px",
+          }}
+        >
+          {selectedIcon && (
+            <Icon source={selectedIcon} />
+          )}
+
+          <span>{label}</span>
+
+          {required && (
+            <span style={{ color: "#D72C0D" }}>*</span>
+          )}
+        </div>
+      );
+
+      // =====================================================
+      // 7. RENDER DROPDOWN
+      // =====================================================
+
       return (
         <BlockStack gap="200">
-          {fieldLabelWithIcon}
 
-          <div style={{ position: "relative", width: "100%" }}>
-            {/* DROPDOWN BUTTON */}
+          {/* FIELD LABEL */}
+          {dropdownLabelWithIcon}
+
+          <div
+            style={{
+              position: "relative",
+              width: "100%",
+            }}
+          >
+
+            {/* =========================================
+            DROPDOWN BUTTON
+        ========================================= */}
+
             <button
               type="button"
               disabled={isReadOnly}
-              onClick={() => setDropdownOpen((previous) => !previous)}
+              onClick={() =>
+                setDropdownOpen((previous) => !previous)
+              }
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -2507,8 +2586,12 @@ export default function PreviewField({
                   "Please select"}
               </span>
 
+              {/* ARROW ICON */}
+
               <span
                 style={{
+                  display: "inline-flex",
+                  alignItems: "center",
                   color: "#6D7175",
                   transition: "transform 250ms ease",
                   transform: dropdownOpen
@@ -2520,7 +2603,10 @@ export default function PreviewField({
               </span>
             </button>
 
-            {/* DROPDOWN PANEL */}
+            {/* =========================================
+            DROPDOWN PANEL
+        ========================================= */}
+
             {!isReadOnly && (
               <div
                 style={{
@@ -2531,26 +2617,39 @@ export default function PreviewField({
                   maxHeight: dropdownOpen ? "280px" : "0px",
                   opacity: dropdownOpen ? 1 : 0,
                   visibility: dropdownOpen ? "visible" : "hidden",
+
                   transform: dropdownOpen
                     ? "translateY(0)"
                     : "translateY(-8px)",
+
                   background: "#FFFFFF",
+
                   border: dropdownOpen
                     ? "1px solid #E1E3E5"
                     : "1px solid transparent",
+
                   borderRadius: "8px",
+
                   boxShadow: dropdownOpen
                     ? "0 4px 16px rgba(0,0,0,0.12)"
                     : "none",
+
                   zIndex: 10000,
                   boxSizing: "border-box",
                   overflow: "hidden",
+
                   transition:
                     "max-height 250ms ease, opacity 200ms ease, transform 250ms ease, visibility 250ms ease",
+
                   pointerEvents: dropdownOpen ? "auto" : "none",
                 }}
               >
-                {/* SEARCH BAR - ONLY WHEN ENABLED */}
+
+                {/* =====================================
+                SEARCH BAR
+                Only shown when search is enabled
+            ===================================== */}
+
                 {normalizedElement.selectWithSearch && (
                   <div
                     style={{
@@ -2580,7 +2679,10 @@ export default function PreviewField({
                   </div>
                 )}
 
-                {/* OPTIONS */}
+                {/* =====================================
+                OPTIONS LIST
+            ===================================== */}
+
                 <div
                   style={{
                     maxHeight: "220px",
@@ -2589,6 +2691,7 @@ export default function PreviewField({
                   }}
                 >
                   {filteredOptions.length > 0 ? (
+
                     filteredOptions.map((option) => {
                       const isSelected = value === option.value;
 
@@ -2596,7 +2699,9 @@ export default function PreviewField({
                         <button
                           key={option.value}
                           type="button"
-                          onClick={() => handleDropdownSelect(option)}
+                          onClick={() =>
+                            handleDropdownSelect(option)
+                          }
                           style={{
                             display: "flex",
                             alignItems: "center",
@@ -2606,13 +2711,18 @@ export default function PreviewField({
                             padding: "8px 10px",
                             border: "none",
                             borderRadius: "5px",
+
                             background: isSelected
                               ? "#F1F2F3"
                               : "#FFFFFF",
+
                             cursor: "pointer",
                             textAlign: "left",
                           }}
                         >
+
+                          {/* OPTION LABEL */}
+
                           <span
                             style={{
                               flex: 1,
@@ -2624,28 +2734,49 @@ export default function PreviewField({
                             {option.label}
                           </span>
 
+                          {/* SELECTED CHECKMARK */}
+
                           {isSelected && (
                             <Icon source={PolarisIcons.CheckIcon} />
                           )}
+
                         </button>
                       );
                     })
+
                   ) : (
-                    <div style={{ padding: "14px", textAlign: "center" }}>
-                      <Text as="p" variant="bodySm" tone="subdued">
+
+                    /* NO SEARCH RESULTS */
+
+                    <div
+                      style={{
+                        padding: "14px",
+                        textAlign: "center",
+                      }}
+                    >
+                      <Text
+                        as="p"
+                        variant="bodySm"
+                        tone="subdued"
+                      >
                         No options found.
                       </Text>
                     </div>
+
                   )}
                 </div>
               </div>
             )}
           </div>
 
+          {/* DESCRIPTION */}
+
           {descriptionText}
+
         </BlockStack>
       );
     }
+
 
     // -------------------------------------------------------
     // CHECKBOX
@@ -3644,7 +3775,10 @@ export default function PreviewField({
                 color: "#303030",
               }}
             >
-              {label || "Quantity"}
+              {normalizedElement.label ||
+                normalizedElement.name ||
+                label ||
+                "Quantity"}
             </span>
 
             {/* Current value */}
@@ -4305,129 +4439,129 @@ export default function PreviewField({
     // FILE UPLOAD
     // -------------------------------------------------------
 
-  case "file_upload": {
-  const buttonText =
-    normalizedElement.buttonText || "Browse file";
+    case "file_upload": {
+      const buttonText =
+        normalizedElement.buttonText || "Browse file";
 
-  const filePlaceholder =
-    normalizedElement.placeholder || "Choose file or drag here";
+      const filePlaceholder =
+        normalizedElement.placeholder || "Choose file or drag here";
 
-  const hint =
-    normalizedElement.hint || "PNG, GIF, SVG.";
+      const hint =
+        normalizedElement.hint || "PNG, GIF, SVG.";
 
-  return (
-    <BlockStack gap="200">
-      {!hideLabel && (
-        <Text as="p" variant="bodyMd">
-          {label || "Attachments"}
-          {required && (
-            <span style={{ color: "var(--p-color-text-critical)" }}>
-              {" "}*
-            </span>
-          )}
-        </Text>
-      )}
-
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept={acceptAttribute || undefined}
-        multiple={Boolean(normalizedElement.allowMultiple)}
-        onChange={handleFileSelection}
-        disabled={isReadOnly}
-        style={{ display: "none" }}
-      />
-
-      <div
-        onClick={() => {
-          if (!isReadOnly) {
-            fileInputRef.current?.click();
-          }
-        }}
-        style={{
-          width: "100%",
-          minHeight: "150px",
-          background: "#eeeeee",
-          border: "1px dashed #8c9196",
-          borderRadius: "8px",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: "10px",
-          padding: "16px",
-          boxSizing: "border-box",
-          cursor: isReadOnly ? "default" : "pointer",
-          opacity: isReadOnly ? 0.7 : 1,
-        }}
-      >
-        <Text as="p" variant="bodyMd">
-          {filePlaceholder}
-        </Text>
-
-        <Text as="p" variant="bodySm" tone="subdued">
-          {acceptedFileTypes.length > 0
-            ? `Supported formats: ${acceptedFileTypes.join(", ").toUpperCase()}`
-            : hint}
-        </Text>
-
-        <div
-          style={{
-            padding: "7px 14px",
-            border: "1px solid #8c9196",
-            borderRadius: "5px",
-            color: "#303030",
-            fontSize: "14px",
-            background: "#ffffff",
-            opacity: isReadOnly ? 0.6 : 1,
-          }}
-        >
-          {buttonText}
-        </div>
-      </div>
-
-      {!isReadOnly && fileError && (
-        <Text as="p" variant="bodySm" tone="critical">
-          {fileError}
-        </Text>
-      )}
-
-      {selectedFiles.length > 0 && (
-        <BlockStack gap="100">
-          {selectedFiles.map((file, index) => (
-            <InlineStack
-              key={`${file.name}-${index}`}
-              align="space-between"
-            >
-              <Text as="span" variant="bodySm">
-                {file.name}
-              </Text>
-
-              {!isReadOnly && (
-                <Button
-                  variant="plain"
-                  tone="critical"
-                  onClick={() => {
-                    const updatedFiles = selectedFiles.filter(
-                      (_, fileIndex) => fileIndex !== index
-                    );
-
-                    setSelectedFiles(updatedFiles);
-                    reportChange(updatedFiles);
-                  }}
-                >
-                  Remove
-                </Button>
+      return (
+        <BlockStack gap="200">
+          {!hideLabel && (
+            <Text as="p" variant="bodyMd">
+              {label || "Attachments"}
+              {required && (
+                <span style={{ color: "var(--p-color-text-critical)" }}>
+                  {" "}*
+                </span>
               )}
-            </InlineStack>
-          ))}
-        </BlockStack>
-      )}
+            </Text>
+          )}
 
-      {descriptionText}
-    </BlockStack>
-  );
-}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept={acceptAttribute || undefined}
+            multiple={Boolean(normalizedElement.allowMultiple)}
+            onChange={handleFileSelection}
+            disabled={isReadOnly}
+            style={{ display: "none" }}
+          />
+
+          <div
+            onClick={() => {
+              if (!isReadOnly) {
+                fileInputRef.current?.click();
+              }
+            }}
+            style={{
+              width: "100%",
+              minHeight: "150px",
+              background: "#eeeeee",
+              border: "1px dashed #8c9196",
+              borderRadius: "8px",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "10px",
+              padding: "16px",
+              boxSizing: "border-box",
+              cursor: isReadOnly ? "default" : "pointer",
+              opacity: isReadOnly ? 0.7 : 1,
+            }}
+          >
+            <Text as="p" variant="bodyMd">
+              {filePlaceholder}
+            </Text>
+
+            <Text as="p" variant="bodySm" tone="subdued">
+              {acceptedFileTypes.length > 0
+                ? `Supported formats: ${acceptedFileTypes.join(", ").toUpperCase()}`
+                : hint}
+            </Text>
+
+            <div
+              style={{
+                padding: "7px 14px",
+                border: "1px solid #8c9196",
+                borderRadius: "5px",
+                color: "#303030",
+                fontSize: "14px",
+                background: "#ffffff",
+                opacity: isReadOnly ? 0.6 : 1,
+              }}
+            >
+              {buttonText}
+            </div>
+          </div>
+
+          {!isReadOnly && fileError && (
+            <Text as="p" variant="bodySm" tone="critical">
+              {fileError}
+            </Text>
+          )}
+
+          {selectedFiles.length > 0 && (
+            <BlockStack gap="100">
+              {selectedFiles.map((file, index) => (
+                <InlineStack
+                  key={`${file.name}-${index}`}
+                  align="space-between"
+                >
+                  <Text as="span" variant="bodySm">
+                    {file.name}
+                  </Text>
+
+                  {!isReadOnly && (
+                    <Button
+                      variant="plain"
+                      tone="critical"
+                      onClick={() => {
+                        const updatedFiles = selectedFiles.filter(
+                          (_, fileIndex) => fileIndex !== index
+                        );
+
+                        setSelectedFiles(updatedFiles);
+                        reportChange(updatedFiles);
+                      }}
+                    >
+                      Remove
+                    </Button>
+                  )}
+                </InlineStack>
+              ))}
+            </BlockStack>
+          )}
+
+          {descriptionText}
+        </BlockStack>
+      );
+    }
 
     // -------------------------------------------------------
     // IMAGE OPTIONS
@@ -5694,146 +5828,146 @@ export default function PreviewField({
       );
     }
     //text
-  case "text": {
-  const maxLength = Number(normalizedElement.maxLength ?? 100);
+    case "text": {
+      const maxLength = Number(normalizedElement.maxLength ?? 100);
 
-  const hasCharacterLimit =
-    normalizedElement.enableCharacterLimit === true;
+      const hasCharacterLimit =
+        normalizedElement.enableCharacterLimit === true;
 
-  const numbersOnly = normalizedElement.numbersOnly === true;
-  const nameValidation = normalizedElement.nameValidation === true;
+      const numbersOnly = normalizedElement.numbersOnly === true;
+      const nameValidation = normalizedElement.nameValidation === true;
 
-  return (
-    <BlockStack gap="200">
-      {fieldLabelWithIcon}
+      return (
+        <BlockStack gap="200">
+          {fieldLabelWithIcon}
 
-      <TextField
-        value={value || ""}
-        placeholder={placeholder || ""}
-        disabled={isReadOnly}
-        autoComplete="off"
-        maxLength={
-          hasCharacterLimit && maxLength > 0
-            ? maxLength
-            : undefined
-        }
+          <TextField
+            value={value || ""}
+            placeholder={placeholder || ""}
+            disabled={isReadOnly}
+            autoComplete="off"
+            maxLength={
+              hasCharacterLimit && maxLength > 0
+                ? maxLength
+                : undefined
+            }
 
-    /* 
-        error={
-          nameValidation &&
-            value &&
-            !/^[a-zA-Z\s'-]*$/.test(value)
-            ? "Please enter a valid name."
-            : undefined
-        }
-        */
-       
+            /* 
+                error={
+                  nameValidation &&
+                    value &&
+                    !/^[a-zA-Z\s'-]*$/.test(value)
+                    ? "Please enter a valid name."
+                    : undefined
+                }
+                */
 
-        onChange={(newValue) => {
-          let updatedValue = newValue;
 
-          // Numbers only
-          if (numbersOnly) {
-            updatedValue = updatedValue.replace(/[^0-9]/g, "");
-          }
+            onChange={(newValue) => {
+              let updatedValue = newValue;
 
-          // Name validation
-          if (nameValidation) {
-            updatedValue = updatedValue.replace(
-              /[^a-zA-Z\s'-]/g,
-              ""
-            );
-          }
+              // Numbers only
+              if (numbersOnly) {
+                updatedValue = updatedValue.replace(/[^0-9]/g, "");
+              }
 
-          // Maximum character limit
-          if (hasCharacterLimit && maxLength > 0) {
-            updatedValue = updatedValue.slice(0, maxLength);
-          }
+              // Name validation
+              if (nameValidation) {
+                updatedValue = updatedValue.replace(
+                  /[^a-zA-Z\s'-]/g,
+                  ""
+                );
+              }
 
-          setValue(updatedValue);
-          reportChange(updatedValue);
-        }}
-      />
+              // Maximum character limit
+              if (hasCharacterLimit && maxLength > 0) {
+                updatedValue = updatedValue.slice(0, maxLength);
+              }
 
-      {descriptionText}
-    </BlockStack>
-  );
-}
+              setValue(updatedValue);
+              reportChange(updatedValue);
+            }}
+          />
+
+          {descriptionText}
+        </BlockStack>
+      );
+    }
     //textaera 
-   case "textarea": {
-  const minCharacters = Number(
-    normalizedElement.minCharacters || 0
-  );
+    case "textarea": {
+      const minCharacters = Number(
+        normalizedElement.minCharacters || 0
+      );
 
-  const maxCharacters = Number(
-    normalizedElement.maxCharacters || 0
-  );
+      const maxCharacters = Number(
+        normalizedElement.maxCharacters || 0
+      );
 
-  const hasCharacterLimit =
-    normalizedElement.limitCharacters === true;
+      const hasCharacterLimit =
+        normalizedElement.limitCharacters === true;
 
-  const characterCount = (value || "").length;
+      const characterCount = (value || "").length;
 
-  // const minError =
-  //   hasCharacterLimit &&
-  //   minCharacters > 0 &&
-  //   characterCount > 0 &&
-  //   characterCount < minCharacters;
+      // const minError =
+      //   hasCharacterLimit &&
+      //   minCharacters > 0 &&
+      //   characterCount > 0 &&
+      //   characterCount < minCharacters;
 
-  return (
-    <BlockStack gap="200">
-      {fieldLabelWithIcon}
+      return (
+        <BlockStack gap="200">
+          {fieldLabelWithIcon}
 
-      <TextField
-        value={value || ""}
-        placeholder={placeholder || ""}
-        multiline={4}
-        disabled={isReadOnly}
-        autoComplete="off"
-        maxLength={
-          hasCharacterLimit && maxCharacters > 0
-            ? maxCharacters
-            : undefined
-        }
+          <TextField
+            value={value || ""}
+            placeholder={placeholder || ""}
+            multiline={4}
+            disabled={isReadOnly}
+            autoComplete="off"
+            maxLength={
+              hasCharacterLimit && maxCharacters > 0
+                ? maxCharacters
+                : undefined
+            }
 
-        // error={
-        //   minError
-        //     ? `Please enter at least ${minCharacters} characters.`
-        //     : undefined
-        // }
+            // error={
+            //   minError
+            //     ? `Please enter at least ${minCharacters} characters.`
+            //     : undefined
+            // }
 
-        onChange={(newValue) => {
-          let updatedValue = newValue;
+            onChange={(newValue) => {
+              let updatedValue = newValue;
 
-          // Maximum character limit
-          if (
-            hasCharacterLimit &&
-            maxCharacters > 0
-          ) {
-            updatedValue = updatedValue.slice(
-              0,
-              maxCharacters
-            );
-          }
+              // Maximum character limit
+              if (
+                hasCharacterLimit &&
+                maxCharacters > 0
+              ) {
+                updatedValue = updatedValue.slice(
+                  0,
+                  maxCharacters
+                );
+              }
 
-          setValue(updatedValue);
-          reportChange(updatedValue);
-        }}
-      />
+              setValue(updatedValue);
+              reportChange(updatedValue);
+            }}
+          />
 
-      {hasCharacterLimit && (
-        <Text as="p" variant="bodySm" tone="subdued">
-          {characterCount}
-          {maxCharacters > 0
-            ? ` / ${maxCharacters}`
-            : " characters"}
-        </Text>
-      )}
+          {hasCharacterLimit && (
+            <Text as="p" variant="bodySm" tone="subdued">
+              {characterCount}
+              {maxCharacters > 0
+                ? ` / ${maxCharacters}`
+                : " characters"}
+            </Text>
+          )}
 
-      {descriptionText}
-    </BlockStack>
-  );
-}
+          {descriptionText}
+        </BlockStack>
+      );
+    }
 
 
     // -------------------------------------------------------
