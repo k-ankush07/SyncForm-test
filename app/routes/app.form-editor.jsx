@@ -1063,6 +1063,7 @@ export default function FormEditor() {
           };
         }
 
+
         // CASE 0.5: INSERT BETWEEN STANDALONE ELEMENTS
         if (
           collection === "rootElements" &&
@@ -1072,18 +1073,28 @@ export default function FormEditor() {
           const rootElements = [...(page.rootElements || [])];
 
           const targetIndex = rootElements.findIndex(
-            (element) => element.id === referenceElementId
+            (element) => String(element.id) === String(referenceElementId)
           );
 
           if (targetIndex === -1) return page;
 
-          // Insert before or after the selected standalone element.
-          const insertAt =
-            placement === "before"
-              ? targetIndex
-              : targetIndex + 1;
+          const targetElement = rootElements[targetIndex];
 
-          rootElements.splice(insertAt, 0, newElement);
+          // Preserve the target's position relative to its row.
+          const standaloneElement = {
+            ...newElement,
+            ...(targetElement.insertBeforeRowId != null
+              ? { insertBeforeRowId: targetElement.insertBeforeRowId }
+              : {}),
+            ...(targetElement.insertAfterRowId != null
+              ? { insertAfterRowId: targetElement.insertAfterRowId }
+              : {}),
+          };
+
+          const insertAt =
+            placement === "before" ? targetIndex : targetIndex + 1;
+
+          rootElements.splice(insertAt, 0, standaloneElement);
 
           return {
             ...page,
@@ -1127,114 +1138,110 @@ export default function FormEditor() {
           };
         }
 
-        
+
+
         // CASE 2: PREVIEW INSERTION BESIDE A ROOT ELEMENT
         // Convert the target and new element into a row
-        // while preserving the target's original visual position.
+        // while preserving its exact visual position.
         if (
           rowId == null &&
           elementId != null &&
           (placement === "left" || placement === "right")
         ) {
-          const rootElements = [...(page.rootElements || [])];
+          const originalRootElements = [...(page.rootElements || [])];
           const rows = [...(page.rows || [])];
 
-          const targetIndex = rootElements.findIndex(
+          const targetIndex = originalRootElements.findIndex(
             (element) => String(element.id) === String(elementId)
           );
 
           if (targetIndex === -1) return page;
 
-          // Get the target without losing its original position.
-          const targetElement = rootElements[targetIndex];
-
-          // Remember whether the target was positioned before or after a row.
-          const positionProps = {};
-
-          if (targetElement.insertBeforeRowId != null) {
-            positionProps.insertBeforeRowId =
-              targetElement.insertBeforeRowId;
-          } else if (targetElement.insertAfterRowId != null) {
-            positionProps.insertAfterRowId =
-              targetElement.insertAfterRowId;
-          }
+          const targetElement = originalRootElements[targetIndex];
 
           // Remove the target from rootElements.
-          rootElements.splice(targetIndex, 1);
+          let rootElements = originalRootElements.filter(
+            (element) => String(element.id) !== String(elementId)
+          );
 
-          // Create a row containing the new element and target.
-          const newRow = {
-            id: crypto.randomUUID(),
-            fields: [],
-            elements:
-              placement === "left"
-                ? [newElement, targetElement]
-                : [targetElement, newElement],
-          };
-
-          // Remove the old anchor from the target because it is now in a row.
-          const updatedTarget = {
-            ...targetElement,
-          };
+          // Remove old position metadata from the target.
+          const updatedTarget = { ...targetElement };
 
           delete updatedTarget.insertBeforeRowId;
           delete updatedTarget.insertAfterRowId;
 
-          newRow.elements =
-            placement === "left"
-              ? [newElement, updatedTarget]
-              : [updatedTarget, newElement];
-
-          // Find the row that the target was originally anchored beside.
           let insertAt = rows.length;
 
-          if (positionProps.insertBeforeRowId != null) {
+          // Generate the new row ID BEFORE assigning anchors.
+          const newRowId = crypto.randomUUID();
+
+          // CASE A: Target was anchored before an existing row.
+          if (targetElement.insertBeforeRowId != null) {
             const anchorIndex = rows.findIndex(
               (row) =>
                 String(row.id) ===
-                String(positionProps.insertBeforeRowId)
+                String(targetElement.insertBeforeRowId)
             );
 
             if (anchorIndex !== -1) {
               insertAt = anchorIndex;
             }
-          } else if (positionProps.insertAfterRowId != null) {
+          }
+
+          // CASE B: Target was anchored after an existing row.
+          else if (targetElement.insertAfterRowId != null) {
             const anchorIndex = rows.findIndex(
               (row) =>
                 String(row.id) ===
-                String(positionProps.insertAfterRowId)
+                String(targetElement.insertAfterRowId)
             );
 
             if (anchorIndex !== -1) {
               insertAt = anchorIndex + 1;
             }
-          } else {
-            // The target was an unanchored root element.
-            // Find its next root element that is anchored to a row.
-            const nextAnchoredElement = rootElements
-              .slice(targetIndex)
-              .find(
-                (element) =>
-                  element.insertBeforeRowId != null ||
-                  element.insertAfterRowId != null
-              );
-
-            if (nextAnchoredElement) {
-              const nextAnchorId =
-                nextAnchoredElement.insertBeforeRowId ||
-                nextAnchoredElement.insertAfterRowId;
-
-              const nextRowIndex = rows.findIndex(
-                (row) => String(row.id) === String(nextAnchorId)
-              );
-
-              if (nextRowIndex !== -1) {
-                insertAt = nextRowIndex;
-              }
-            }
           }
 
-          // Insert the new row at the calculated position.
+          // CASE C: Target was an unanchored root element.
+          else {
+            // Keep preceding unanchored standalone elements
+            // immediately before the new row.
+            rootElements = rootElements.map((element) => {
+              const originalIndex = originalRootElements.findIndex(
+                (original) =>
+                  String(original.id) === String(element.id)
+              );
+
+              const appearedBeforeTarget =
+                originalIndex !== -1 &&
+                originalIndex < targetIndex;
+
+              const hasExistingAnchor =
+                element.insertBeforeRowId != null ||
+                element.insertAfterRowId != null;
+
+              if (appearedBeforeTarget && !hasExistingAnchor) {
+                return {
+                  ...element,
+                  insertBeforeRowId: newRowId,
+                };
+              }
+
+              return element;
+            });
+
+            insertAt = rows.length;
+          }
+
+          // Create the row using THE SAME ID used by the anchors.
+          const newRow = {
+            id: newRowId,
+            fields: [],
+            elements:
+              placement === "left"
+                ? [newElement, updatedTarget]
+                : [updatedTarget, newElement],
+          };
+
           rows.splice(insertAt, 0, newRow);
 
           return {
@@ -1254,15 +1261,27 @@ export default function FormEditor() {
           const rootElements = [...(page.rootElements || [])];
 
           const targetIndex = rootElements.findIndex(
-            (element) => element.id === elementId
+            (element) => String(element.id) === String(elementId)
           );
 
           if (targetIndex === -1) return page;
 
+          const targetElement = rootElements[targetIndex];
+
+          const standaloneElement = {
+            ...newElement,
+            ...(targetElement.insertBeforeRowId != null
+              ? { insertBeforeRowId: targetElement.insertBeforeRowId }
+              : {}),
+            ...(targetElement.insertAfterRowId != null
+              ? { insertAfterRowId: targetElement.insertAfterRowId }
+              : {}),
+          };
+
           rootElements.splice(
             placement === "top" ? targetIndex : targetIndex + 1,
             0,
-            newElement
+            standaloneElement
           );
 
           return {
@@ -1572,31 +1591,93 @@ export default function FormEditor() {
   };
 
   // DELETE ROW
+
   const handleDeleteRow = (pageId, rowId) => {
-    // Collect the IDs of elements inside the row so the selection
-    // can be cleared if the selected element is being deleted.
+    // Collect IDs of elements inside the deleted row.
     const deletedRow = pages
-      .find((page) => page.id === pageId)
-      ?.rows?.find((row) => row.id === rowId);
+      .find((page) => String(page.id) === String(pageId))
+      ?.rows?.find((row) => String(row.id) === String(rowId));
 
     const deletedElementIds = [
       ...(deletedRow?.fields ?? []),
       ...(deletedRow?.elements ?? []),
     ]
-      .filter((item) => typeof item === "object" && item !== null)
+      .filter((item) => item && typeof item === "object")
       .map((item) => item.id);
 
     setPages((previousPages) =>
-      previousPages.map((page) =>
-        page.id !== pageId
-          ? page
-          : {
-            ...page,
-            rows: (page.rows ?? []).filter(
-              (row) => row.id !== rowId
-            ),
+      previousPages.map((page) => {
+        if (String(page.id) !== String(pageId)) {
+          return page;
+        }
+
+        const originalRows = page.rows ?? [];
+
+        const deletedIndex = originalRows.findIndex(
+          (row) => String(row.id) === String(rowId)
+        );
+
+        if (deletedIndex === -1) return page;
+
+        // Remove the row.
+        const updatedRows = originalRows.filter(
+          (row) => String(row.id) !== String(rowId)
+        );
+
+        const survivingRowIds = new Set(
+          updatedRows.map((row) => String(row.id))
+        );
+
+        // Find the nearest surviving rows.
+        const nextRow = originalRows
+          .slice(deletedIndex + 1)
+          .find((row) => survivingRowIds.has(String(row.id)));
+
+        const previousRow = originalRows
+          .slice(0, deletedIndex)
+          .reverse()
+          .find((row) => survivingRowIds.has(String(row.id)));
+
+        // Repair standalone elements pointing to the deleted row.
+        const updatedRootElements = (page.rootElements ?? []).map(
+          (element) => {
+            const referencesDeletedRow =
+              String(element.insertBeforeRowId) === String(rowId) ||
+              String(element.insertAfterRowId) === String(rowId);
+
+            if (!referencesDeletedRow) return element;
+
+            const {
+              insertBeforeRowId,
+              insertAfterRowId,
+              ...elementWithoutAnchors
+            } = element;
+
+            if (nextRow) {
+              return {
+                ...elementWithoutAnchors,
+                insertBeforeRowId: nextRow.id,
+              };
+            }
+
+            if (previousRow) {
+              return {
+                ...elementWithoutAnchors,
+                insertAfterRowId: previousRow.id,
+              };
+            }
+
+            // No rows remain, so make it an unanchored root element.
+            return elementWithoutAnchors;
           }
-      )
+        );
+
+        return {
+          ...page,
+          rows: updatedRows,
+          rootElements: updatedRootElements,
+        };
+      })
     );
 
     setSelectedElement((previousElement) =>
@@ -1607,7 +1688,9 @@ export default function FormEditor() {
     );
   };
 
+
   // DUPLICATE PAGE (page + all its rows and elements)
+
   const handleDuplicatePage = (pageId) => {
     setPages((previousPages) => {
       const pageIndex = previousPages.findIndex(
@@ -1618,24 +1701,55 @@ export default function FormEditor() {
 
       const originalPage = previousPages[pageIndex];
 
+      // 1. Duplicate rows and remember each old row ID's new ID.
+      const rowIdMap = new Map();
+
+      const duplicatedRows = (originalPage.rows ?? []).map((row) => {
+        const duplicatedRow = createDuplicateRow(row);
+
+        rowIdMap.set(String(row.id), duplicatedRow.id);
+
+        return duplicatedRow;
+      });
+
+      // 2. Duplicate standalone elements and update their row anchors.
+      const duplicatedRootElements = (
+        originalPage.rootElements ?? []
+      ).map((element) => {
+        const duplicatedElement = createDuplicateElement(element);
+
+        const oldBeforeId = element.insertBeforeRowId;
+        const oldAfterId = element.insertAfterRowId;
+
+        return {
+          ...duplicatedElement,
+
+          insertBeforeRowId:
+            oldBeforeId != null
+              ? rowIdMap.get(String(oldBeforeId))
+              : undefined,
+
+          insertAfterRowId:
+            oldAfterId != null
+              ? rowIdMap.get(String(oldAfterId))
+              : undefined,
+        };
+      });
+
+      // 3. Create the duplicated page.
       const duplicatePage = {
         ...originalPage,
         id: crypto.randomUUID(),
         label: `${originalPage.label} Copy`,
         open: true,
-
-        rows: (originalPage.rows ?? []).map(createDuplicateRow),
-
-        rootElements: (originalPage.rootElements ?? []).map(
-          createDuplicateElement
-        ),
-
+        rows: duplicatedRows,
+        rootElements: duplicatedRootElements,
         submitButton: originalPage.submitButton
           ? { ...originalPage.submitButton }
           : originalPage.submitButton,
       };
 
-      // Close all pages, then insert the (open) duplicate after the original.
+      // 4. Close other pages and insert the duplicate after the original.
       const updatedPages = previousPages.map((page) => ({
         ...page,
         open: false,
@@ -1648,6 +1762,7 @@ export default function FormEditor() {
 
     setSelectedElement(null);
   };
+
 
 
   // -------------------------------------------------------------------
@@ -1733,6 +1848,16 @@ export default function FormEditor() {
       });
 
       if (!draggedElement) return previousPages;
+
+      // Remove old standalone positioning anchors.
+      // Once an element moves into a row, these anchors are no longer needed.
+      const {
+        insertBeforeRowId,
+        insertAfterRowId,
+        ...cleanDraggedElement
+      } = draggedElement;
+
+      draggedElement = cleanDraggedElement;
 
       // Step 2: find the destination page.
       const targetPageIndex = updatedPages.findIndex(
@@ -2499,56 +2624,56 @@ export default function FormEditor() {
   // large general preview drop area.
   // =====================================================================
 
-const previewCollisionDetection = (args) => {
-  const collisions = pointerWithin(args);
+  const previewCollisionDetection = (args) => {
+    const collisions = pointerWithin(args);
 
-  const getData = (collision) =>
-    collision.data?.droppableContainer?.data?.current;
+    const getData = (collision) =>
+      collision.data?.droppableContainer?.data?.current;
 
-  // First: prioritize top/bottom zones around standalone elements.
-  const rootElementDropCollisions = collisions.filter(
-    (collision) => {
-      const data = getData(collision);
+    // First: prioritize top/bottom zones around standalone elements.
+    const rootElementDropCollisions = collisions.filter(
+      (collision) => {
+        const data = getData(collision);
 
-      return (
-        data?.type === "previewDrop" &&
-        data?.targetCollection === "rootElements" &&
-        (data?.placement === "top" ||
-          data?.placement === "bottom")
-      );
+        return (
+          data?.type === "previewDrop" &&
+          data?.targetCollection === "rootElements" &&
+          (data?.placement === "top" ||
+            data?.placement === "bottom")
+        );
+      }
+    );
+
+    if (rootElementDropCollisions.length > 0) {
+      return rootElementDropCollisions;
     }
-  );
 
-  if (rootElementDropCollisions.length > 0) {
-    return rootElementDropCollisions;
-  }
+    // Second: normal row insertion zones.
+    const rowInsertCollisions = collisions.filter(
+      (collision) =>
+        getData(collision)?.type === "previewRowInsert"
+    );
 
-  // Second: normal row insertion zones.
-  const rowInsertCollisions = collisions.filter(
-    (collision) =>
-      getData(collision)?.type === "previewRowInsert"
-  );
+    if (rowInsertCollisions.length > 0) {
+      return rowInsertCollisions;
+    }
 
-  if (rowInsertCollisions.length > 0) {
-    return rowInsertCollisions;
-  }
+    // Third: other preview element drop zones.
+    const previewDropCollisions = collisions.filter(
+      (collision) =>
+        getData(collision)?.type === "previewDrop"
+    );
 
-  // Third: other preview element drop zones.
-  const previewDropCollisions = collisions.filter(
-    (collision) =>
-      getData(collision)?.type === "previewDrop"
-  );
+    if (previewDropCollisions.length > 0) {
+      return previewDropCollisions;
+    }
 
-  if (previewDropCollisions.length > 0) {
-    return previewDropCollisions;
-  }
-
-  // Last: root drop area.
-  return collisions.filter(
-    (collision) =>
-      getData(collision)?.type === "rootDrop"
-  );
-};
+    // Last: root drop area.
+    return collisions.filter(
+      (collision) =>
+        getData(collision)?.type === "rootDrop"
+    );
+  };
 
 
 
