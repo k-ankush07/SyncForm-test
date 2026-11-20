@@ -12,6 +12,7 @@ import {
     useSensor,
     useSensors,
     useDroppable,
+    pointerWithin,
     DragOverlay,
 } from "@dnd-kit/core";
 
@@ -87,6 +88,9 @@ export default function ElementsPanel({
     pages,
     setPages,
 
+    //normalize rows 
+    normalizeRows,
+
     // Shared header and footer settings.
     header,
     footer,
@@ -138,124 +142,232 @@ export default function ElementsPanel({
         const overData = over.data.current;
 
         if (!activeData || !overData) return;
-
-        // Row dragging is handled separately.
         if (activeData.type === "row") return;
 
-        const targetRowId = overData.rowId ?? null;
+        const sourcePageId = activeData.pageId;
         const targetPageId = overData.pageId;
 
-        if (targetPageId == null) return;
+        if (sourcePageId == null || targetPageId == null) return;
+
+        const activeRect = active.rect.current.translated;
+        const overRect = over.rect;
+
+        let placement = "after";
+
+        if (activeRect && overRect) {
+            const activeCenter = activeRect.top + activeRect.height / 2;
+            const overCenter = overRect.top + overRect.height / 2;
+
+            placement = activeCenter < overCenter ? "before" : "after";
+        }
 
         setPages((previousPages) => {
-            let draggedItem = null;
-
-            // First remove the dragged item from its source.
-            const updatedPages = previousPages.map((page) => {
-                if (page.id !== activeData.pageId) return page;
-
-                // Create copies so the existing state is not mutated.
-                const rows = (page.rows || []).map((row) => ({
+            const updatedPages = previousPages.map((page) => ({
+                ...page,
+                rows: (page.rows ?? []).map((row) => ({
                     ...row,
-                    fields: [...(row.fields || [])],
-                    elements: [...(row.elements || [])],
-                }));
+                    fields: [...(row.fields ?? [])],
+                    elements: [...(row.elements ?? [])],
+                })),
+                rootElements: [...(page.rootElements ?? [])],
+            }));
 
-                // Find and remove the original field.
-                if (activeData.type === "field") {
-                    const sourceRow = rows.find(
-                        (row) => row.id === activeData.rowId
+            const sourcePage = updatedPages.find(
+                (page) => String(page.id) === String(sourcePageId)
+            );
+
+            const targetPage = updatedPages.find(
+                (page) => String(page.id) === String(targetPageId)
+            );
+
+            if (!sourcePage || !targetPage) return previousPages;
+
+            // Allow an existing field to become standalone only
+            // when it is the only item in its source row.
+            let canMoveFieldToRoot = false;
+
+            if (activeData.type === "field") {
+                const sourceRow = sourcePage.rows.find(
+                    (row) => String(row.id) === String(activeData.rowId)
+                );
+
+                canMoveFieldToRoot =
+                    !!sourceRow &&
+                    (sourceRow.fields ?? []).length +
+                    (sourceRow.elements ?? []).length === 1;
+            }
+
+            let draggedItem = null;;
+
+            if (activeData.type === "field") {
+                const sourceRow = sourcePage.rows.find(
+                    (row) => String(row.id) === String(activeData.rowId)
+                );
+
+                if (sourceRow) {
+                    const index = sourceRow.fields.findIndex(
+                        (item, itemIndex) =>
+                            getDragItemId(item, itemIndex) === activeData.itemId
                     );
 
-                    if (sourceRow) {
-                        draggedItem = sourceRow.fields.find(
-                            (item, index) =>
-                                getDragItemId(item, index) === activeData.itemId
-                        );
-
-                        sourceRow.fields = sourceRow.fields.filter(
-                            (item, index) =>
-                                getDragItemId(item, index) !== activeData.itemId
-                        );
+                    if (index !== -1) {
+                        draggedItem = sourceRow.fields.splice(index, 1)[0];
                     }
                 }
+            } else if (activeData.type === "element") {
+                const sourceRow = sourcePage.rows.find(
+                    (row) => String(row.id) === String(activeData.rowId)
+                );
 
-                // Find and remove the created element.
-                if (activeData.type === "element") {
-                    const sourceRow = rows.find(
-                        (row) => row.id === activeData.rowId
-                    );
-
-                    if (sourceRow) {
-                        draggedItem = sourceRow.elements.find(
-                            (item) => `element-${item.id}` === activeData.itemId
-                        );
-
-                        sourceRow.elements = sourceRow.elements.filter(
-                            (item) => `element-${item.id}` !== activeData.itemId
-                        );
-                    }
-                }
-
-                // Find and remove a standalone page element.
-                if (activeData.type === "rootElement") {
-                    draggedItem = (page.rootElements || []).find(
+                if (sourceRow) {
+                    const index = sourceRow.elements.findIndex(
                         (item) => `element-${item.id}` === activeData.itemId
                     );
+
+                    if (index !== -1) {
+                        draggedItem = sourceRow.elements.splice(index, 1)[0];
+                    }
                 }
+            } else if (activeData.type === "rootElement") {
+                const index = sourcePage.rootElements.findIndex(
+                    (item) => `element-${item.id}` === activeData.itemId
+                );
 
-                return {
-                    ...page,
-                    rows,
+                if (index !== -1) {
+                    draggedItem = sourcePage.rootElements.splice(index, 1)[0];
+                }
+            } else {
+                return previousPages;
+            }
 
-                    rootElements: (page.rootElements || []).filter(
-                        (item) =>
-                            activeData.type !== "rootElement" ||
-                            `element-${item.id}` !== activeData.itemId
-                    ),
-                };
-            });
-
-            // Stop if the dragged item could not be found.
             if (!draggedItem) return previousPages;
 
-            // Then insert the item into its destination.
-            return updatedPages.map((page) => {
-                if (page.id !== targetPageId) return page;
+            // STEP 2: CLEAR OLD ROOT POSITION ANCHORS.
 
-                // No row means the item belongs directly to the page.
-                if (targetRowId == null) {
-                    return {
-                        ...page,
-                        rootElements: [
-                            ...(page.rootElements || []),
-                            draggedItem,
-                        ],
-                    };
+            const {
+                insertBeforeRowId,
+                insertAfterRowId,
+                ...cleanDraggedItem
+            } = draggedItem;
+
+            draggedItem = cleanDraggedItem;
+
+            // STEP 3: FIND THE TARGET ROW.
+
+            const targetRowId = overData.rowId ?? null;
+
+            const targetRow =
+                targetRowId != null
+                    ? targetPage.rows.find(
+                        (row) => String(row.id) === String(targetRowId)
+                    )
+                    : null;
+
+            if (targetRowId != null && !targetRow) {
+                return previousPages;
+            }
+
+            // STEP 4: DROP ONTO A FIELD OR CREATED ELEMENT.
+            // Use the TARGET collection, not the dragged item's original type.
+
+            if (
+                targetRow &&
+                (overData.type === "field" || overData.type === "element")
+            ) {
+                const targetCollection =
+                    overData.type === "field" ? "fields" : "elements";
+
+                const items = targetRow[targetCollection];
+
+                const targetIndex =
+                    overData.type === "field"
+                        ? items.findIndex(
+                            (item, index) =>
+                                getDragItemId(item, index) === overData.itemId
+                        )
+                        : items.findIndex(
+                            (item) => `element-${item.id}` === overData.itemId
+                        );
+
+                if (targetIndex === -1) return previousPages;
+
+                const insertIndex =
+                    targetIndex + (placement === "after" ? 1 : 0);
+
+                items.splice(insertIndex, 0, draggedItem);
+            }
+
+            // STEP 5: DROP ONTO THE ROW BODY.
+            // Preserve the dragged item's collection.
+
+            else if (
+                targetRow &&
+                (overData.type === "rowDrop" || overData.type === "row")
+            ) {
+                if (activeData.type === "field") {
+                    targetRow.fields.push(draggedItem);
+                } else {
+                    targetRow.elements.push(draggedItem);
+                }
+            }
+
+            // STEP 6: DROP ONTO ANOTHER STANDALONE ELEMENT.
+
+            else if (
+                overData.type === "rootElement" &&
+                (
+                    activeData.type !== "field" ||
+                    canMoveFieldToRoot
+                )
+            ) {
+                const rootElements = targetPage.rootElements;
+
+                const targetIndex = rootElements.findIndex(
+                    (item) => `element-${item.id}` === overData.itemId
+                );
+
+                if (targetIndex === -1) return previousPages;
+
+                const targetElement = rootElements[targetIndex];
+
+                const standaloneElement = {
+                    ...draggedItem,
+                    ...(targetElement.insertBeforeRowId != null
+                        ? { insertBeforeRowId: targetElement.insertBeforeRowId }
+                        : {}),
+                    ...(targetElement.insertAfterRowId != null
+                        ? { insertAfterRowId: targetElement.insertAfterRowId }
+                        : {}),
+                };
+
+                rootElements.splice(
+                    targetIndex + (placement === "after" ? 1 : 0),
+                    0,
+                    standaloneElement
+                );
+            }
+
+
+            // STEP 7: DROP ONTO THE PAGE ROOT AREA.
+
+            else if (overData.type === "pageRoot") {
+                if (
+                    activeData.type === "field" &&
+                    !canMoveFieldToRoot
+                ) {
+                    return previousPages;
                 }
 
-                // Otherwise insert the item into the selected row.
-                return {
-                    ...page,
-                    rows: page.rows.map((row) => {
-                        if (row.id !== targetRowId) return row;
+                targetPage.rootElements.push(draggedItem);
+            }
 
-                        if (activeData.type === "field") {
-                            return {
-                                ...row,
-                                fields: [...row.fields, draggedItem],
-                            };
-                        }
+            // STEP 8: ENFORCE ROW RULES AND REPAIR ROOT ANCHORS.
 
-                        return {
-                            ...row,
-                            elements: [...row.elements, draggedItem],
-                        };
-                    }),
-                };
-            });
+            return normalizeRows(updatedPages);
         });
     };
+
+
 
     // ======================================================
     // 5.2. REORDER PAGES
@@ -305,38 +417,53 @@ export default function ElementsPanel({
 
         if (!over) return;
 
-        const activeRowId = active.data.current?.rowId;
-        const overRowId = over.data.current?.rowId;
+        const activeData = active.data.current;
+        const overData = over.data.current;
 
-        if (
-            activeRowId == null ||
-            overRowId == null ||
-            activeRowId === overRowId
-        ) {
-            return;
+        if (activeData?.type !== "row") return;
+
+        const activeRowId = activeData.rowId;
+
+        // Support both the sortable row and its inner drop area.
+        let overRowId = overData?.rowId;
+
+        if (overRowId == null) {
+            const overId = String(over.id);
+
+            if (overId.startsWith("row-drop-")) {
+                overRowId = overId.replace("row-drop-", "");
+            } else if (overId.startsWith("row-")) {
+                overRowId = overId.replace("row-", "");
+            }
         }
+
+        if (activeRowId == null || overRowId == null) return;
+
+        if (String(activeRowId) === String(overRowId)) return;
 
         setPages((previousPages) =>
             previousPages.map((page) => {
-                // Only update the page containing the dragged row.
-                if (page.id !== pageId) return page;
+                if (String(page.id) !== String(pageId)) {
+                    return page;
+                }
 
-                const oldIndex = page.rows.findIndex(
-                    (row) => row.id === activeRowId
+                const rows = [...(page.rows ?? [])];
+
+                const oldIndex = rows.findIndex(
+                    (row) => String(row.id) === String(activeRowId)
                 );
 
-                const newIndex = page.rows.findIndex(
-                    (row) => row.id === overRowId
+                const newIndex = rows.findIndex(
+                    (row) => String(row.id) === String(overRowId)
                 );
 
                 if (oldIndex === -1 || newIndex === -1) {
                     return page;
                 }
 
-                // Move the complete row.
                 return {
                     ...page,
-                    rows: arrayMove(page.rows, oldIndex, newIndex),
+                    rows: arrayMove(rows, oldIndex, newIndex),
                 };
             })
         );
@@ -578,6 +705,7 @@ export default function ElementsPanel({
                     collisionDetection={(args) => {
                         const activeType = args.active.data.current?.type;
 
+                        // PAGE DRAGGING: Only detect pages.
                         if (activeType === "page") {
                             const pageContainers = args.droppableContainers.filter(
                                 (container) =>
@@ -590,6 +718,7 @@ export default function ElementsPanel({
                             });
                         }
 
+                        // ROW DRAGGING: Only detect rows.
                         if (activeType === "row") {
                             const rowContainers = args.droppableContainers.filter(
                                 (container) =>
@@ -602,7 +731,27 @@ export default function ElementsPanel({
                             });
                         }
 
-                        return closestCenter(args);
+                        // ELEMENT DRAGGING:
+                        // Detect what is actually underneath the pointer.
+                        const pointerCollisions = pointerWithin(args);
+
+                        if (pointerCollisions.length > 0) {
+                            // Prefer actual elements, rows and row drop areas
+                            // over the large page-root drop area.
+                            const specificTargets = pointerCollisions.filter(
+                                (collision) =>
+                                    collision.data?.droppableContainer?.data?.current?.type !==
+                                    "pageRoot"
+                            );
+
+                            return specificTargets.length > 0
+                                ? specificTargets
+                                : pointerCollisions;
+                        }
+
+                        // Do not guess a nearby row when the pointer is outside
+                        // all valid drop areas.
+                        return [];
                     }}
 
                     // Store information for the floating drag preview.
@@ -819,6 +968,18 @@ function SortablePage({
             icon: FileIcon,
         },
     });
+    // Allow created elements to be dropped outside rows.
+    const {
+        setNodeRef: setPageRootDropRef,
+        isOver: isPageRootOver,
+    } = useDroppable({
+        id: `page-root-drop-${page.id}`,
+        data: {
+            type: "pageRoot",
+            pageId: page.id,
+            rowId: null,
+        },
+    });
 
     // Apply drag styling to the page.
     const pageStyle = {
@@ -901,6 +1062,44 @@ function SortablePage({
             {renderRootInsertButton(element, "after")}
         </div>
     );
+
+    const sortableItems = [];
+
+    (page.rows ?? []).forEach((row) => {
+        // Standalone elements before this row.
+        (page.rootElements ?? [])
+            .filter(
+                (element) =>
+                    String(element.insertBeforeRowId) === String(row.id)
+            )
+            .forEach((element) => {
+                sortableItems.push(`element-${element.id}`);
+            });
+
+        // The row itself.
+        sortableItems.push(`row-${row.id}`);
+
+        // Standalone elements after this row.
+        (page.rootElements ?? [])
+            .filter(
+                (element) =>
+                    String(element.insertAfterRowId) === String(row.id)
+            )
+            .forEach((element) => {
+                sortableItems.push(`element-${element.id}`);
+            });
+    });
+
+    // Normal standalone elements at the bottom.
+    (page.rootElements ?? [])
+        .filter(
+            (element) =>
+                element.insertBeforeRowId == null &&
+                element.insertAfterRowId == null
+        )
+        .forEach((element) => {
+            sortableItems.push(`element-${element.id}`);
+        });
 
     return (
         <div
@@ -995,17 +1194,14 @@ function SortablePage({
             {/* PAGE CONTENT */}
 
             {page.open && (
-                <div className="element-tree__page-content">
+                <div
+                    ref={setPageRootDropRef}
+                    className={`element-tree__page-content ${isPageRootOver ? "element-tree__page-content--over" : ""
+                        }`}
+                >
 
                     <SortableContext
-                        items={[
-                            ...(page.rows || []).map(
-                                (row) => `row-${row.id}`
-                            ),
-                            ...(page.rootElements || []).map(
-                                (element) => `element-${element.id}`
-                            ),
-                        ]}
+                        items={sortableItems}
                         strategy={verticalListSortingStrategy}
                     >
                         {/* INSERT BEFORE THE FIRST ROW */}
