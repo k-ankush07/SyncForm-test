@@ -228,6 +228,12 @@ function DraggablePreviewElement({
     !isModelPreview && element.id === selectedElementId;
 
   const isHidden = element.visible === false;
+  console.log("PREVIEW ELEMENT:", {
+  elementId: element.id,
+  elementType: element.type,
+  rowId,
+  collection,
+});
 
   // Drag behavior for this element.
   const {
@@ -256,89 +262,89 @@ function DraggablePreviewElement({
   // ---------------------------------------------------------------
 
 
-// Prevent editor controls from keeping keyboard focus.
-const handlePreviewMouseDown = (event) => {
-  if (isModelPreview) return;
+  // Prevent editor controls from keeping keyboard focus.
+  const handlePreviewMouseDown = (event) => {
+    if (isModelPreview) return;
 
-  const target = event.target;
+    const target = event.target;
 
-  if (!(target instanceof Element)) return;
+    if (!(target instanceof Element)) return;
 
-  if (
-    target.closest(
-      "input, textarea, select, button, [role='combobox'], [contenteditable='true']"
-    )
-  ) {
-    // Prevent the browser's default focus behavior.
-    // This does not cancel the earlier pointer event used by DnD Kit.
-    event.preventDefault();
-  }
-};
+    if (
+      target.closest(
+        "input, textarea, select, button, [role='combobox'], [contenteditable='true']"
+      )
+    ) {
+      // Prevent the browser's default focus behavior.
+      // This does not cancel the earlier pointer event used by DnD Kit.
+      event.preventDefault();
+    }
+  };
 
-// Remove focus if a control receives it through another interaction.
-const handlePreviewFocus = (event) => {
-  if (isModelPreview) return;
+  // Remove focus if a control receives it through another interaction.
+  const handlePreviewFocus = (event) => {
+    if (isModelPreview) return;
 
-  const target = event.target;
+    const target = event.target;
 
-  if (!(target instanceof HTMLElement)) return;
+    if (!(target instanceof HTMLElement)) return;
 
-  if (
-    target.matches(
-      "input, textarea, select, button, [role='combobox'], [contenteditable='true']"
-    )
-  ) {
-    target.blur();
-  }
-};
+    if (
+      target.matches(
+        "input, textarea, select, button, [role='combobox'], [contenteditable='true']"
+      )
+    ) {
+      target.blur();
+    }
+  };
 
-// Prevent editor-mode controls from executing their customer-facing actions.
-const handlePreviewClick = (event) => {
-  if (isModelPreview) return;
+  // Prevent editor-mode controls from executing their customer-facing actions.
+  const handlePreviewClick = (event) => {
+    if (isModelPreview) return;
 
-  const target = event.target;
+    const target = event.target;
 
-  if (!(target instanceof Element)) return;
+    if (!(target instanceof Element)) return;
 
-  if (
-    target.closest(
-      ".preview-drop-zone, .element-floating-toolbar, .Polaris-Popover"
-    )
-  ) {
-    return;
-  }
+    if (
+      target.closest(
+        ".preview-drop-zone, .element-floating-toolbar, .Polaris-Popover"
+      )
+    ) {
+      return;
+    }
 
-  if (
-    target.closest(
-      "input, textarea, select, button, [role='combobox'], [contenteditable='true']"
-    )
-  ) {
-    event.preventDefault();
-  }
-};
+    if (
+      target.closest(
+        "input, textarea, select, button, [role='combobox'], [contenteditable='true']"
+      )
+    ) {
+      event.preventDefault();
+    }
+  };
 
-// ---------------------------------------------------------------
-// START DRAGGING FROM ANYWHERE INSIDE THE PREVIEW FIELD
-// ---------------------------------------------------------------
+  // ---------------------------------------------------------------
+  // START DRAGGING FROM ANYWHERE INSIDE THE PREVIEW FIELD
+  // ---------------------------------------------------------------
 
-const handlePreviewPointerDown = (event) => {
-  const target = event.target;
+  const handlePreviewPointerDown = (event) => {
+    const target = event.target;
 
-  if (!(target instanceof Element)) return;
+    if (!(target instanceof Element)) return;
 
-  // Do not start dragging from insertion zones or editor popups.
-  if (
-    target.closest(
-      ".preview-drop-zone, .Polaris-Popover, .element-floating-toolbar"
-    )
-  ) {
-    return;
-  }
+    // Do not start dragging from insertion zones or editor popups.
+    if (
+      target.closest(
+        ".preview-drop-zone, .Polaris-Popover, .element-floating-toolbar"
+      )
+    ) {
+      return;
+    }
 
-  // Start DnD Kit pointer sensor.
-  // This also allows dragging directly from inputs and dropdowns.
-  listeners?.onPointerDown?.(event);
-};
+    // Start DnD Kit pointer sensor.
+    // This also allows dragging directly from inputs and dropdowns.
+    listeners?.onPointerDown?.(event);
+  };
 
 
   // ---------------------------------------------------------------
@@ -426,7 +432,7 @@ const handlePreviewPointerDown = (event) => {
       onMouseDownCapture={handlePreviewMouseDown}
       onFocusCapture={handlePreviewFocus}
       onPointerDown={handlePreviewPointerDown}
-        onClickCapture={handlePreviewClick}
+      onClickCapture={handlePreviewClick}
 
       style={{
         ...dragStyle,
@@ -446,7 +452,6 @@ const handlePreviewPointerDown = (event) => {
     >
 
       {/* ---------- DROP ZONES AROUND THE ELEMENT ---------- */}
-
       {/* Standalone/root elements can have top and bottom insertion. */}
       {rowId === null && (
         <>
@@ -1215,6 +1220,30 @@ export default function LivePreview({
                       page.visible !== false && page.open
                   )
               ).map((page) => {
+                // Prepare only rows that actually contain visible elements.
+                const visibleRows = (page.rows ?? [])
+                  .filter((row) => row.visible !== false)
+                  .map((row) => {
+                    const rowItems = [
+                      ...(row.fields ?? []).map((field) => ({
+                        element: field,
+                        collection: "fields",
+                      })),
+
+                      ...(row.elements ?? []).map((element) => ({
+                        element,
+                        collection: "elements",
+                      })),
+                    ].filter(({ element }) => shouldRenderElement(element));
+
+                    return { row, rowItems };
+                  })
+                  .filter(({ rowItems }) => rowItems.length > 0);
+
+                // IDs of rows that are actually rendered.
+                const renderedRowIds = new Set(
+                  visibleRows.map(({ row }) => String(row.id))
+                );
 
                 // Get the correct header and footer for this page.
                 const pageHeader = getPageHeader(page);
@@ -1288,106 +1317,73 @@ export default function LivePreview({
                             are rendered.
                         ========================================= */}
 
-                        {(page.rows ?? [])
+                        {visibleRows.map(({ row, rowItems }, index, allRows) => (
+                          <React.Fragment key={row.id}>
 
-                          // Hide the complete row when its visibility is false.
-                          .filter((row) => row.visible !== false)
+                            {/* Add element before this row */}
+                            {!isModelPreview && (
+                              <PreviewRowInsert
+                                pageId={page.id}
+                                rowId={row.id}
+                                placement="before"
+                                onOpenElementPicker={onOpenElementPicker}
+                              />
+                            )}
 
-                          .map((row) => {
-                            // Combine fields and elements into one list.
-                            // This lets the grid support any number of items.
-                            const rowItems = [
-                              ...(row.fields ?? []).map((field) => ({
-                                element: field,
-                                collection: "fields",
-                              })),
-
-                              ...(row.elements ?? []).map((element) => ({
-                                element,
-                                collection: "elements",
-                              })),
-                            ].filter(({ element }) =>
-                              shouldRenderElement(element)
-                            );
-
-                            return {
-                              row,
-                              rowItems,
-                            };
-                          })
-
-                          // IMPORTANT: Empty rows are not rendered.
-                          // This removes the empty row and its spacing.
-                          .filter(({ rowItems }) => rowItems.length > 0)
-
-                          .map(({ row, rowItems }, index, allRows) => (
-                            <React.Fragment key={row.id}>
-
-                              {/* Add element before this row */}
-                              {!isModelPreview && (
-                                <PreviewRowInsert
-                                  pageId={page.id}
-                                  rowId={row.id}
-                                  placement="before"
-                                  onOpenElementPicker={onOpenElementPicker}
-                                />
+                            {/* Standalone elements positioned before this row */}
+                            {(page.rootElements ?? [])
+                              .filter(
+                                (element) =>
+                                  shouldRenderElement(element) &&
+                                  String(element.insertBeforeRowId) === String(row.id)
+                              )
+                              .map((element) =>
+                                renderRootElement(element, page)
                               )}
 
-                              {/* Standalone elements positioned before this row */}
-                              {(page.rootElements ?? [])
-                                .filter(
-                                  (element) =>
-                                    shouldRenderElement(element) &&
-                                    element.insertBeforeRowId === row.id
-                                )
-                                .map((element) =>
-                                  renderRootElement(element, page)
+                            {/* The row itself */}
+                            <div className="preview-row">
+                              <div
+                                className="preview-row-grid"
+                                style={{
+                                  "--preview-column-count": rowItems.length,
+                                }}
+                              >
+                                {rowItems.map(({ element, collection }) =>
+                                  renderPreviewElement({
+                                    element,
+                                    page,
+                                    rowId: row.id,
+                                    collection,
+                                    key: `${collection}-${element.id}`,
+                                  })
                                 )}
-
-                              {/* The row itself (grid of elements) */}
-                              <div className="preview-row">
-                                <div
-                                  className="preview-row-grid"
-                                  style={{
-                                    "--preview-column-count": rowItems.length,
-                                  }}
-                                >
-                                  {rowItems.map(({ element, collection }) =>
-                                    renderPreviewElement({
-                                      element,
-                                      page,
-                                      rowId: row.id,
-                                      collection,
-                                      key: `${collection}-${element.id}`,
-                                    })
-                                  )}
-                                </div>
                               </div>
+                            </div>
 
-                              {/* Standalone elements positioned after this row */}
-                              {(page.rootElements ?? [])
-                                .filter(
-                                  (element) =>
-                                    shouldRenderElement(element) &&
-                                    element.insertAfterRowId === row.id
-                                )
-                                .map((element) =>
-                                  renderRootElement(element, page)
-                                )}
+                            {/* Standalone elements positioned after this row */}
+                            {(page.rootElements ?? [])
+                              .filter(
+                                (element) =>
+                                  shouldRenderElement(element) &&
+                                  String(element.insertAfterRowId) === String(row.id)
+                              )
+                              .map((element) =>
+                                renderRootElement(element, page)
+                              )}
 
-                              {/* Add element after the last row */}
-                              {!isModelPreview &&
-                                index === allRows.length - 1 && (
-                                  <PreviewRowInsert
-                                    pageId={page.id}
-                                    rowId={row.id}
-                                    placement="after"
-                                    onOpenElementPicker={onOpenElementPicker}
-                                  />
-                                )}
+                            {/* Add element after the last row */}
+                            {!isModelPreview && index === allRows.length - 1 && (
+                              <PreviewRowInsert
+                                pageId={page.id}
+                                rowId={row.id}
+                                placement="after"
+                                onOpenElementPicker={onOpenElementPicker}
+                              />
+                            )}
 
-                            </React.Fragment>
-                          ))}
+                          </React.Fragment>
+                        ))}
 
 
                         {/* =========================================
@@ -1399,12 +1395,24 @@ export default function LivePreview({
 
                         <BlockStack gap="300">
                           {(page.rootElements ?? [])
-                            .filter(
-                              (element) =>
-                                shouldRenderElement(element) &&
-                                !element.insertBeforeRowId &&
-                                !element.insertAfterRowId
-                            )
+                            .filter((element) => {
+                              if (!shouldRenderElement(element)) {
+                                return false;
+                              }
+
+                              const anchorId =
+                                element.insertBeforeRowId ||
+                                element.insertAfterRowId;
+
+                              // Normal root elements without an anchor.
+                              if (!anchorId) {
+                                return true;
+                              }
+
+                              // If the original row no longer exists in the preview,
+                              // render the root element here instead of hiding it.
+                              return !renderedRowIds.has(String(anchorId));
+                            })
                             .map((element) =>
                               renderRootElement(element, page)
                             )}

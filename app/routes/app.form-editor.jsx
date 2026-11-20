@@ -203,101 +203,131 @@ const getDefaultPage = () => ({
 // This keeps ElementsPanel and LivePreview synchronized through the
 // shared pages state.
 // ---------------------------------------------------------------------
+
 const normalizeRows = (pages) =>
   pages.map((page) => {
     const originalRows = page.rows ?? [];
     const existingRootElements = [...(page.rootElements ?? [])];
 
-    // Keep only rows that contain two or more elements.
-    const updatedRows = originalRows.filter((row) => {
+    const updatedRows = [];
+    const convertedElements = [];
+
+    // Keep only rows containing at least two elements.
+    originalRows.forEach((row) => {
       const totalElements =
         (row.fields ?? []).length +
         (row.elements ?? []).length;
 
-      return totalElements >= 2;
-    });
-
-    const convertedElements = [];
-
-    originalRows.forEach((row, originalIndex) => {
-      const fields = row.fields ?? [];
-      const elements = row.elements ?? [];
-
-      const totalElements = fields.length + elements.length;
-
-      // CASE 1: Empty row. Nothing to convert.
-      if (totalElements === 0) return;
-
-      // CASE 2: Keep rows with two or more elements.
-      if (totalElements >= 2) return;
-
-      // CASE 3: Convert a single-element row into a root element.
-      const remainingElement = fields[0] ?? elements[0];
-
-      if (!remainingElement) return;
-
-      // Find the next row that will remain after normalization.
-      const nextRow = originalRows
-        .slice(originalIndex + 1)
-        .find(
-          (candidate) =>
-            (candidate.fields?.length ?? 0) +
-            (candidate.elements?.length ?? 0) >= 2
-        );
-
-      // If there is no next row, find the previous surviving row.
-      const previousRow = originalRows
-        .slice(0, originalIndex)
-        .reverse()
-        .find(
-          (candidate) =>
-            (candidate.fields?.length ?? 0) +
-            (candidate.elements?.length ?? 0) >= 2
-        );
-
-      // Remove any old position metadata before assigning its new position.
-      const {
-        insertBeforeRowId,
-        insertAfterRowId,
-        ...elementWithoutPosition
-      } = remainingElement;
-
-      const standaloneElement = {
-        ...elementWithoutPosition,
-      };
-
-      if (nextRow) {
-        // Keep the element immediately before the next surviving row.
-        standaloneElement.insertBeforeRowId = nextRow.id;
-      } else if (previousRow) {
-        // If there is no next row, keep it immediately after the previous row.
-        standaloneElement.insertAfterRowId = previousRow.id;
+      if (totalElements >= 2) {
+        updatedRows.push(row);
       }
-
-      // Preserve the original order of converted elements.
-      convertedElements.push(standaloneElement);
     });
 
-    // Avoid adding an element twice.
-    const existingIds = new Set(
-      existingRootElements.map((element) => element.id)
+    const survivingRowIds = new Set(
+      updatedRows.map((row) => String(row.id))
     );
 
-    const newConvertedElements = convertedElements.filter(
-      (element) => !existingIds.has(element.id)
+    // Find the nearest surviving row around an original row.
+    const getPositionForRow = (rowId) => {
+      const index = originalRows.findIndex(
+        (row) => String(row.id) === String(rowId)
+      );
+
+      if (index === -1) {
+        return {};
+      }
+
+      const nextRow = originalRows
+        .slice(index + 1)
+        .find((row) =>
+          survivingRowIds.has(String(row.id))
+        );
+
+      if (nextRow) {
+        return {
+          insertBeforeRowId: nextRow.id,
+          insertAfterRowId: undefined,
+        };
+      }
+
+      const previousRow = originalRows
+        .slice(0, index)
+        .reverse()
+        .find((row) =>
+          survivingRowIds.has(String(row.id))
+        );
+
+      if (previousRow) {
+        return {
+          insertBeforeRowId: undefined,
+          insertAfterRowId: previousRow.id,
+        };
+      }
+
+      return {};
+    };
+
+    // Convert singleton rows into root elements.
+    originalRows.forEach((row) => {
+      const allElements = [
+        ...(row.fields ?? []),
+        ...(row.elements ?? []),
+      ];
+
+      if (allElements.length !== 1) {
+        return;
+      }
+
+      convertedElements.push({
+        ...allElements[0],
+        ...getPositionForRow(row.id),
+      });
+    });
+
+    // Repair existing root elements that point to removed rows.
+    const repairedRootElements = existingRootElements.map(
+      (element) => {
+        const beforeId = element.insertBeforeRowId;
+        const afterId = element.insertAfterRowId;
+
+        if (
+          beforeId &&
+          !survivingRowIds.has(String(beforeId))
+        ) {
+          return {
+            ...element,
+            insertBeforeRowId: undefined,
+            insertAfterRowId: undefined,
+            ...getPositionForRow(beforeId),
+          };
+        }
+
+        if (
+          afterId &&
+          !survivingRowIds.has(String(afterId))
+        ) {
+          return {
+            ...element,
+            insertBeforeRowId: undefined,
+            insertAfterRowId: undefined,
+            ...getPositionForRow(afterId),
+          };
+        }
+
+        return element;
+      }
     );
 
     return {
       ...page,
       rows: updatedRows,
-
-      // Converted elements are placed before ordinary bottom root elements.
       rootElements: [
-        ...newConvertedElements,
-        ...existingRootElements,
+        ...repairedRootElements,
+        ...convertedElements,
       ],
     };
   });
+
 
 // ---------------------------------------------------------------------
 // createDuplicateElement
@@ -442,7 +472,7 @@ export default function FormEditor() {
 
   // Pages state. Header/footer are shared, so they are removed
   // from each page.
-   // Pages state. Header/footer are shared by default.
+  // Pages state. Header/footer are shared by default.
   // A page only stores its own header/footer when custom mode is used.
   const [pages, setPages] = useState(() =>
     normalizeFormPages(
@@ -538,9 +568,9 @@ export default function FormEditor() {
           updatedPage.header = page.header
             ? { ...page.header }
             : {
-                ...header,
-                id: `custom-header-${page.id}`,
-              };
+              ...header,
+              id: `custom-header-${page.id}`,
+            };
         }
 
         // ---------------------------------------------------
@@ -556,9 +586,9 @@ export default function FormEditor() {
           updatedPage.footer = page.footer
             ? { ...page.footer }
             : {
-                ...footer,
-                id: `custom-footer-${page.id}`,
-              };
+              ...footer,
+              id: `custom-footer-${page.id}`,
+            };
         }
 
         return updatedPage;
@@ -947,46 +977,46 @@ export default function FormEditor() {
   // footers, and other elements in the preview.
   // ======================================================
 
- const handleSelectExistingElement = (element, pageId = null) => {
-  const isHeader = element?.type === "form_header";
-  const isFooter = element?.type === "form_footer";
+  const handleSelectExistingElement = (element, pageId = null) => {
+    const isHeader = element?.type === "form_header";
+    const isFooter = element?.type === "form_footer";
 
-  // Find the page that owns this custom header/footer.
-  const matchingCustomPage = pages.find((page) => {
-    if (isHeader) {
-      return (
-        page.useCustomHeader === true &&
-        String(page.header?.id) === String(element?.id)
-      );
-    }
+    // Find the page that owns this custom header/footer.
+    const matchingCustomPage = pages.find((page) => {
+      if (isHeader) {
+        return (
+          page.useCustomHeader === true &&
+          String(page.header?.id) === String(element?.id)
+        );
+      }
 
-    if (isFooter) {
-      return (
-        page.useCustomFooter === true &&
-        String(page.footer?.id) === String(element?.id)
-      );
-    }
+      if (isFooter) {
+        return (
+          page.useCustomFooter === true &&
+          String(page.footer?.id) === String(element?.id)
+        );
+      }
 
-    return false;
-  });
+      return false;
+    });
 
-  // A page ID is used only for a custom header/footer.
-  // Shared header/footer always use null.
-  const resolvedPageId =
-    pageId ?? matchingCustomPage?.id ?? null;
+    // A page ID is used only for a custom header/footer.
+    // Shared header/footer always use null.
+    const resolvedPageId =
+      pageId ?? matchingCustomPage?.id ?? null;
 
-  console.log("HEADER/FOOTER SELECTION:", {
-    elementId: element?.id,
-    elementType: element?.type,
-    receivedPageId: pageId,
-    resolvedPageId,
-    isShared: resolvedPageId === null,
-  });
+    console.log("HEADER/FOOTER SELECTION:", {
+      elementId: element?.id,
+      elementType: element?.type,
+      receivedPageId: pageId,
+      resolvedPageId,
+      isShared: resolvedPageId === null,
+    });
 
-  setSelectedElement(element);
-  setSelectedElementPageId(resolvedPageId);
-  setSelectedTarget(null);
-};
+    setSelectedElement(element);
+    setSelectedElementPageId(resolvedPageId);
+    setSelectedTarget(null);
+  };
   // Adds the picked element at the requested position
   // (or appends it when added from the sidebar).
   const handleSelectElement = (item) => {
@@ -1097,23 +1127,42 @@ export default function FormEditor() {
           };
         }
 
+        
         // CASE 2: PREVIEW INSERTION BESIDE A ROOT ELEMENT
-        // Convert the target and the new element into a row.
+        // Convert the target and new element into a row
+        // while preserving the target's original visual position.
         if (
           rowId == null &&
           elementId != null &&
           (placement === "left" || placement === "right")
         ) {
           const rootElements = [...(page.rootElements || [])];
+          const rows = [...(page.rows || [])];
 
           const targetIndex = rootElements.findIndex(
-            (element) => element.id === elementId
+            (element) => String(element.id) === String(elementId)
           );
 
           if (targetIndex === -1) return page;
 
-          const targetElement = rootElements.splice(targetIndex, 1)[0];
+          // Get the target without losing its original position.
+          const targetElement = rootElements[targetIndex];
 
+          // Remember whether the target was positioned before or after a row.
+          const positionProps = {};
+
+          if (targetElement.insertBeforeRowId != null) {
+            positionProps.insertBeforeRowId =
+              targetElement.insertBeforeRowId;
+          } else if (targetElement.insertAfterRowId != null) {
+            positionProps.insertAfterRowId =
+              targetElement.insertAfterRowId;
+          }
+
+          // Remove the target from rootElements.
+          rootElements.splice(targetIndex, 1);
+
+          // Create a row containing the new element and target.
           const newRow = {
             id: crypto.randomUUID(),
             fields: [],
@@ -1123,12 +1172,78 @@ export default function FormEditor() {
                 : [targetElement, newElement],
           };
 
+          // Remove the old anchor from the target because it is now in a row.
+          const updatedTarget = {
+            ...targetElement,
+          };
+
+          delete updatedTarget.insertBeforeRowId;
+          delete updatedTarget.insertAfterRowId;
+
+          newRow.elements =
+            placement === "left"
+              ? [newElement, updatedTarget]
+              : [updatedTarget, newElement];
+
+          // Find the row that the target was originally anchored beside.
+          let insertAt = rows.length;
+
+          if (positionProps.insertBeforeRowId != null) {
+            const anchorIndex = rows.findIndex(
+              (row) =>
+                String(row.id) ===
+                String(positionProps.insertBeforeRowId)
+            );
+
+            if (anchorIndex !== -1) {
+              insertAt = anchorIndex;
+            }
+          } else if (positionProps.insertAfterRowId != null) {
+            const anchorIndex = rows.findIndex(
+              (row) =>
+                String(row.id) ===
+                String(positionProps.insertAfterRowId)
+            );
+
+            if (anchorIndex !== -1) {
+              insertAt = anchorIndex + 1;
+            }
+          } else {
+            // The target was an unanchored root element.
+            // Find its next root element that is anchored to a row.
+            const nextAnchoredElement = rootElements
+              .slice(targetIndex)
+              .find(
+                (element) =>
+                  element.insertBeforeRowId != null ||
+                  element.insertAfterRowId != null
+              );
+
+            if (nextAnchoredElement) {
+              const nextAnchorId =
+                nextAnchoredElement.insertBeforeRowId ||
+                nextAnchoredElement.insertAfterRowId;
+
+              const nextRowIndex = rows.findIndex(
+                (row) => String(row.id) === String(nextAnchorId)
+              );
+
+              if (nextRowIndex !== -1) {
+                insertAt = nextRowIndex;
+              }
+            }
+          }
+
+          // Insert the new row at the calculated position.
+          rows.splice(insertAt, 0, newRow);
+
           return {
             ...page,
             rootElements,
-            rows: [...(page.rows || []), newRow],
+            rows,
           };
         }
+
 
         // CASE 3: PREVIEW INSERTION ABOVE OR BELOW A ROOT ELEMENT
         if (
@@ -1224,105 +1339,105 @@ export default function FormEditor() {
   // Otherwise, headers/footers update the shared default.
   // Normal elements update inside pages.
 
-const updateSelectedElement = (updatedElement) => {
-  // Find the page associated with the selected custom element.
-  const selectedCustomPage = pages.find(
-    (page) =>
-      String(page.id) === String(selectedElementPageId)
-  );
-
-  // ---------------------------------------------------
-  // PAGE-SPECIFIC HEADER
-  // ---------------------------------------------------
-
-  if (
-    updatedElement.type === "form_header" &&
-    selectedCustomPage?.useCustomHeader === true
-  ) {
-    setPages((previousPages) =>
-      previousPages.map((page) =>
+  const updateSelectedElement = (updatedElement) => {
+    // Find the page associated with the selected custom element.
+    const selectedCustomPage = pages.find(
+      (page) =>
         String(page.id) === String(selectedElementPageId)
-          ? {
+    );
+
+    // ---------------------------------------------------
+    // PAGE-SPECIFIC HEADER
+    // ---------------------------------------------------
+
+    if (
+      updatedElement.type === "form_header" &&
+      selectedCustomPage?.useCustomHeader === true
+    ) {
+      setPages((previousPages) =>
+        previousPages.map((page) =>
+          String(page.id) === String(selectedElementPageId)
+            ? {
               ...page,
               header: updatedElement,
             }
-          : page
-      )
-    );
+            : page
+        )
+      );
 
-    setSelectedElement(updatedElement);
-    return;
-  }
+      setSelectedElement(updatedElement);
+      return;
+    }
 
-  // ---------------------------------------------------
-  // PAGE-SPECIFIC FOOTER
-  // ---------------------------------------------------
+    // ---------------------------------------------------
+    // PAGE-SPECIFIC FOOTER
+    // ---------------------------------------------------
 
-  if (
-    updatedElement.type === "form_footer" &&
-    selectedCustomPage?.useCustomFooter === true
-  ) {
-    setPages((previousPages) =>
-      previousPages.map((page) =>
-        String(page.id) === String(selectedElementPageId)
-          ? {
+    if (
+      updatedElement.type === "form_footer" &&
+      selectedCustomPage?.useCustomFooter === true
+    ) {
+      setPages((previousPages) =>
+        previousPages.map((page) =>
+          String(page.id) === String(selectedElementPageId)
+            ? {
               ...page,
               footer: updatedElement,
             }
-          : page
+            : page
+        )
+      );
+
+      setSelectedElement(updatedElement);
+      return;
+    }
+
+    // ---------------------------------------------------
+    // SHARED HEADER
+    // This works from Page 1, Page 2, Page 3, etc.
+    // ---------------------------------------------------
+
+    if (updatedElement.type === "form_header") {
+      setHeader((previousHeader) => ({
+        ...previousHeader,
+        ...updatedElement,
+      }));
+
+      setSelectedElement(updatedElement);
+      setSelectedElementPageId(null);
+      return;
+    }
+
+    // ---------------------------------------------------
+    // SHARED FOOTER
+    // This works from any page displaying the shared footer.
+    // ---------------------------------------------------
+
+    if (updatedElement.type === "form_footer") {
+      setFooter((previousFooter) => ({
+        ...previousFooter,
+        ...updatedElement,
+      }));
+
+      setSelectedElement(updatedElement);
+      setSelectedElementPageId(null);
+      return;
+    }
+
+    // ---------------------------------------------------
+    // NORMAL PAGE ELEMENT
+    // ---------------------------------------------------
+
+    setPages((previousPages) =>
+      updateElementInPages(
+        previousPages,
+        updatedElement.id,
+        () => updatedElement
       )
     );
 
     setSelectedElement(updatedElement);
-    return;
-  }
-
-  // ---------------------------------------------------
-  // SHARED HEADER
-  // This works from Page 1, Page 2, Page 3, etc.
-  // ---------------------------------------------------
-
-  if (updatedElement.type === "form_header") {
-    setHeader((previousHeader) => ({
-      ...previousHeader,
-      ...updatedElement,
-    }));
-
-    setSelectedElement(updatedElement);
-    setSelectedElementPageId(null);
-    return;
-  }
-
-  // ---------------------------------------------------
-  // SHARED FOOTER
-  // This works from any page displaying the shared footer.
-  // ---------------------------------------------------
-
-  if (updatedElement.type === "form_footer") {
-    setFooter((previousFooter) => ({
-      ...previousFooter,
-      ...updatedElement,
-    }));
-
-    setSelectedElement(updatedElement);
-    setSelectedElementPageId(null);
-    return;
-  }
-
-  // ---------------------------------------------------
-  // NORMAL PAGE ELEMENT
-  // ---------------------------------------------------
-
-  setPages((previousPages) =>
-    updateElementInPages(
-      previousPages,
-      updatedElement.id,
-      () => updatedElement
-    )
-  );
-
-  setSelectedElement(updatedElement);
-};
+  };
   // SHOW OR HIDE ELEMENT
   const handleToggleElementVisibility = (element) => {
     const updatedElement = {
@@ -1898,282 +2013,463 @@ const updateSelectedElement = (updatedElement) => {
   // Separate from the ElementsPanel drag handler. Moves an element that
   // is dragged inside LivePreview.
 
-// =====================================================================
-// PREVIEW DRAG END
-// Handles moving fields/elements inside LivePreview.
-//
-// Supported destinations:
-// 1. previewDrop      -> Around another element (top/bottom/left/right)
-// 2. previewRowInsert -> Between two rows
-// 3. rootDrop         -> General preview area
-//
-// Important:
-// - Supports fields, elements and rootElements.
-// - Supports moving within the same row.
-// - Supports moving between different rows.
-// - Supports moving between pages.
-// - Does not mutate the original React state.
-// - Does not normalize away newly created single-element rows.
-// =====================================================================
+  // =====================================================================
+  // PREVIEW DRAG END
+  // Handles moving fields/elements inside LivePreview.
+  //
+  // Supported destinations:
+  // 1. previewDrop      -> Around another element (top/bottom/left/right)
+  // 2. previewRowInsert -> Between two rows
+  // 3. rootDrop         -> General preview area
+  //
+  // Important:
+  // - Supports fields, elements and rootElements.
+  // - Supports moving within the same row.
+  // - Supports moving between different rows.
+  // - Supports moving between pages.
+  // - Does not mutate the original React state.
+  // - Does not normalize away newly created single-element rows.
+  // =====================================================================
 
-const handlePreviewDragEnd = ({ active, over }) => {
-  if (!over) return;
+  const handlePreviewDragEnd = ({ active, over }) => {
+    if (!over) return;
 
-  const activeData = active.data.current;
-  const overData = over.data.current;
+    const activeData = active.data.current;
+    const overData = over.data.current;
 
-  // Only handle elements dragged from LivePreview.
-  if (
-    !activeData ||
-    !overData ||
-    activeData.type !== "previewElement"
-  ) {
-    return;
-  }
-
-  // Only allow drops onto supported preview targets.
-  if (
-    !["previewDrop", "previewRowInsert", "rootDrop"].includes(
-      overData.type
-    )
-  ) {
-    return;
-  }
-
-  // Do not move an element to another page accidentally.
-  if (overData.pageId == null) return;
-
-  setPages((previousPages) => {
-    // ---------------------------------------------------------------
-    // STEP 1: Create independent copies of pages, rows and collections.
-    // ---------------------------------------------------------------
-
-    const updatedPages = previousPages.map((page) => ({
-      ...page,
-
-      rows: (page.rows ?? []).map((row) => ({
-        ...row,
-        fields: [...(row.fields ?? [])],
-        elements: [...(row.elements ?? [])],
-      })),
-
-      rootElements: [...(page.rootElements ?? [])],
-    }));
-
-    // ---------------------------------------------------------------
-    // STEP 2: Find the source page and target page.
-    // ---------------------------------------------------------------
-
-    const sourcePage = updatedPages.find(
-      (page) =>
-        String(page.id) === String(activeData.pageId)
-    );
-
-    const targetPage = updatedPages.find(
-      (page) =>
-        String(page.id) === String(overData.pageId)
-    );
-
-    if (!sourcePage || !targetPage) {
-      return previousPages;
+    // Only handle elements dragged from LivePreview.
+    if (
+      !activeData ||
+      !overData ||
+      activeData.type !== "previewElement"
+    ) {
+      return;
     }
 
-    // ---------------------------------------------------------------
-    // STEP 3: Find and remove the dragged element.
-    // ---------------------------------------------------------------
+    // Only allow drops onto supported preview targets.
+    if (
+      !["previewDrop", "previewRowInsert", "rootDrop"].includes(
+        overData.type
+      )
+    ) {
+      return;
+    }
 
-    let draggedElement = null;
+    // Do not move an element to another page accidentally.
+    if (overData.pageId == null) return;
 
-    if (activeData.collection === "rootElements") {
-      const sourceIndex = sourcePage.rootElements.findIndex(
-        (item) =>
-          String(item.id) === String(activeData.elementId)
+    setPages((previousPages) => {
+      // ---------------------------------------------------------------
+      // STEP 1: Create independent copies of pages, rows and collections.
+      // ---------------------------------------------------------------
+
+      const updatedPages = previousPages.map((page) => ({
+        ...page,
+
+        rows: (page.rows ?? []).map((row) => ({
+          ...row,
+          fields: [...(row.fields ?? [])],
+          elements: [...(row.elements ?? [])],
+        })),
+
+        rootElements: [...(page.rootElements ?? [])],
+      }));
+
+      // ---------------------------------------------------------------
+      // STEP 2: Find the source page and target page.
+      // ---------------------------------------------------------------
+
+      const sourcePage = updatedPages.find(
+        (page) =>
+          String(page.id) === String(activeData.pageId)
       );
 
-      if (sourceIndex === -1) return previousPages;
-
-      [draggedElement] = sourcePage.rootElements.splice(
-        sourceIndex,
-        1
+      const targetPage = updatedPages.find(
+        (page) =>
+          String(page.id) === String(overData.pageId)
       );
-    } else {
-      // Only fields and elements are valid row collections.
-      if (
-        !["fields", "elements"].includes(activeData.collection)
-      ) {
+
+      if (!sourcePage || !targetPage) {
         return previousPages;
       }
 
-      const sourceRow = sourcePage.rows.find(
-        (row) =>
-          String(row.id) === String(activeData.rowId)
-      );
+      // ---------------------------------------------------------------
+      // STEP 3: Find and remove the dragged element.
+      // ---------------------------------------------------------------
 
-      if (!sourceRow) return previousPages;
+      let draggedElement = null;
 
-      const sourceItems = sourceRow[activeData.collection];
+      if (activeData.collection === "rootElements") {
+        const sourceIndex = sourcePage.rootElements.findIndex(
+          (item) =>
+            String(item.id) === String(activeData.elementId)
+        );
 
-      const sourceIndex = sourceItems.findIndex(
-        (item) =>
-          String(item.id) === String(activeData.elementId)
-      );
+        if (sourceIndex === -1) return previousPages;
 
-      if (sourceIndex === -1) return previousPages;
-
-      [draggedElement] = sourceItems.splice(sourceIndex, 1);
-    }
-
-    if (!draggedElement) return previousPages;
-
-    // Remove old standalone positioning metadata.
-    // The destination will decide the new position.
-    const {
-      insertBeforeRowId,
-      insertAfterRowId,
-      ...elementWithoutPosition
-    } = draggedElement;
-
-    draggedElement = elementWithoutPosition;
-
-    // ---------------------------------------------------------------
-    // STEP 4: Helper to remove only EMPTY rows.
-    //
-    // We intentionally keep single-element rows.
-    // They must not disappear just because an element was moved.
-    // ---------------------------------------------------------------
-
-    const removeEmptyRows = (page) => {
-      page.rows = page.rows.filter(
-        (row) =>
-          (row.fields?.length ?? 0) > 0 ||
-          (row.elements?.length ?? 0) > 0
-      );
-    };
-
-    // ---------------------------------------------------------------
-    // CASE 1: DROP BETWEEN ROWS.
-    //
-    // Keep the dragged element standalone and position it before
-    // or after the target row.
-    // ---------------------------------------------------------------
-
-    if (overData.type === "previewRowInsert") {
-      const originalTargetRows = [...targetPage.rows];
-
-      const originalTargetIndex = originalTargetRows.findIndex(
-        (row) =>
-          String(row.id) === String(overData.targetRowId)
-      );
-
-      if (originalTargetIndex === -1) {
-        return previousPages;
-      }
-
-      // Remove empty source rows, but keep single-element rows.
-      removeEmptyRows(sourcePage);
-
-      // The target row may have been the source row.
-      // Find it again after removing the dragged element.
-      const targetStillExists = targetPage.rows.some(
-        (row) =>
-          String(row.id) === String(overData.targetRowId)
-      );
-
-      let standaloneElement;
-
-      if (targetStillExists) {
-        standaloneElement = {
-          ...draggedElement,
-
-          ...(overData.placement === "before"
-            ? { insertBeforeRowId: overData.targetRowId }
-            : { insertAfterRowId: overData.targetRowId }),
-        };
+        [draggedElement] = sourcePage.rootElements.splice(
+          sourceIndex,
+          1
+        );
       } else {
-        // The dragged element was the only element in the target row.
-        // Use the nearest surviving row as the new insertion anchor.
+        // Only fields and elements are valid row collections.
+        if (
+          !["fields", "elements"].includes(activeData.collection)
+        ) {
+          return previousPages;
+        }
 
-        const nextSurvivingRow = originalTargetRows
-          .slice(originalTargetIndex + 1)
-          .find((originalRow) =>
-            targetPage.rows.some(
-              (row) => row.id === originalRow.id
-            )
-          );
+        const sourceRow = sourcePage.rows.find(
+          (row) =>
+            String(row.id) === String(activeData.rowId)
+        );
 
-        const previousSurvivingRow = originalTargetRows
-          .slice(0, originalTargetIndex)
-          .reverse()
-          .find((originalRow) =>
-            targetPage.rows.some(
-              (row) => row.id === originalRow.id
-            )
-          );
+        if (!sourceRow) return previousPages;
 
-        if (nextSurvivingRow) {
+        const sourceItems = sourceRow[activeData.collection];
+
+        const sourceIndex = sourceItems.findIndex(
+          (item) =>
+            String(item.id) === String(activeData.elementId)
+        );
+
+        if (sourceIndex === -1) return previousPages;
+
+        [draggedElement] = sourceItems.splice(sourceIndex, 1);
+      }
+
+      if (!draggedElement) return previousPages;
+
+      // Remove old standalone positioning metadata.
+      // The destination will decide the new position.
+      const {
+        insertBeforeRowId,
+        insertAfterRowId,
+        ...elementWithoutPosition
+      } = draggedElement;
+
+      draggedElement = elementWithoutPosition;
+
+      // ---------------------------------------------------------------
+      // STEP 4: Helper to remove only EMPTY rows.
+      //
+      // We intentionally keep single-element rows.
+      // They must not disappear just because an element was moved.
+      // ---------------------------------------------------------------
+
+      const removeEmptyRows = (page) => {
+        page.rows = page.rows.filter(
+          (row) =>
+            (row.fields?.length ?? 0) > 0 ||
+            (row.elements?.length ?? 0) > 0
+        );
+      };
+
+      // ---------------------------------------------------------------
+      // CASE 1: DROP BETWEEN ROWS.
+      //
+      // Keep the dragged element standalone and position it before
+      // or after the target row.
+      // ---------------------------------------------------------------
+
+      if (overData.type === "previewRowInsert") {
+        const originalTargetRows = [...targetPage.rows];
+
+        const originalTargetIndex = originalTargetRows.findIndex(
+          (row) =>
+            String(row.id) === String(overData.targetRowId)
+        );
+
+        if (originalTargetIndex === -1) {
+          return previousPages;
+        }
+
+        // Remove empty source rows, but keep single-element rows.
+        removeEmptyRows(sourcePage);
+
+        // The target row may have been the source row.
+        // Find it again after removing the dragged element.
+        const targetStillExists = targetPage.rows.some(
+          (row) =>
+            String(row.id) === String(overData.targetRowId)
+        );
+
+        let standaloneElement;
+
+        if (targetStillExists) {
           standaloneElement = {
             ...draggedElement,
-            insertBeforeRowId: nextSurvivingRow.id,
-          };
-        } else if (previousSurvivingRow) {
-          standaloneElement = {
-            ...draggedElement,
-            insertAfterRowId: previousSurvivingRow.id,
+
+            ...(overData.placement === "before"
+              ? { insertBeforeRowId: overData.targetRowId }
+              : { insertAfterRowId: overData.targetRowId }),
           };
         } else {
-          // No rows remain. Keep it as a normal root element.
-          standaloneElement = draggedElement;
+          // The dragged element was the only element in the target row.
+          // Use the nearest surviving row as the new insertion anchor.
+
+          const nextSurvivingRow = originalTargetRows
+            .slice(originalTargetIndex + 1)
+            .find((originalRow) =>
+              targetPage.rows.some(
+                (row) => row.id === originalRow.id
+              )
+            );
+
+          const previousSurvivingRow = originalTargetRows
+            .slice(0, originalTargetIndex)
+            .reverse()
+            .find((originalRow) =>
+              targetPage.rows.some(
+                (row) => row.id === originalRow.id
+              )
+            );
+
+          if (nextSurvivingRow) {
+            standaloneElement = {
+              ...draggedElement,
+              insertBeforeRowId: nextSurvivingRow.id,
+            };
+          } else if (previousSurvivingRow) {
+            standaloneElement = {
+              ...draggedElement,
+              insertAfterRowId: previousSurvivingRow.id,
+            };
+          } else {
+            // No rows remain. Keep it as a normal root element.
+            standaloneElement = draggedElement;
+          }
         }
+
+        targetPage.rootElements.push(standaloneElement);
+
+        removeEmptyRows(targetPage);
+
+        return updatedPages;
       }
 
-      targetPage.rootElements.push(standaloneElement);
+      // ---------------------------------------------------------------
+      // CASE 2: DROP INTO THE GENERAL PREVIEW AREA.
+      //
+      // Move the element into rootElements (full width).
+      // ---------------------------------------------------------------
 
-      removeEmptyRows(targetPage);
+      if (overData.type === "rootDrop") {
+        targetPage.rootElements.push(draggedElement);
 
-      return updatedPages;
-    }
+        removeEmptyRows(sourcePage);
+        removeEmptyRows(targetPage);
 
-    // ---------------------------------------------------------------
-    // CASE 2: DROP INTO THE GENERAL PREVIEW AREA.
-    //
-    // Move the element into rootElements (full width).
-    // ---------------------------------------------------------------
+        return updatedPages;
+      }
 
-    if (overData.type === "rootDrop") {
-      targetPage.rootElements.push(draggedElement);
+      // ---------------------------------------------------------------
+      // CASE 3: DROP ABOVE OR BELOW ANOTHER ELEMENT.
+      //
+      // For a row element, create a new full-width row.
+      // For a root element, reorder it in rootElements.
+      // ---------------------------------------------------------------
 
-      removeEmptyRows(sourcePage);
-      removeEmptyRows(targetPage);
+      const {
+        placement,
+        targetRowId,
+        targetElementId,
+        targetCollection,
+      } = overData;
 
-      return updatedPages;
-    }
+      if (placement === "top" || placement === "bottom") {
+        // CASE 3A: Target is another standalone root element.
 
-    // ---------------------------------------------------------------
-    // CASE 3: DROP ABOVE OR BELOW ANOTHER ELEMENT.
-    //
-    // For a row element, create a new full-width row.
-    // For a root element, reorder it in rootElements.
-    // ---------------------------------------------------------------
+        if (targetCollection === "rootElements") {
+          const targetIndex = targetPage.rootElements.findIndex(
+            (item) =>
+              String(item.id) === String(targetElementId)
+          );
 
-    const {
-      placement,
-      targetRowId,
-      targetElementId,
-      targetCollection,
-    } = overData;
+          if (targetIndex === -1) return previousPages;
 
-    if (placement === "top" || placement === "bottom") {
-      // CASE 3A: Target is another standalone root element.
-      if (targetCollection === "rootElements") {
-        const targetIndex = targetPage.rootElements.findIndex(
+          // Get the target element without removing it.
+          const targetElement = targetPage.rootElements[targetIndex];
+
+          // Preserve the target element's original visual position.
+          const positionProps = {};
+
+          if (targetElement.insertBeforeRowId != null) {
+            positionProps.insertBeforeRowId =
+              targetElement.insertBeforeRowId;
+          } else if (targetElement.insertAfterRowId != null) {
+            positionProps.insertAfterRowId =
+              targetElement.insertAfterRowId;
+          }
+
+          // Give the dragged element the same position.
+          const positionedDraggedElement = {
+            ...draggedElement,
+            ...positionProps,
+          };
+
+          // Insert above or below the target.
+          targetPage.rootElements.splice(
+            placement === "top"
+              ? targetIndex
+              : targetIndex + 1,
+            0,
+            positionedDraggedElement
+          );
+
+          removeEmptyRows(sourcePage);
+
+          return updatedPages;
+        }
+
+        // CASE 3B: Target is inside a row.
+        const targetIndex = targetPage.rows.findIndex(
+          (row) =>
+            String(row.id) === String(targetRowId)
+        );
+
+        if (targetIndex === -1) return previousPages;
+
+        const newRow = {
+          id: crypto.randomUUID(),
+
+          fields:
+            activeData.collection === "fields"
+              ? [draggedElement]
+              : [],
+
+          elements:
+            activeData.collection === "fields"
+              ? []
+              : [draggedElement],
+        };
+
+        targetPage.rows.splice(
+          placement === "top"
+            ? targetIndex
+            : targetIndex + 1,
+          0,
+          newRow
+        );
+
+        removeEmptyRows(sourcePage);
+
+        return updatedPages;
+      }
+
+      // ---------------------------------------------------------------
+      // CASE 4: DROP LEFT OR RIGHT OF ANOTHER ELEMENT.
+      // ---------------------------------------------------------------
+
+      if (placement === "left" || placement === "right") {
+        // CASE 4A: Target is a standalone root element.
+        // Convert both elements into a new row.
+
+        // CASE 4A: Target is a standalone root element.
+        // Convert both elements into a new row while preserving
+        // the target element's original visual position.
+        if (targetCollection === "rootElements") {
+          const targetIndex = targetPage.rootElements.findIndex(
+            (item) =>
+              String(item.id) === String(targetElementId)
+          );
+
+          if (targetIndex === -1) return previousPages;
+
+          // Remove the target root element.
+          const [targetElement] = targetPage.rootElements.splice(
+            targetIndex,
+            1
+          );
+
+          // Save the target's original position before converting it.
+          const targetBeforeRowId = targetElement.insertBeforeRowId;
+          const targetAfterRowId = targetElement.insertAfterRowId;
+
+          // Remove positioning metadata because these elements
+          // will now belong to a normal row.
+          const {
+            insertBeforeRowId,
+            insertAfterRowId,
+            ...targetElementWithoutPosition
+          } = targetElement;
+
+          // Create the new row.
+          const newRow = {
+            id: crypto.randomUUID(),
+            fields: [],
+
+            elements:
+              placement === "left"
+                ? [draggedElement, targetElementWithoutPosition]
+                : [targetElementWithoutPosition, draggedElement],
+          };
+
+          // Remove empty source rows before calculating the destination.
+          // This is important when source and target are on the same page.
+          removeEmptyRows(sourcePage);
+
+          // Find the row position where the target root element
+          // was originally displayed.
+          let insertAt = targetPage.rows.length;
+
+          if (targetBeforeRowId != null) {
+            const beforeIndex = targetPage.rows.findIndex(
+              (row) =>
+                String(row.id) === String(targetBeforeRowId)
+            );
+
+            if (beforeIndex !== -1) {
+              insertAt = beforeIndex;
+            }
+          } else if (targetAfterRowId != null) {
+            const afterIndex = targetPage.rows.findIndex(
+              (row) =>
+                String(row.id) === String(targetAfterRowId)
+            );
+
+            if (afterIndex !== -1) {
+              insertAt = afterIndex + 1;
+            }
+          }
+
+          // Insert the new row at the target's original position.
+          targetPage.rows.splice(insertAt, 0, newRow);
+
+          return updatedPages;
+        }
+
+
+        // CASE 4B: Target is inside an existing row.
+        // Insert directly into the target collection.
+        if (
+          !["fields", "elements"].includes(targetCollection)
+        ) {
+          return previousPages;
+        }
+
+        const targetRow = targetPage.rows.find(
+          (row) =>
+            String(row.id) === String(targetRowId)
+        );
+
+        if (!targetRow) return previousPages;
+
+        const targetItems = targetRow[targetCollection];
+
+        if (!Array.isArray(targetItems)) {
+          return previousPages;
+        }
+
+        const targetIndex = targetItems.findIndex(
           (item) =>
             String(item.id) === String(targetElementId)
         );
 
         if (targetIndex === -1) return previousPages;
 
-        targetPage.rootElements.splice(
-          placement === "top"
+        targetItems.splice(
+          placement === "left"
             ? targetIndex
             : targetIndex + 1,
           0,
@@ -2185,176 +2481,85 @@ const handlePreviewDragEnd = ({ active, over }) => {
         return updatedPages;
       }
 
-      // CASE 3B: Target is inside a row.
-      const targetIndex = targetPage.rows.findIndex(
-        (row) =>
-          String(row.id) === String(targetRowId)
-      );
-
-      if (targetIndex === -1) return previousPages;
-
-      const newRow = {
-        id: crypto.randomUUID(),
-
-        fields:
-          activeData.collection === "fields"
-            ? [draggedElement]
-            : [],
-
-        elements:
-          activeData.collection === "fields"
-            ? []
-            : [draggedElement],
-      };
-
-      targetPage.rows.splice(
-        placement === "top"
-          ? targetIndex
-          : targetIndex + 1,
-        0,
-        newRow
-      );
-
-      removeEmptyRows(sourcePage);
-
-      return updatedPages;
-    }
-
-    // ---------------------------------------------------------------
-    // CASE 4: DROP LEFT OR RIGHT OF ANOTHER ELEMENT.
-    // ---------------------------------------------------------------
-
-    if (placement === "left" || placement === "right") {
-      // CASE 4A: Target is a standalone root element.
-      // Convert both elements into a new row.
-      if (targetCollection === "rootElements") {
-        const targetIndex = targetPage.rootElements.findIndex(
-          (item) =>
-            String(item.id) === String(targetElementId)
-        );
-
-        if (targetIndex === -1) return previousPages;
-
-        const [targetElement] = targetPage.rootElements.splice(
-          targetIndex,
-          1
-        );
-
-        const newRow = {
-          id: crypto.randomUUID(),
-          fields: [],
-
-          elements:
-            placement === "left"
-              ? [draggedElement, targetElement]
-              : [targetElement, draggedElement],
-        };
-
-        targetPage.rows.push(newRow);
-
-        removeEmptyRows(sourcePage);
-
-        return updatedPages;
-      }
-
-      // CASE 4B: Target is inside an existing row.
-      // Insert directly into the target collection.
-      if (
-        !["fields", "elements"].includes(targetCollection)
-      ) {
-        return previousPages;
-      }
-
-      const targetRow = targetPage.rows.find(
-        (row) =>
-          String(row.id) === String(targetRowId)
-      );
-
-      if (!targetRow) return previousPages;
-
-      const targetItems = targetRow[targetCollection];
-
-      if (!Array.isArray(targetItems)) {
-        return previousPages;
-      }
-
-      const targetIndex = targetItems.findIndex(
-        (item) =>
-          String(item.id) === String(targetElementId)
-      );
-
-      if (targetIndex === -1) return previousPages;
-
-      targetItems.splice(
-        placement === "left"
-          ? targetIndex
-          : targetIndex + 1,
-        0,
-        draggedElement
-      );
-
-      removeEmptyRows(sourcePage);
-
-      return updatedPages;
-    }
-
-    // Unsupported placement.
-    return previousPages;
-  });
-};
+      // Unsupported placement.
+      return previousPages;
+    });
+  };
 
 
-// =====================================================================
-// PREVIEW COLLISION DETECTION
-//
-// Priority:
-// 1. previewRowInsert
-// 2. previewDrop
-// 3. rootDrop
-//
-// This ensures small insertion zones are selected before the
-// large general preview drop area.
-// =====================================================================
+  // =====================================================================
+  // PREVIEW COLLISION DETECTION
+  //
+  // Priority:
+  // 1. previewRowInsert
+  // 2. previewDrop
+  // 3. rootDrop
+  //
+  // This ensures small insertion zones are selected before the
+  // large general preview drop area.
+  // =====================================================================
 
 const previewCollisionDetection = (args) => {
   const collisions = pointerWithin(args);
 
-  const getType = (collision) =>
-    collision.data?.droppableContainer?.data?.current?.type;
+  const getData = (collision) =>
+    collision.data?.droppableContainer?.data?.current;
 
+  // First: prioritize top/bottom zones around standalone elements.
+  const rootElementDropCollisions = collisions.filter(
+    (collision) => {
+      const data = getData(collision);
+
+      return (
+        data?.type === "previewDrop" &&
+        data?.targetCollection === "rootElements" &&
+        (data?.placement === "top" ||
+          data?.placement === "bottom")
+      );
+    }
+  );
+
+  if (rootElementDropCollisions.length > 0) {
+    return rootElementDropCollisions;
+  }
+
+  // Second: normal row insertion zones.
   const rowInsertCollisions = collisions.filter(
     (collision) =>
-      getType(collision) === "previewRowInsert"
+      getData(collision)?.type === "previewRowInsert"
   );
 
   if (rowInsertCollisions.length > 0) {
     return rowInsertCollisions;
   }
 
+  // Third: other preview element drop zones.
   const previewDropCollisions = collisions.filter(
     (collision) =>
-      getType(collision) === "previewDrop"
+      getData(collision)?.type === "previewDrop"
   );
 
   if (previewDropCollisions.length > 0) {
     return previewDropCollisions;
   }
 
+  // Last: root drop area.
   return collisions.filter(
     (collision) =>
-      getType(collision) === "rootDrop"
+      getData(collision)?.type === "rootDrop"
   );
 };
 
 
+
   // Expand settings panel when custom header/footer is enabled
-// and its text editor is displayed in PageSettings.
-const isPageSettingsExpanded =
-  selectedTarget?.type === "page" &&
-  (
-    selectedPage?.useCustomHeader === true ||
-    selectedPage?.useCustomFooter === true
-  );
+  // and its text editor is displayed in PageSettings.
+  const isPageSettingsExpanded =
+    selectedTarget?.type === "page" &&
+    (
+      selectedPage?.useCustomHeader === true ||
+      selectedPage?.useCustomFooter === true
+    );
 
 
   // -------------------------------------------------------------------
@@ -2366,20 +2571,19 @@ const isPageSettingsExpanded =
     <div className="template-editor">
 
       {/* Main content */}
-     <div
-  className={`template-editor__main ${
-    isSidebarCollapsed
-      ? "template-editor__main--collapsed"
-      : (
-          isPageSettingsExpanded ||
-          ["paragraph", "form_header", "form_footer"].includes(
-            selectedElement?.type
+      <div
+        className={`template-editor__main ${isSidebarCollapsed
+          ? "template-editor__main--collapsed"
+          : (
+            isPageSettingsExpanded ||
+            ["paragraph", "form_header", "form_footer"].includes(
+              selectedElement?.type
+            )
           )
-        )
-        ? "template-editor__main--paragraph"
-        : "template-editor__main--expanded"
-  }`}
->
+            ? "template-editor__main--paragraph"
+            : "template-editor__main--expanded"
+          }`}
+      >
 
         {/* ---------------------------------------------------------- */}
         {/* SIDEBAR                                                    */}
