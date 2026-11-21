@@ -73,10 +73,52 @@ const getElementIcon = (type) => {
 };
 
 // Get the unique drag ID for a field.
+// Get a stable drag ID for every default field.
 const getDragItemId = (item, index) => {
-    return typeof item === "object" && item?.id != null
-        ? `field-${item.id}`
-        : `field-index-${index}`;
+    // Fields with their own ID use that ID.
+    if (
+        item &&
+        typeof item === "object" &&
+        item.id != null
+    ) {
+        return `field-${item.id}`;
+    }
+
+    // String fields use their actual name instead of their index.
+    if (typeof item === "string") {
+        return `field-${encodeURIComponent(
+            item.trim().toLowerCase()
+        )}`;
+    }
+
+    // Objects without IDs use their available identifying value.
+    const fieldName =
+        item?.name ||
+        item?.label ||
+        item?.type;
+
+    if (fieldName) {
+        return `field-${encodeURIComponent(
+            String(fieldName).trim().toLowerCase()
+        )}`;
+    }
+
+    // Last-resort fallback for unidentified fields.
+    return `field-index-${index}`;
+};
+
+// Get the correct collection for a dragged item.
+const getSourceCollection = (type) => {
+    if (type === "field") return "fields";
+
+    if (
+        type === "element" ||
+        type === "rootElement"
+    ) {
+        return "elements";
+    }
+
+    return null;
 };
 
 // ======================================================
@@ -88,7 +130,7 @@ export default function ElementsPanel({
     pages,
     setPages,
 
-    //normalize rows 
+    //normalize rows
     normalizeRows,
 
     // Shared header and footer settings.
@@ -97,7 +139,8 @@ export default function ElementsPanel({
 
     // Element selection.
     onSelectElement,
-    //page & row 
+
+    //page & row
     onSelectPage,
     onSelectRow,
 
@@ -136,32 +179,76 @@ export default function ElementsPanel({
     const handlePageContentDragEnd = (event) => {
         const { active, over } = event;
 
-        if (!over || active.id === over.id) return;
+        if (!over || String(active.id) === String(over.id)) return;
 
         const activeData = active.data.current;
         const overData = over.data.current;
 
         if (!activeData || !overData) return;
-        if (activeData.type === "row") return;
+
+        // Page and row dragging are handled separately.
+        if (
+            activeData.type === "page" ||
+            activeData.type === "row"
+        ) {
+            return;
+        }
+
+        // Only these item types can be moved by this handler.
+        const sourceCollection = getSourceCollection(activeData.type);
+
+        if (!sourceCollection) return;
 
         const sourcePageId = activeData.pageId;
         const targetPageId = overData.pageId;
 
-        if (sourcePageId == null || targetPageId == null) return;
+        if (
+            sourcePageId == null ||
+            targetPageId == null
+        ) {
+            return;
+        }
 
+        // Only allow supported content drop targets.
+        const supportedTargets = [
+            "field",
+            "element",
+            "rootElement",
+            "rowDrop",
+            "row",
+            "pageRoot",
+        ];
+
+        if (!supportedTargets.includes(overData.type)) {
+            return;
+        }
+
+        // Determine whether the dragged item should be inserted
+        // before or after the item underneath it.
         const activeRect = active.rect.current.translated;
         const overRect = over.rect;
 
         let placement = "after";
 
         if (activeRect && overRect) {
-            const activeCenter = activeRect.top + activeRect.height / 2;
-            const overCenter = overRect.top + overRect.height / 2;
+            const activeCenter =
+                activeRect.top + activeRect.height / 2;
 
-            placement = activeCenter < overCenter ? "before" : "after";
+            const overCenter =
+                overRect.top + overRect.height / 2;
+
+            placement =
+                activeCenter < overCenter
+                    ? "before"
+                    : "after";
         }
 
         setPages((previousPages) => {
+
+            // ======================================================
+            // STEP 1: CREATE SAFE COPIES OF THE PAGE DATA.
+            // ======================================================
+
             const updatedPages = previousPages.map((page) => ({
                 ...page,
                 rows: (page.rows ?? []).map((row) => ({
@@ -173,76 +260,278 @@ export default function ElementsPanel({
             }));
 
             const sourcePage = updatedPages.find(
-                (page) => String(page.id) === String(sourcePageId)
+                (page) =>
+                    String(page.id) === String(sourcePageId)
             );
 
             const targetPage = updatedPages.find(
-                (page) => String(page.id) === String(targetPageId)
+                (page) =>
+                    String(page.id) === String(targetPageId)
             );
 
-            if (!sourcePage || !targetPage) return previousPages;
-
-            // Allow an existing field to become standalone only
-            // when it is the only item in its source row.
-            let canMoveFieldToRoot = false;
-
-            if (activeData.type === "field") {
-                const sourceRow = sourcePage.rows.find(
-                    (row) => String(row.id) === String(activeData.rowId)
-                );
-
-                canMoveFieldToRoot =
-                    !!sourceRow &&
-                    (sourceRow.fields ?? []).length +
-                    (sourceRow.elements ?? []).length === 1;
-            }
-
-            let draggedItem = null;;
-
-            if (activeData.type === "field") {
-                const sourceRow = sourcePage.rows.find(
-                    (row) => String(row.id) === String(activeData.rowId)
-                );
-
-                if (sourceRow) {
-                    const index = sourceRow.fields.findIndex(
-                        (item, itemIndex) =>
-                            getDragItemId(item, itemIndex) === activeData.itemId
-                    );
-
-                    if (index !== -1) {
-                        draggedItem = sourceRow.fields.splice(index, 1)[0];
-                    }
-                }
-            } else if (activeData.type === "element") {
-                const sourceRow = sourcePage.rows.find(
-                    (row) => String(row.id) === String(activeData.rowId)
-                );
-
-                if (sourceRow) {
-                    const index = sourceRow.elements.findIndex(
-                        (item) => `element-${item.id}` === activeData.itemId
-                    );
-
-                    if (index !== -1) {
-                        draggedItem = sourceRow.elements.splice(index, 1)[0];
-                    }
-                }
-            } else if (activeData.type === "rootElement") {
-                const index = sourcePage.rootElements.findIndex(
-                    (item) => `element-${item.id}` === activeData.itemId
-                );
-
-                if (index !== -1) {
-                    draggedItem = sourcePage.rootElements.splice(index, 1)[0];
-                }
-            } else {
+            if (!sourcePage || !targetPage) {
                 return previousPages;
             }
 
-            if (!draggedItem) return previousPages;
+            // ======================================================
+            // STEP 2: FIND THE SOURCE ROW.
+            // ======================================================
 
-            // STEP 2: CLEAR OLD ROOT POSITION ANCHORS.
+            const sourceRow =
+                activeData.rowId != null
+                    ? sourcePage.rows.find(
+                        (row) =>
+                            String(row.id) ===
+                            String(activeData.rowId)
+                    )
+                    : null;
+
+            // ======================================================
+            // STEP 3: FIND THE TARGET ROW.
+            // ======================================================
+
+            const targetRowId = overData.rowId ?? null;
+
+            const targetRow =
+                targetRowId != null
+                    ? targetPage.rows.find(
+                        (row) =>
+                            String(row.id) ===
+                            String(targetRowId)
+                    )
+                    : null;
+
+            if (
+                targetRowId != null &&
+                !targetRow
+            ) {
+                return previousPages;
+            }
+
+            // ======================================================
+            // STEP 4: VALIDATE SOURCE AND TARGET COLLECTIONS.
+            // ======================================================
+
+            if (
+                (activeData.type === "field" ||
+                    activeData.type === "element") &&
+                !sourceRow
+            ) {
+                return previousPages;
+            }
+
+            if (
+                targetRow &&
+                !Array.isArray(targetRow.fields)
+            ) {
+                targetRow.fields = [];
+            }
+
+            if (
+                targetRow &&
+                !Array.isArray(targetRow.elements)
+            ) {
+                targetRow.elements = [];
+            }
+
+            // ======================================================
+            // STEP 5: VALIDATE THE TARGET ELEMENT.
+            // ======================================================
+
+            if (overData.type === "rootElement") {
+                const targetExists =
+                    targetPage.rootElements.some(
+                        (item) =>
+                            `element-${item.id}` ===
+                            String(over.id)
+                    );
+
+                if (!targetExists) {
+                    return previousPages;
+                }
+            }
+
+            if (
+                targetRow &&
+                (
+                    overData.type === "field" ||
+                    overData.type === "element"
+                )
+            ) {
+                const targetCollection =
+                    overData.type === "field"
+                        ? "fields"
+                        : "elements";
+
+                const targetItems =
+                    targetRow[targetCollection] ?? [];
+
+                const targetExists =
+                    targetItems.some((item, index) => {
+                        const itemId =
+                            targetCollection === "fields"
+                                ? getDragItemId(item, index)
+                                : `element-${item.id}`;
+
+                        return String(itemId) === String(over.id);
+                    });
+
+                if (!targetExists) {
+                    return previousPages;
+                }
+            }
+
+            // ======================================================
+            // STEP 6: FIND THE DRAGGED ITEM.
+            // ======================================================
+
+            let draggedItem = null;
+            let sourceIndex = -1;
+
+            if (activeData.type === "field") {
+                sourceIndex = sourceRow.fields.findIndex(
+                    (item, index) =>
+                        String(getDragItemId(item, index)) ===
+                        String(active.id)
+                );
+
+                if (sourceIndex !== -1) {
+                    draggedItem = sourceRow.fields[sourceIndex];
+                }
+            }
+
+            else if (activeData.type === "element") {
+                sourceIndex = sourceRow.elements.findIndex(
+                    (item) =>
+                        `element-${item.id}` === String(active.id)
+                );
+
+                if (sourceIndex !== -1) {
+                    draggedItem = sourceRow.elements[sourceIndex];
+                }
+            }
+
+            else if (activeData.type === "rootElement") {
+                sourceIndex = sourcePage.rootElements.findIndex(
+                    (item) =>
+                        `element-${item.id}` === String(active.id)
+                );
+
+                if (sourceIndex !== -1) {
+                    draggedItem = sourcePage.rootElements[sourceIndex];
+                }
+            }
+
+            if (!draggedItem || sourceIndex === -1) {
+                return previousPages;
+            }
+
+
+
+
+            // ======================================================
+            // STEP 7: REORDER ITEMS INSIDE THE SAME ROW.
+            // Save the mixed order in sourceRow.itemOrder.
+            // ======================================================
+
+            if (
+                sourcePage === targetPage &&
+                sourceRow &&
+                targetRow &&
+                String(sourceRow.id) === String(targetRow.id) &&
+                (
+                    overData.type === "field" ||
+                    overData.type === "element"
+                )
+            ) {
+                const combinedItems = [
+                    ...(sourceRow.fields || []).map((field, index) => ({
+                        item: field,
+                        collection: "fields",
+                        dragId: getDragItemId(field, index),
+                    })),
+
+                    ...(sourceRow.elements || []).map((element) => ({
+                        item: element,
+                        collection: "elements",
+                        dragId: `element-${element.id}`,
+                    })),
+                ];
+
+                // Restore the previously saved mixed order.
+                const savedOrder = sourceRow.itemOrder || [];
+
+                combinedItems.sort((a, b) => {
+                    const indexA = savedOrder.indexOf(a.dragId);
+                    const indexB = savedOrder.indexOf(b.dragId);
+
+                    if (indexA === -1 && indexB === -1) return 0;
+                    if (indexA === -1) return 1;
+                    if (indexB === -1) return -1;
+
+                    return indexA - indexB;
+                });
+
+                const oldIndex = combinedItems.findIndex(
+                    (entry) =>
+                        String(entry.dragId) === String(active.id)
+                );
+
+                const newIndex = combinedItems.findIndex(
+                    (entry) =>
+                        String(entry.dragId) === String(over.id)
+                );
+
+                if (oldIndex === -1 || newIndex === -1) {
+                    return previousPages;
+                }
+
+                const reorderedItems = arrayMove(
+                    combinedItems,
+                    oldIndex,
+                    newIndex
+                );
+
+                // Keep the original collections separate.
+                sourceRow.fields = reorderedItems
+                    .filter((entry) => entry.collection === "fields")
+                    .map((entry) => entry.item);
+
+                sourceRow.elements = reorderedItems
+                    .filter((entry) => entry.collection === "elements")
+                    .map((entry) => entry.item);
+
+                // Save the actual visual order.
+                sourceRow.itemOrder = reorderedItems.map(
+                    (entry) => entry.dragId
+                );
+
+                return normalizeRows
+                    ? normalizeRows(updatedPages)
+                    : updatedPages;
+            }
+
+
+            // ======================================================
+            // STEP 8: REMOVE THE DRAGGED ITEM FROM ITS SOURCE.
+            // ======================================================
+
+            if (activeData.type === "field") {
+                sourceRow.fields.splice(sourceIndex, 1);
+            }
+
+            else if (activeData.type === "element") {
+                sourceRow.elements.splice(sourceIndex, 1);
+            }
+
+            else if (activeData.type === "rootElement") {
+                sourcePage.rootElements.splice(sourceIndex, 1);
+            }
+
+            // ======================================================
+            // STEP 9: CLEAR OLD ROOT POSITION ANCHORS.
+            // The destination decides the new position.
+            // ======================================================
 
             const {
                 insertBeforeRowId,
@@ -252,122 +541,196 @@ export default function ElementsPanel({
 
             draggedItem = cleanDraggedItem;
 
-            // STEP 3: FIND THE TARGET ROW.
-
-            const targetRowId = overData.rowId ?? null;
-
-            const targetRow =
-                targetRowId != null
-                    ? targetPage.rows.find(
-                        (row) => String(row.id) === String(targetRowId)
-                    )
-                    : null;
-
-            if (targetRowId != null && !targetRow) {
-                return previousPages;
-            }
-
-            // STEP 4: DROP ONTO A FIELD OR CREATED ELEMENT.
-            // Use the TARGET collection, not the dragged item's original type.
+            // ======================================================
+            // STEP 10: DROP ONTO A FIELD OR CREATED ELEMENT.
+            // ======================================================
 
             if (
                 targetRow &&
-                (overData.type === "field" || overData.type === "element")
+                (
+                    overData.type === "field" ||
+                    overData.type === "element"
+                )
             ) {
                 const targetCollection =
-                    overData.type === "field" ? "fields" : "elements";
-
-                const items = targetRow[targetCollection];
-
-                const targetIndex =
                     overData.type === "field"
-                        ? items.findIndex(
-                            (item, index) =>
-                                getDragItemId(item, index) === overData.itemId
-                        )
-                        : items.findIndex(
-                            (item) => `element-${item.id}` === overData.itemId
+                        ? "fields"
+                        : "elements";
+
+                // Keep the dragged item in its original collection.
+                const destinationCollection = sourceCollection;
+
+                const destinationItems =
+                    targetRow[destinationCollection];
+
+                let insertIndex = destinationItems.length;
+
+                // Insert relative to the target when both collections
+                // are the same.
+                if (
+                    destinationCollection === targetCollection
+                ) {
+                    const currentTargetIndex =
+                        destinationItems.findIndex(
+                            (item, index) => {
+                                const itemId =
+                                    targetCollection === "fields"
+                                        ? getDragItemId(item, index)
+                                        : `element-${item.id}`;
+
+                                return String(itemId) === String(over.id);
+                            }
                         );
 
-                if (targetIndex === -1) return previousPages;
+                    if (currentTargetIndex === -1) {
+                        return previousPages;
+                    }
 
-                const insertIndex =
-                    targetIndex + (placement === "after" ? 1 : 0);
+                    insertIndex =
+                        currentTargetIndex +
+                        (placement === "after" ? 1 : 0);
+                }
 
-                items.splice(insertIndex, 0, draggedItem);
+                destinationItems.splice(
+                    insertIndex,
+                    0,
+                    draggedItem
+                );
             }
 
-            // STEP 5: DROP ONTO THE ROW BODY.
-            // Preserve the dragged item's collection.
+            // ======================================================
+            // STEP 11: DROP ONTO THE ROW BODY.
+            // ======================================================
 
             else if (
                 targetRow &&
-                (overData.type === "rowDrop" || overData.type === "row")
-            ) {
-                if (activeData.type === "field") {
-                    targetRow.fields.push(draggedItem);
-                } else {
-                    targetRow.elements.push(draggedItem);
-                }
-            }
-
-            // STEP 6: DROP ONTO ANOTHER STANDALONE ELEMENT.
-
-            else if (
-                overData.type === "rootElement" &&
                 (
-                    activeData.type !== "field" ||
-                    canMoveFieldToRoot
+                    overData.type === "rowDrop" ||
+                    overData.type === "row"
                 )
             ) {
+                targetRow[sourceCollection].push(draggedItem);
+            }
+
+            // ======================================================
+            // STEP 12: DROP ONTO ANOTHER STANDALONE ELEMENT.
+            // ======================================================
+
+            else if (overData.type === "rootElement") {
                 const rootElements = targetPage.rootElements;
 
-                const targetIndex = rootElements.findIndex(
-                    (item) => `element-${item.id}` === overData.itemId
+                const currentTargetIndex = rootElements.findIndex(
+                    (item) =>
+                        `element-${item.id}` === String(over.id)
                 );
 
-                if (targetIndex === -1) return previousPages;
+                if (currentTargetIndex === -1) {
+                    return previousPages;
+                }
 
-                const targetElement = rootElements[targetIndex];
+                const currentTargetElement =
+                    rootElements[currentTargetIndex];
 
                 const standaloneElement = {
                     ...draggedItem,
-                    ...(targetElement.insertBeforeRowId != null
-                        ? { insertBeforeRowId: targetElement.insertBeforeRowId }
+
+                    ...(currentTargetElement.insertBeforeRowId != null
+                        ? {
+                            insertBeforeRowId:
+                                currentTargetElement.insertBeforeRowId,
+                        }
                         : {}),
-                    ...(targetElement.insertAfterRowId != null
-                        ? { insertAfterRowId: targetElement.insertAfterRowId }
+
+                    ...(currentTargetElement.insertAfterRowId != null
+                        ? {
+                            insertAfterRowId:
+                                currentTargetElement.insertAfterRowId,
+                        }
                         : {}),
                 };
 
                 rootElements.splice(
-                    targetIndex + (placement === "after" ? 1 : 0),
+                    currentTargetIndex +
+                    (placement === "after" ? 1 : 0),
                     0,
                     standaloneElement
                 );
             }
 
-
-            // STEP 7: DROP ONTO THE PAGE ROOT AREA.
+            // ======================================================
+            // STEP 13: DROP ONTO THE PAGE ROOT AREA.
+            // Turn the dragged item into a standalone element
+            // at the position where it was dropped.
+            // ======================================================
 
             else if (overData.type === "pageRoot") {
-                if (
-                    activeData.type === "field" &&
-                    !canMoveFieldToRoot
-                ) {
-                    return previousPages;
-                }
+                const activeRect = active.rect.current.translated;
 
-                targetPage.rootElements.push(draggedItem);
+                const dropY = activeRect
+                    ? activeRect.top + activeRect.height / 2
+                    : null;
+
+                const rowElements = Array.from(
+                    document.querySelectorAll(
+                        `[data-element-tree-row="true"][data-page-id="${String(targetPageId)}"]`
+                    )
+                );
+
+                if (
+                    rowElements.length === 0 ||
+                    dropY === null
+                ) {
+                    targetPage.rootElements.push(draggedItem);
+                } else {
+                    const rowPositions = rowElements
+                        .map((rowElement) => ({
+                            rowId: rowElement.dataset.rowId,
+                            top: rowElement.getBoundingClientRect().top,
+                            bottom: rowElement.getBoundingClientRect().bottom,
+                        }))
+                        .sort((a, b) => a.top - b.top);
+
+                    const nextRow = rowPositions.find(
+                        (row) =>
+                            dropY < (row.top + row.bottom) / 2
+                    );
+
+                    if (nextRow) {
+                        targetPage.rootElements.push({
+                            ...draggedItem,
+                            insertBeforeRowId: nextRow.rowId,
+                        });
+                    } else {
+                        const lastRow =
+                            rowPositions[rowPositions.length - 1];
+
+                        targetPage.rootElements.push({
+                            ...draggedItem,
+                            insertAfterRowId: lastRow.rowId,
+                        });
+                    }
+                }
             }
 
-            // STEP 8: ENFORCE ROW RULES AND REPAIR ROOT ANCHORS.
+            // ======================================================
+            // STEP 14: CANCEL ANY UNHANDLED DROP TARGET.
+            // ======================================================
 
-            return normalizeRows(updatedPages);
+            else {
+                return previousPages;
+            }
+
+            // ======================================================
+            // STEP 15: NORMALIZE ROWS.
+            // Remove empty rows and convert one-item rows
+            // into standalone elements.
+            // ======================================================
+
+            return normalizeRows
+                ? normalizeRows(updatedPages)
+                : updatedPages;
         });
     };
-
-
 
     // ======================================================
     // 5.2. REORDER PAGES
@@ -378,33 +741,52 @@ export default function ElementsPanel({
 
         if (!over) return;
 
+        const activeData = active.data.current;
+        const overData = over.data.current;
+
+        if (
+            activeData?.type !== "page" ||
+            overData?.type !== "page"
+        ) {
+            return;
+        }
+
         // Get page IDs from the drag data.
-        const activePageId = active.data.current?.pageId;
-        const overPageId = over.data.current?.pageId;
+        const activePageId = activeData.pageId;
+        const overPageId = overData.pageId;
 
         if (
             activePageId == null ||
             overPageId == null ||
-            activePageId === overPageId
+            String(activePageId) === String(overPageId)
         ) {
             return;
         }
 
         setPages((previousPages) => {
             const oldIndex = previousPages.findIndex(
-                (page) => page.id === activePageId
+                (page) =>
+                    String(page.id) === String(activePageId)
             );
 
             const newIndex = previousPages.findIndex(
-                (page) => page.id === overPageId
+                (page) =>
+                    String(page.id) === String(overPageId)
             );
 
-            if (oldIndex === -1 || newIndex === -1) {
+            if (
+                oldIndex === -1 ||
+                newIndex === -1
+            ) {
                 return previousPages;
             }
 
             // Move the complete page to the new position.
-            return arrayMove(previousPages, oldIndex, newIndex);
+            return arrayMove(
+                previousPages,
+                oldIndex,
+                newIndex
+            );
         });
     };
 
@@ -431,39 +813,68 @@ export default function ElementsPanel({
             const overId = String(over.id);
 
             if (overId.startsWith("row-drop-")) {
-                overRowId = overId.replace("row-drop-", "");
+                overRowId = overId.replace(
+                    "row-drop-",
+                    ""
+                );
             } else if (overId.startsWith("row-")) {
-                overRowId = overId.replace("row-", "");
+                overRowId = overId.replace(
+                    "row-",
+                    ""
+                );
             }
         }
 
-        if (activeRowId == null || overRowId == null) return;
+        if (
+            activeRowId == null ||
+            overRowId == null
+        ) {
+            return;
+        }
 
-        if (String(activeRowId) === String(overRowId)) return;
+        if (
+            String(activeRowId) ===
+            String(overRowId)
+        ) {
+            return;
+        }
 
         setPages((previousPages) =>
             previousPages.map((page) => {
-                if (String(page.id) !== String(pageId)) {
+                if (
+                    String(page.id) !== String(pageId)
+                ) {
                     return page;
                 }
 
                 const rows = [...(page.rows ?? [])];
 
                 const oldIndex = rows.findIndex(
-                    (row) => String(row.id) === String(activeRowId)
+                    (row) =>
+                        String(row.id) ===
+                        String(activeRowId)
                 );
 
                 const newIndex = rows.findIndex(
-                    (row) => String(row.id) === String(overRowId)
+                    (row) =>
+                        String(row.id) ===
+                        String(overRowId)
                 );
 
-                if (oldIndex === -1 || newIndex === -1) {
+                if (
+                    oldIndex === -1 ||
+                    newIndex === -1
+                ) {
                     return page;
                 }
 
                 return {
                     ...page,
-                    rows: arrayMove(rows, oldIndex, newIndex),
+                    rows: arrayMove(
+                        rows,
+                        oldIndex,
+                        newIndex
+                    ),
                 };
             })
         );
@@ -480,30 +891,41 @@ export default function ElementsPanel({
 
         setPages((previousPages) =>
             previousPages.map((page) => {
-                if (page.id !== pageId) return page;
+                if (
+                    String(page.id) !== String(pageId)
+                ) {
+                    return page;
+                }
 
                 return {
                     ...page,
                     rows: (page.rows || []).map((row) => {
-                        if (row.id !== rowId) return row;
+                        if (
+                            String(row.id) !== String(rowId)
+                        ) {
+                            return row;
+                        }
 
                         // Get the unique ID for each field.
                         const getFieldId = (field, index) =>
-                            typeof field === "object" && field?.id != null
-                                ? `field-${field.id}`
-                                : `${rowId}-field-${index}`;
+                            getDragItemId(field, index);
 
                         const oldIndex = row.fields.findIndex(
                             (field, index) =>
-                                getFieldId(field, index) === active.id
+                                getFieldId(field, index) ===
+                                active.id
                         );
 
                         const newIndex = row.fields.findIndex(
                             (field, index) =>
-                                getFieldId(field, index) === over.id
+                                getFieldId(field, index) ===
+                                over.id
                         );
 
-                        if (oldIndex === -1 || newIndex === -1) {
+                        if (
+                            oldIndex === -1 ||
+                            newIndex === -1
+                        ) {
                             return row;
                         }
 
@@ -526,31 +948,52 @@ export default function ElementsPanel({
     // 5.5. REORDER CREATED ELEMENTS
     // ======================================================
 
-    const handleElementDragEnd = (event, pageId, rowId = null) => {
+    const handleElementDragEnd = (
+        event,
+        pageId,
+        rowId = null
+    ) => {
         const { active, over } = event;
 
         if (!over || active.id === over.id) return;
 
         setPages((previousPages) =>
             previousPages.map((page) => {
-                if (page.id !== pageId) return page;
+                if (
+                    String(page.id) !== String(pageId)
+                ) {
+                    return page;
+                }
 
                 // CASE 1: Reorder elements inside a row.
                 if (rowId !== null) {
                     return {
                         ...page,
                         rows: page.rows.map((row) => {
-                            if (row.id !== rowId) return row;
+                            if (
+                                String(row.id) !== String(rowId)
+                            ) {
+                                return row;
+                            }
 
-                            const oldIndex = (row.elements || []).findIndex(
-                                (element) => `element-${element.id}` === active.id
-                            );
+                            const oldIndex =
+                                (row.elements || []).findIndex(
+                                    (element) =>
+                                        `element-${element.id}` ===
+                                        active.id
+                                );
 
-                            const newIndex = (row.elements || []).findIndex(
-                                (element) => `element-${element.id}` === over.id
-                            );
+                            const newIndex =
+                                (row.elements || []).findIndex(
+                                    (element) =>
+                                        `element-${element.id}` ===
+                                        over.id
+                                );
 
-                            if (oldIndex === -1 || newIndex === -1) {
+                            if (
+                                oldIndex === -1 ||
+                                newIndex === -1
+                            ) {
                                 return row;
                             }
 
@@ -567,17 +1010,23 @@ export default function ElementsPanel({
                 }
 
                 // CASE 2: Reorder standalone page elements.
-                const rootElements = page.rootElements || [];
+                const rootElements =
+                    page.rootElements || [];
 
                 const oldIndex = rootElements.findIndex(
-                    (element) => `element-${element.id}` === active.id
+                    (element) =>
+                        `element-${element.id}` === active.id
                 );
 
                 const newIndex = rootElements.findIndex(
-                    (element) => `element-${element.id}` === over.id
+                    (element) =>
+                        `element-${element.id}` === over.id
                 );
 
-                if (oldIndex === -1 || newIndex === -1) {
+                if (
+                    oldIndex === -1 ||
+                    newIndex === -1
+                ) {
                     return page;
                 }
 
@@ -610,7 +1059,10 @@ export default function ElementsPanel({
 
         // Handle row reordering.
         if (activeData.type === "row") {
-            handleRowDragEnd(event, activeData.pageId);
+            handleRowDragEnd(
+                event,
+                activeData.pageId
+            );
             return;
         }
 
@@ -649,7 +1101,10 @@ export default function ElementsPanel({
         setPages((previousPages) =>
             previousPages.map((page) => ({
                 ...page,
-                open: page.id === pageId ? !page.open : false,
+                open:
+                    page.id === pageId
+                        ? !page.open
+                        : false,
             }))
         );
     };
@@ -703,14 +1158,17 @@ export default function ElementsPanel({
 
                     // Restrict page and row dragging to their own containers.
                     collisionDetection={(args) => {
-                        const activeType = args.active.data.current?.type;
+                        const activeType =
+                            args.active.data.current?.type;
 
                         // PAGE DRAGGING: Only detect pages.
                         if (activeType === "page") {
-                            const pageContainers = args.droppableContainers.filter(
-                                (container) =>
-                                    container.data.current?.type === "page"
-                            );
+                            const pageContainers =
+                                args.droppableContainers.filter(
+                                    (container) =>
+                                        container.data.current?.type ===
+                                        "page"
+                                );
 
                             return closestCenter({
                                 ...args,
@@ -720,10 +1178,12 @@ export default function ElementsPanel({
 
                         // ROW DRAGGING: Only detect rows.
                         if (activeType === "row") {
-                            const rowContainers = args.droppableContainers.filter(
-                                (container) =>
-                                    container.data.current?.type === "row"
-                            );
+                            const rowContainers =
+                                args.droppableContainers.filter(
+                                    (container) =>
+                                        container.data.current?.type ===
+                                        "row"
+                                );
 
                             return closestCenter({
                                 ...args,
@@ -731,32 +1191,60 @@ export default function ElementsPanel({
                             });
                         }
 
-                        // ELEMENT DRAGGING:
+                        // ELEMENT AND FIELD DRAGGING:
                         // Detect what is actually underneath the pointer.
-                        const pointerCollisions = pointerWithin(args);
+                        const pointerCollisions =
+                            pointerWithin(args);
 
-                        if (pointerCollisions.length > 0) {
-                            // Prefer actual elements, rows and row drop areas
-                            // over the large page-root drop area.
-                            const specificTargets = pointerCollisions.filter(
-                                (collision) =>
-                                    collision.data?.droppableContainer?.data?.current?.type !==
-                                    "pageRoot"
-                            );
-
-                            return specificTargets.length > 0
-                                ? specificTargets
-                                : pointerCollisions;
+                        if (pointerCollisions.length === 0) {
+                            return [];
                         }
 
-                        // Do not guess a nearby row when the pointer is outside
-                        // all valid drop areas.
-                        return [];
+                        // Never allow the outer page sortable to become
+                        // a content drop target.
+                        const contentCollisions =
+                            pointerCollisions.filter((collision) => {
+                                const type =
+                                    collision.data?.droppableContainer
+                                        ?.data?.current?.type;
+
+                                return type !== "page";
+                            });
+
+                        // Prefer specific targets over the large page root.
+                        const priority = {
+                            field: 5,
+                            element: 5,
+                            rootElement: 5,
+                            rowDrop: 4,
+                            row: 3,
+                            pageRoot: 1,
+                        };
+
+                        const sortedCollisions = [
+                            ...contentCollisions,
+                        ].sort((a, b) => {
+                            const typeA =
+                                a.data?.droppableContainer
+                                    ?.data?.current?.type;
+
+                            const typeB =
+                                b.data?.droppableContainer
+                                    ?.data?.current?.type;
+
+                            return (
+                                (priority[typeB] || 0) -
+                                (priority[typeA] || 0)
+                            );
+                        });
+
+                        return sortedCollisions;
                     }}
 
                     // Store information for the floating drag preview.
                     onDragStart={(event) => {
-                        const data = event.active.data.current;
+                        const data =
+                            event.active.data.current;
 
                         setActiveDragItem({
                             label: data?.label || "Element",
@@ -777,7 +1265,9 @@ export default function ElementsPanel({
                     }}
                 >
                     <SortableContext
-                        items={pages.map((page) => `page-${page.id}`)}
+                        items={pages.map(
+                            (page) => `page-${page.id}`
+                        )}
                         strategy={verticalListSortingStrategy}
                     >
                         {/* Render all draggable pages. */}
@@ -788,7 +1278,7 @@ export default function ElementsPanel({
                                 page={page}
                                 togglePage={togglePage}
 
-                                // handle the page and row setting 
+                                // handle the page and row setting
                                 onSelectPage={onSelectPage}
                                 onSelectRow={onSelectRow}
 
@@ -897,17 +1387,25 @@ function SidebarSectionInsert({
                 className="element-tree__section-insert-button"
                 title="Add element here"
                 aria-label="Add element here"
-                onPointerDown={(event) => event.stopPropagation()}
+                onPointerDown={(event) =>
+                    event.stopPropagation()
+                }
                 onClick={(event) => {
                     event.stopPropagation();
 
-                    openElementPicker(pageId, rowId ?? null, event, {
-                        collection: referenceElementId
-                            ? "rootElements"
-                            : "rows",
-                        placement,
-                        referenceElementId: referenceElementId ?? null,
-                    });
+                    openElementPicker(
+                        pageId,
+                        rowId ?? null,
+                        event,
+                        {
+                            collection: referenceElementId
+                                ? "rootElements"
+                                : "rows",
+                            placement,
+                            referenceElementId:
+                                referenceElementId ?? null,
+                        }
+                    );
                 }}
             >
                 +
@@ -933,7 +1431,7 @@ function SortablePage({
     openElementPicker,
     onSelectElement,
 
-    //on seleect page & row 
+    //on seleect page & row
     onSelectPage,
     onSelectRow,
 
@@ -968,6 +1466,7 @@ function SortablePage({
             icon: FileIcon,
         },
     });
+
     // Allow created elements to be dropped outside rows.
     const {
         setNodeRef: setPageRootDropRef,
@@ -1070,7 +1569,8 @@ function SortablePage({
         (page.rootElements ?? [])
             .filter(
                 (element) =>
-                    String(element.insertBeforeRowId) === String(row.id)
+                    String(element.insertBeforeRowId) ===
+                    String(row.id)
             )
             .forEach((element) => {
                 sortableItems.push(`element-${element.id}`);
@@ -1083,7 +1583,8 @@ function SortablePage({
         (page.rootElements ?? [])
             .filter(
                 (element) =>
-                    String(element.insertAfterRowId) === String(row.id)
+                    String(element.insertAfterRowId) ===
+                    String(row.id)
             )
             .forEach((element) => {
                 sortableItems.push(`element-${element.id}`);
@@ -1120,7 +1621,10 @@ function SortablePage({
                 <button
                     type="button"
                     className="element-tree__chevron"
-                    onClick={() => togglePage(page.id)}
+                    onClick={(event) => {
+                        event.stopPropagation();
+                        togglePage(page.id);
+                    }}
                 >
                     <Icon
                         source={
@@ -1142,7 +1646,10 @@ function SortablePage({
                     role="button"
                     tabIndex={0}
                     onKeyDown={(event) => {
-                        if (event.key === "Enter" || event.key === " ") {
+                        if (
+                            event.key === "Enter" ||
+                            event.key === " "
+                        ) {
                             event.preventDefault();
                             event.stopPropagation();
                             onSelectPage?.(page);
@@ -1196,10 +1703,16 @@ function SortablePage({
             {page.open && (
                 <div
                     ref={setPageRootDropRef}
-                    className={`element-tree__page-content ${isPageRootOver ? "element-tree__page-content--over" : ""
+                    style={{
+                        minHeight: "80px",
+                        width: "100%",
+                        position: "relative",
+                    }}
+                    className={`element-tree__page-content ${isPageRootOver
+                        ? "element-tree__page-content--over"
+                        : ""
                         }`}
                 >
-
                     <SortableContext
                         items={sortableItems}
                         strategy={verticalListSortingStrategy}
@@ -1225,7 +1738,8 @@ function SortablePage({
                                 {(page.rootElements || [])
                                     .filter(
                                         (element) =>
-                                            element.insertBeforeRowId === row.id
+                                            String(element.insertBeforeRowId) ===
+                                            String(row.id)
                                     )
                                     .map((element) =>
                                         renderRootElement(element)
@@ -1248,7 +1762,8 @@ function SortablePage({
 
                                     // Element selection.
                                     onSelectElement={onSelectElement}
-                                    // row selection 
+
+                                    // row selection
                                     onSelectRow={onSelectRow}
 
                                     // Row toolbox actions.
@@ -1262,7 +1777,8 @@ function SortablePage({
                                 {(page.rootElements || [])
                                     .filter(
                                         (element) =>
-                                            element.insertAfterRowId === row.id
+                                            String(element.insertAfterRowId) ===
+                                            String(row.id)
                                     )
                                     .map((element) =>
                                         renderRootElement(element)
@@ -1334,7 +1850,7 @@ function SortableRow({
     // Element picker.
     openElementPicker,
 
-    //row 
+    //row
     onSelectRow,
 
     // Element toolbox actions.
@@ -1452,6 +1968,9 @@ function SortableRow({
     return (
         <div
             ref={setNodeRef}
+            data-element-tree-row="true"
+            data-page-id={pageId}
+            data-row-id={row.id}
             style={rowStyle}
             className={`element-tree__row ${row.visible === false
                 ? "element-tree__row--hidden"
@@ -1469,7 +1988,6 @@ function SortableRow({
             >
                 {/* FOLDER ICON / DRAG ICON */}
 
-
                 <span
                     className="element-tree__field-icon element-tree__row-drag-icon"
                     onClick={(event) => {
@@ -1479,7 +1997,10 @@ function SortableRow({
                     role="button"
                     tabIndex={0}
                     onKeyDown={(event) => {
-                        if (event.key === "Enter" || event.key === " ") {
+                        if (
+                            event.key === "Enter" ||
+                            event.key === " "
+                        ) {
                             event.preventDefault();
                             event.stopPropagation();
                             onSelectRow?.(pageId, row);
@@ -1487,6 +2008,7 @@ function SortableRow({
                     }}
                 >
                     {/* ROW ICON */}
+
                     <span className="element-tree__default-icon">
                         <Icon
                             source={
@@ -1498,11 +2020,11 @@ function SortableRow({
                     </span>
 
                     {/* DRAG HANDLE */}
+
                     <span className="element-tree__drag-icon">
                         <Icon source={DragHandleIcon} />
                     </span>
                 </span>
-
 
                 {/* ROW LABEL */}
 
@@ -1514,15 +2036,16 @@ function SortableRow({
                     role="button"
                     tabIndex={0}
                     onKeyDown={(event) => {
-                        if (event.key === "Enter" || event.key === " ") {
+                        if (
+                            event.key === "Enter" ||
+                            event.key === " "
+                        ) {
                             event.preventDefault();
                             event.stopPropagation();
                             onSelectRow?.(pageId, row);
                         }
                     }}
                 >
-                    {/* ROW LABEL */}
-
                     <Text as="span" variant="bodySm">
                         {row.label || "Row"}
                     </Text>
@@ -1547,7 +2070,6 @@ function SortableRow({
             </div>
 
             {/* ROW FIELDS AND CREATED ELEMENTS */}
-
             <div
                 ref={setDropRef}
                 className={`element-tree__row-fields ${isOver
@@ -1555,94 +2077,96 @@ function SortableRow({
                     : ""
                     }`}
             >
-                <SortableContext
-                    items={[
-                        ...fields.map((field, index) =>
-                            getDragItemId(field, index)
-                        ),
-                        ...elements.map(
-                            (element) => `element-${element.id}`
-                        ),
-                    ]}
-                    strategy={verticalListSortingStrategy}
-                >
-                    {/* ORIGINAL FIELDS */}
+                {(() => {
+                    // Combine fields and created elements.
+                    const combinedItems = [
+                        ...fields.map((field, index) => ({
+                            item: field,
+                            collection: "fields",
+                            dragId: getDragItemId(field, index),
+                        })),
 
-                    {fields.map((field, index) => {
-                        const fieldId = getDragItemId(field, index);
+                        ...elements.map((element) => ({
+                            item: element,
+                            collection: "elements",
+                            dragId: `element-${element.id}`,
+                        })),
+                    ];
+                    const savedOrder = row.itemOrder || [];
 
-                        return (
-                            <div
-                                key={fieldId}
-                                className="element-tree__item-wrapper"
-                            >
-                                {/* ABOVE FIELD */}
+                    combinedItems.sort((a, b) => {
+                        const indexA = savedOrder.indexOf(a.dragId);
+                        const indexB = savedOrder.indexOf(b.dragId);
 
-                                {renderInsertButton(
-                                    "fields",
-                                    field.id,
-                                    "before"
-                                )}
+                        if (indexA === -1 && indexB === -1) return 0;
+                        if (indexA === -1) return 1;
+                        if (indexB === -1) return -1;
 
-                                <SortableSidebarField
-                                    id={fieldId}
-                                    field={field}
-                                    rowId={row.id}
-                                    pageId={pageId}
-                                    onSelectElement={onSelectElement}
-                                    onToggleElementVisibility={onToggleElementVisibility}
-                                    onDuplicateElement={onDuplicateElement}
-                                    onDeleteElement={onDeleteElement}
-                                />
+                        return indexA - indexB;
+                    });
 
-                                {/* BELOW FIELD */}
-
-                                {renderInsertButton(
-                                    "fields",
-                                    field.id,
-                                    "after"
-                                )}
-                            </div>
-                        );
-                    })}
-
-                    {/* CREATED ELEMENTS */}
-
-                    {elements.map((element) => (
-                        <div
-                            key={element.id}
-                            className="element-tree__item-wrapper"
+                    return (
+                        <SortableContext
+                            items={combinedItems.map(
+                                (entry) => entry.dragId
+                            )}
+                            strategy={verticalListSortingStrategy}
                         >
-                            {/* ABOVE ELEMENT */}
+                            {combinedItems.map((entry) => {
+                                const {
+                                    item,
+                                    collection,
+                                    dragId,
+                                } = entry;
 
-                            {renderInsertButton(
-                                "elements",
-                                element.id,
-                                "before"
-                            )}
+                                return (
+                                    <div
+                                        key={dragId}
+                                        className="element-tree__item-wrapper"
+                                    >
+                                        {renderInsertButton(
+                                            collection,
+                                            item.id,
+                                            "before"
+                                        )}
 
-                            <SortableCreatedElement
-                                element={element}
-                                type="element"
-                                rowId={row.id}
-                                pageId={pageId}
-                                onSelectElement={onSelectElement}
-                                onToggleElementVisibility={onToggleElementVisibility}
-                                onDuplicateElement={onDuplicateElement}
-                                onDeleteElement={onDeleteElement}
-                            />
+                                        {collection === "fields" ? (
+                                            <SortableSidebarField
+                                                id={dragId}
+                                                field={item}
+                                                rowId={row.id}
+                                                pageId={pageId}
+                                                onSelectElement={onSelectElement}
+                                                onToggleElementVisibility={onToggleElementVisibility}
+                                                onDuplicateElement={onDuplicateElement}
+                                                onDeleteElement={onDeleteElement}
+                                            />
+                                        ) : (
+                                            <SortableCreatedElement
+                                                element={item}
+                                                type="element"
+                                                rowId={row.id}
+                                                pageId={pageId}
+                                                onSelectElement={onSelectElement}
+                                                onToggleElementVisibility={onToggleElementVisibility}
+                                                onDuplicateElement={onDuplicateElement}
+                                                onDeleteElement={onDeleteElement}
+                                            />
+                                        )}
 
-                            {/* BELOW ELEMENT */}
-
-                            {renderInsertButton(
-                                "elements",
-                                element.id,
-                                "after"
-                            )}
-                        </div>
-                    ))}
-                </SortableContext>
+                                        {renderInsertButton(
+                                            collection,
+                                            item.id,
+                                            "after"
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </SortableContext>
+                    );
+                })()}
             </div>
+
 
             {/* ADD ELEMENT TO THIS ROW */}
 
@@ -1650,7 +2174,11 @@ function SortableRow({
                 type="button"
                 className="element-tree__add"
                 onClick={(event) => {
-                    openElementPicker(pageId, row.id, event);
+                    openElementPicker(
+                        pageId,
+                        row.id,
+                        event
+                    );
                 }}
             >
                 <Icon source={PlusCircleIcon} />
@@ -1701,10 +2229,14 @@ function SortableSidebarField({
             label:
                 typeof field === "string"
                     ? field
-                    : field?.label || field?.type || "Untitled field",
+                    : field?.label ||
+                    field?.type ||
+                    "Untitled field",
 
             icon: getElementIcon(
-                typeof field === "string" ? field : field?.type
+                typeof field === "string"
+                    ? field
+                    : field?.type
             ),
         },
     });
@@ -1748,7 +2280,10 @@ function SortableSidebarField({
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
             onClick={() => {
-                if (typeof field === "object" && field?.id != null) {
+                if (
+                    typeof field === "object" &&
+                    field?.id != null
+                ) {
                     onSelectElement?.(field);
                 }
             }}
@@ -1760,7 +2295,8 @@ function SortableSidebarField({
                     <Icon
                         source={getElementIcon(
                             typeof field === "string"
-                                ? field === "First Name" || field === "Last Name"
+                                ? field === "First Name" ||
+                                    field === "Last Name"
                                     ? "name"
                                     : field
                                 : field?.type === "first_name" ||
@@ -1781,7 +2317,9 @@ function SortableSidebarField({
             <span className="element-tree__field-label">
                 {typeof field === "string"
                     ? field
-                    : field?.label || field?.type || "Untitled field"}
+                    : field?.label ||
+                    field?.type ||
+                    "Untitled field"}
             </span>
 
             {/* TOOLBOX: Only fields with IDs support these actions. */}
@@ -1835,7 +2373,10 @@ function SortableCreatedElement({
             rowId,
             pageId,
             itemId: `element-${element.id}`,
-            label: element.label || element.type || "Untitled element",
+            label:
+                element.label ||
+                element.type ||
+                "Untitled element",
             icon: getElementIcon(element.type),
         },
     });
@@ -1873,7 +2414,9 @@ function SortableCreatedElement({
                 }`}
             {...attributes}
             {...listeners}
-            onClick={() => onSelectElement?.(element)}
+            onClick={() =>
+                onSelectElement?.(element)
+            }
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
         >
@@ -1892,7 +2435,9 @@ function SortableCreatedElement({
             {/* ELEMENT LABEL */}
 
             <span className="element-tree__field-label">
-                {element.label || element.type || "Untitled element"}
+                {element.label ||
+                    element.type ||
+                    "Untitled element"}
             </span>
 
             {/* ELEMENT TOOLBOX */}
