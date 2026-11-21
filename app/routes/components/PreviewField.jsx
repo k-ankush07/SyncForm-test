@@ -1743,106 +1743,113 @@ export default function PreviewField({
     return null;
   }
 
-
+console.log("PREVIEW FIELD DEBUG:", {
+  originalType: element?.type,
+  finalType: type,
+  label,
+  value,
+  isModelPreview,
+});
   switch (type) {
+    
     // -------------------------------------------------------
     // EMAIL
     // -------------------------------------------------------
 
-   // -------------------------------------------------------
-// EMAIL
-// -------------------------------------------------------
+    // -------------------------------------------------------
+    // EMAIL
+    // -------------------------------------------------------
 
-case "email": {
-  const {
-    label: _label,
-    prefix: _prefix,
-    helpText: _helpText,
-    ...emailFieldProps
-  } = commonTextFieldProps;
+    case "email": {
+      const {
+        label: _label,
+        prefix: _prefix,
+        helpText: _helpText,
+        ...emailFieldProps
+      } = commonTextFieldProps;
 
-  return (
-    <BlockStack gap="300">
-      {/* MAIN EMAIL FIELD */}
-      <PreviewInputShell
-        label={label}
-        required={required}
-        icon={selectedIcon}
-        description={descriptionText}
-      >
-        <TextField
-          {...emailFieldProps}
-          type="email"
-          autoComplete="email"
-          value={value}
-          onChange={(nextValue) => {
-            setValue(nextValue);
+      return (
+        <BlockStack gap="300">
+          {/* MAIN EMAIL FIELD */}
+          <PreviewInputShell
+            label={label}
+            required={required}
+            icon={selectedIcon}
+            description={descriptionText}
+          >
+            <TextField
+              {...emailFieldProps}
+              type="email"
+              autoComplete="email"
+              value={value}
+              onChange={(nextValue) => {
+                setValue(nextValue);
 
-            reportChange({
-              email: nextValue,
-              confirmEmail: confirmEmailValue,
-            });
-          }}
-          label=""
-          labelHidden
-          placeholder={placeholder}
-          readOnly={isReadOnly}
-          disabled={isReadOnly}
-          requiredIndicator={false}
-          borderless
-          minLength={
-            normalizedElement.limitCharacters &&
-            normalizedElement.minCharacters !== ""
-              ? Number(normalizedElement.minCharacters)
-              : undefined
-          }
-          maxLength={
-            normalizedElement.limitCharacters &&
-            normalizedElement.maxCharacters !== ""
-              ? Number(normalizedElement.maxCharacters)
-              : undefined
-          }
-        />
-      </PreviewInputShell>
+                reportChange({
+                  email: nextValue,
+                  confirmEmail: confirmEmailValue,
+                });
+              }}
+              label=""
+              labelHidden
+              placeholder={placeholder}
+              readOnly={isReadOnly}
+              disabled={isReadOnly}
+              requiredIndicator={false}
+              borderless
+              minLength={
+                normalizedElement.limitCharacters &&
+                  normalizedElement.minCharacters !== ""
+                  ? Number(normalizedElement.minCharacters)
+                  : undefined
+              }
+              maxLength={
+                normalizedElement.limitCharacters &&
+                  normalizedElement.maxCharacters !== ""
+                  ? Number(normalizedElement.maxCharacters)
+                  : undefined
+              }
+            />
+          </PreviewInputShell>
 
-      {/* CONFIRM EMAIL FIELD */}
-      {normalizedElement.confirmEmail && (
-        <PreviewInputShell
-          label={normalizedElement.confirmEmailLabel || "Confirm email"}
-          required={required}
-          icon={selectedIcon}
-          description={
-            normalizedElement.confirmEmailDescription || undefined
-          }
-        >
-          <TextField
-            type="email"
-            autoComplete="email"
-            value={confirmEmailValue}
-            onChange={(nextValue) => {
-              setConfirmEmailValue(nextValue);
+          {/* CONFIRM EMAIL FIELD */}
+          {normalizedElement.confirmEmail && (
+            <PreviewInputShell
+              label={normalizedElement.confirmEmailLabel || "Confirm email"}
+              required={required}
+              icon={selectedIcon}
+              description={
+                normalizedElement.confirmEmailDescription || undefined
+              }
+            >
+              <TextField
+                type="email"
+                autoComplete="email"
+                value={confirmEmailValue}
+                onChange={(nextValue) => {
+                  setConfirmEmailValue(nextValue);
 
-              reportChange({
-                email: value,
-                confirmEmail: nextValue,
-              });
-            }}
-            label=""
-            labelHidden
-            placeholder={
-              normalizedElement.confirmEmailPlaceholder ||
-              "Confirm your email"
-            }
-            readOnly={isReadOnly}
-            disabled={isReadOnly}
-            requiredIndicator={false}
-            borderless
-          />
-        </PreviewInputShell>
-      )}
-    </BlockStack>
-  );
-}
+                  reportChange({
+                    email: value,
+                    confirmEmail: nextValue,
+                  });
+                }}
+                label=""
+                labelHidden
+                placeholder={
+                  normalizedElement.confirmEmailPlaceholder ||
+                  "Confirm your email"
+                }
+                readOnly={isReadOnly}
+                disabled={isReadOnly}
+                requiredIndicator={false}
+                borderless
+              />
+            </PreviewInputShell>
+          )}
+        </BlockStack>
+      );
+    }
 
     // -------------------------------------------------------
     // NAME
@@ -2142,8 +2149,6 @@ case "email": {
     // PASSWORD
     // -------------------------------------------------------
 
-
-
     case "password": {
       const passwordError = passwordValidationTriggered
         ? getPasswordError()
@@ -2309,8 +2314,6 @@ case "email": {
         </BlockStack>
       );
     }
-
-
 
     // -------------------------------------------------------
     // COUNTRY
@@ -3912,175 +3915,150 @@ case "email": {
     // QUANTITY
     // -------------------------------------------------------
 
+case "quantity": {
+  const parsedMin = Number(normalizedElement.minValue);
+  const parsedMax = Number(normalizedElement.maxValue);
 
-    case "quantity": {
-      const parsedMin = Number(normalizedElement.minValue);
-      const parsedMax = Number(normalizedElement.maxValue);
+  const min =
+    normalizedElement.setMinValue && Number.isFinite(parsedMin)
+      ? parsedMin
+      : 0;
 
-      const min =
-        normalizedElement.setMinValue &&
-          Number.isFinite(parsedMin)
-          ? parsedMin
-          : 0;
+  const max =
+    normalizedElement.setMaxValue &&
+    normalizedElement.maxValue !== "" &&
+    Number.isFinite(parsedMax)
+      ? Math.max(min, parsedMax)
+      : Infinity;
 
-      const max =
-        normalizedElement.setMaxValue &&
-          normalizedElement.maxValue !== "" &&
-          Number.isFinite(parsedMax)
-          ? Math.max(min, parsedMax)
-          : Infinity;
+  const parsedValue = Number(value);
 
-      const parsedValue = Number(value);
+  const currentValue =
+    value === "" ||
+    value === null ||
+    value === undefined ||
+    !Number.isFinite(parsedValue)
+      ? min
+      : parsedValue;
 
-      const currentValue =
-        value === "" ||
-          value === null ||
-          value === undefined ||
-          !Number.isFinite(parsedValue)
-          ? min
-          : parsedValue;
+  const safeValue = Math.min(max, Math.max(min, currentValue));
 
-      const safeValue = Math.min(
-        max,
-        Math.max(min, currentValue)
-      );
+  const decreaseValue = () => {
+    if (isReadOnly || safeValue <= min) return;
+    updateValue(String(Math.max(min, safeValue - 1)));
+  };
 
-      const decreaseValue = () => {
-        if (isReadOnly || safeValue <= min) return;
+  const increaseValue = () => {
+    if (isReadOnly || safeValue >= max) return;
+    updateValue(String(Math.min(max, safeValue + 1)));
+  };
 
-        const nextValue = Math.max(min, safeValue - 1);
+  const buttonStyle = {
+    all: "unset",
+    width: "36px",
+    height: "36px",
+    flexShrink: 0,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: "22px",
+    fontWeight: 400,
+    color: "#303030",
+    cursor: "pointer",
+    textAlign: "center",
+    boxSizing: "border-box",
+  };
 
-        updateValue(String(nextValue));
-      };
-
-      const increaseValue = () => {
-        if (isReadOnly || safeValue >= max) return;
-
-        const nextValue = Math.min(max, safeValue + 1);
-
-        updateValue(String(nextValue));
-      };
-
-      return (
-        <BlockStack gap="200">
-          {/* Quantity selector */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              width: "100%",
-              minHeight: "52px",
-              padding: "0 12px",
-              background: "#F6F6F7",
-              border: "1px solid #E1E3E5",
-              borderRadius: "8px",
-              boxSizing: "border-box",
-            }}
-          >
-            {/* Decrease button */}
-            <button
-              type="button"
-              disabled={isReadOnly || safeValue <= min}
-              onClick={decreaseValue}
-              style={{
-                width: "32px",
-                height: "32px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                border: "none",
-                borderRadius: "6px",
-                background: "transparent",
-                color:
-                  isReadOnly || safeValue <= min
-                    ? "#C9CCCF"
-                    : "#303030",
-                fontSize: "22px",
-                cursor:
-                  isReadOnly || safeValue <= min
-                    ? "not-allowed"
-                    : "pointer",
-                flexShrink: 0,
-              }}
-            >
-              −
-            </button>
-
-            {/* Quantity label */}
-            <span
-              style={{
-                flex: 1,
-                minWidth: 0,
-                marginLeft: "10px",
-                fontSize: "14px",
-                fontWeight: 500,
-                color: "#303030",
-              }}
-            >
-              {normalizedElement.label ||
-                normalizedElement.name ||
-                label ||
-                "Quantity"}
-            </span>
-
-            {/* Current value */}
-            <span
-              style={{
-                minWidth: "30px",
-                textAlign: "center",
-                fontSize: "14px",
-                fontWeight: 600,
-                color: "#303030",
-                marginRight: "10px",
-                fontVariantNumeric: "tabular-nums",
-              }}
-            >
-              {safeValue}
-            </span>
-
-            {/* Increase button */}
-            <button
-              type="button"
-              disabled={isReadOnly || safeValue >= max}
-              onClick={increaseValue}
-              style={{
-                width: "32px",
-                height: "32px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                border: "none",
-                borderRadius: "6px",
-                background: "transparent",
-                color:
-                  isReadOnly || safeValue >= max
-                    ? "#C9CCCF"
-                    : "#303030",
-                fontSize: "22px",
-                cursor:
-                  isReadOnly || safeValue >= max
-                    ? "not-allowed"
-                    : "pointer",
-                flexShrink: 0,
-              }}
-            >
-              +
-            </button>
-          </div>
-
-          {/* Description */}
-          {normalizedElement.description && (
-            <Text
-              as="p"
-              variant="bodySm"
-              tone="subdued"
-            >
-              {normalizedElement.description}
-            </Text>
+  return (
+    <div style={{ width: "100%", minWidth: 0 }}>
+      {!hideLabel && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "4px",
+            marginBottom: "6px",
+            fontSize: "14px",
+            fontWeight: 500,
+            color: "#303030",
+          }}
+        >
+          {label}
+          {required && (
+            <span style={{ color: "#D72C0D" }}>*</span>
           )}
-        </BlockStack>
-      );
-    }
+        </div>
+      )}
+
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          width: "100%",
+          minHeight: "48px",
+          padding: "0 8px",
+          background: "#F6F6F7",
+          border: "1px solid #D8DADD",
+          borderRadius: "8px",
+          boxSizing: "border-box",
+          gap: "8px",
+        }}
+      >
+        <button
+          type="button"
+          aria-label="Decrease quantity"
+          disabled={isReadOnly || safeValue <= min}
+          onClick={decreaseValue}
+          style={{
+            ...buttonStyle,
+            color: safeValue <= min ? "#C9CCCF" : "#303030",
+            cursor:
+              isReadOnly || safeValue <= min
+                ? "not-allowed"
+                : "pointer",
+          }}
+        >
+          −
+        </button>
+
+        <span
+          style={{
+            flex: 1,
+            minWidth: 0,
+            textAlign: "center",
+            fontSize: "14px",
+            fontWeight: 500,
+            color: "#303030",
+            fontVariantNumeric: "tabular-nums",
+          }}
+        >
+          {safeValue}
+        </span>
+
+        <button
+          type="button"
+          aria-label="Increase quantity"
+          disabled={isReadOnly || safeValue >= max}
+          onClick={increaseValue}
+          style={{
+            ...buttonStyle,
+            color: safeValue >= max ? "#C9CCCF" : "#303030",
+            cursor:
+              isReadOnly || safeValue >= max
+                ? "not-allowed"
+                : "pointer",
+          }}
+        >
+          +
+        </button>
+      </div>
+
+      {descriptionText}
+    </div>
+  );
+}
+
 
 
 
