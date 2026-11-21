@@ -2298,6 +2298,7 @@ export default function FormEditor() {
         );
       };
 
+     
       // CASE 1: DROP BETWEEN ROWS.
       if (overData.type === "previewRowInsert") {
         const originalTargetRows = [...targetPage.rows];
@@ -2311,8 +2312,75 @@ export default function FormEditor() {
           return previousPages;
         }
 
+        // Remove empty rows after removing the dragged element.
         removeEmptyRows(sourcePage);
 
+        // Check whether the target row still exists.
+        const targetRowAfterRemoval = targetPage.rows.find(
+          (row) =>
+            String(row.id) === String(overData.targetRowId)
+        );
+
+        // --------------------------------------------------
+        // CASE 1A: Target row has exactly ONE remaining item.
+        // Normalize first so the remaining item is converted
+        // into a root element before inserting the dragged one.
+        // --------------------------------------------------
+        const remainingItems = targetRowAfterRemoval
+          ? [
+              ...(targetRowAfterRemoval.fields ?? []),
+              ...(targetRowAfterRemoval.elements ?? []),
+            ]
+          : [];
+
+        if (remainingItems.length === 1) {
+          const remainingElementId = remainingItems[0].id;
+
+          // First normalize the remaining singleton.
+          const normalizedPages = normalizeRows(updatedPages);
+
+          const normalizedTargetPage = normalizedPages.find(
+            (page) =>
+              String(page.id) === String(overData.pageId)
+          );
+
+          if (!normalizedTargetPage) {
+            return normalizedPages;
+          }
+
+          // Find the remaining element after normalization.
+          const remainingElementIndex =
+            normalizedTargetPage.rootElements.findIndex(
+              (element) =>
+                String(element.id) === String(remainingElementId)
+            );
+
+          const standaloneElement = {
+            ...draggedElement,
+          };
+
+          // Insert immediately before or after the remaining item.
+          if (remainingElementIndex !== -1) {
+            normalizedTargetPage.rootElements.splice(
+              overData.placement === "before"
+                ? remainingElementIndex
+                : remainingElementIndex + 1,
+              0,
+              standaloneElement
+            );
+          } else {
+            normalizedTargetPage.rootElements.push(
+              standaloneElement
+            );
+          }
+
+          return normalizedPages;
+        }
+
+        // --------------------------------------------------
+        // CASE 1B: Target row still has multiple items.
+        // Keep the existing anchor-based behavior.
+        // --------------------------------------------------
         const targetStillExists = targetPage.rows.some(
           (row) =>
             String(row.id) === String(overData.targetRowId)
@@ -2328,12 +2396,12 @@ export default function FormEditor() {
               : { insertAfterRowId: overData.targetRowId }),
           };
         } else {
-          // The dragged element was the only element in the target row.
+          // Target row became empty.
           const nextSurvivingRow = originalTargetRows
             .slice(originalTargetIndex + 1)
             .find((originalRow) =>
               targetPage.rows.some(
-                (row) => row.id === originalRow.id
+                (row) => String(row.id) === String(originalRow.id)
               )
             );
 
@@ -2342,7 +2410,7 @@ export default function FormEditor() {
             .reverse()
             .find((originalRow) =>
               targetPage.rows.some(
-                (row) => row.id === originalRow.id
+                (row) => String(row.id) === String(originalRow.id)
               )
             );
 
@@ -2458,26 +2526,32 @@ export default function FormEditor() {
 
       // CASE 4: DROP LEFT OR RIGHT OF ANOTHER ELEMENT.
       if (placement === "left" || placement === "right") {
+      
         // CASE 4A: Target is a standalone root element.
         if (targetCollection === "rootElements") {
-          const targetIndex = targetPage.rootElements.findIndex(
+          // Save the root-element order before removing the target.
+          const originalRootElements = [...targetPage.rootElements];
+
+          const targetIndex = originalRootElements.findIndex(
             (item) =>
               String(item.id) === String(targetElementId)
           );
 
           if (targetIndex === -1) return previousPages;
 
-          // Remove the target root element.
-          const [targetElement] = targetPage.rootElements.splice(
-            targetIndex,
-            1
+          const targetElement = originalRootElements[targetIndex];
+
+          // Remove the target from rootElements.
+          targetPage.rootElements = targetPage.rootElements.filter(
+            (item) =>
+              String(item.id) !== String(targetElementId)
           );
 
-          // Save the target's original position.
+          // Save the target's existing position.
           const targetBeforeRowId = targetElement.insertBeforeRowId;
           const targetAfterRowId = targetElement.insertAfterRowId;
 
-          // Remove positioning metadata before converting to a row.
+          // Remove position metadata before converting it into a row.
           const {
             insertBeforeRowId,
             insertAfterRowId,
@@ -2494,9 +2568,10 @@ export default function FormEditor() {
                 : [targetElementWithoutPosition, draggedElement],
           };
 
+          // Remove empty source rows.
           removeEmptyRows(sourcePage);
 
-          // Find the target's original visual position.
+          // Find where the new row belongs.
           let insertAt = targetPage.rows.length;
 
           if (targetBeforeRowId != null) {
@@ -2519,10 +2594,67 @@ export default function FormEditor() {
             }
           }
 
+          // Insert the new row.
           targetPage.rows.splice(insertAt, 0, newRow);
+
+          // --------------------------------------------------
+          // IMPORTANT:
+          // If the target was an unanchored root element,
+          // preserve the positions of the other unanchored
+          // root elements around the new row.
+          //
+          // Roots before the target -> before the new row.
+          // Roots after the target  -> after the new row.
+          // --------------------------------------------------
+
+          if (
+            targetBeforeRowId == null &&
+            targetAfterRowId == null
+          ) {
+            targetPage.rootElements = targetPage.rootElements.map(
+              (element) => {
+                // Keep existing anchors unchanged.
+                if (
+                  element.insertBeforeRowId != null ||
+                  element.insertAfterRowId != null
+                ) {
+                  return element;
+                }
+
+                const originalIndex = originalRootElements.findIndex(
+                  (original) =>
+                    String(original.id) === String(element.id)
+                );
+
+                if (originalIndex === -1) {
+                  return element;
+                }
+
+                if (originalIndex < targetIndex) {
+                  return {
+                    ...element,
+                    insertBeforeRowId: newRow.id,
+                    insertAfterRowId: undefined,
+                  };
+                }
+
+                if (originalIndex > targetIndex) {
+                  return {
+                    ...element,
+                    insertBeforeRowId: undefined,
+                    insertAfterRowId: newRow.id,
+                  };
+                }
+
+                return element;
+              }
+            );
+          }
 
           return normalizeRows(updatedPages);
         }
+
+
 
         // CASE 4B: Target is inside an existing row.
         if (
