@@ -41,7 +41,7 @@
 // =====================================================================
 // 1. IMPORTS
 // =====================================================================
-
+// aggable
 import React from "react";
 
 import { BlockStack, Icon } from "@shopify/polaris";
@@ -264,14 +264,14 @@ function DraggablePreviewElement({
 
   const isHidden = element.visible === false;
   const elementTypeConfig = ELEMENT_TYPES.find(
-  (item) => item.type === element.type
-);
-  console.log("PREVIEW ELEMENT:", {
-    elementId: element.id,
-    elementType: element.type,
-    rowId,
-    collection,
-  });
+    (item) => item.type === element.type
+  );
+  // console.log("PREVIEW ELEMENT:", {
+  //   elementId: element.id,
+  //   elementType: element.type,
+  //   rowId,
+  //   collection,
+  // });
 
   // Drag behavior for this element.
   const {
@@ -397,7 +397,7 @@ function DraggablePreviewElement({
     Math.max(1, Number(element.columnWidth) || 100)
   );
 
- const dragStyle = {
+  const dragStyle = {
     // transform: transform
     //   ? `translate3d(${transform.x}px, ${transform.y}px, 0)`
     //   : undefined,
@@ -409,7 +409,7 @@ function DraggablePreviewElement({
     width: `${columnWidth}%`,
     minWidth: 0,
     boxSizing: "border-box",
-};
+  };
 
 
 
@@ -445,8 +445,8 @@ function DraggablePreviewElement({
           return;
         }
 
-        // Select the field when clicking anywhere inside it.
-        onSelectElement?.(element);
+        // Select the field and pass the page it belongs to.
+        onSelectElement?.(element, pageId);
 
         // Do not preventDefault here.
         // DnD Kit needs the pointer event to start dragging.

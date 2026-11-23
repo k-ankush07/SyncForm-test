@@ -1743,13 +1743,13 @@ export default function PreviewField({
     return null;
   }
 
-console.log("PREVIEW FIELD DEBUG:", {
-  originalType: element?.type,
-  finalType: type,
-  label,
-  value,
-  isModelPreview,
-});
+// console.log("PREVIEW FIELD DEBUG:", {
+//   originalType: element?.type,
+//   finalType: type,
+//   label,
+//   value,
+//   isModelPreview,
+// });
   switch (type) {
     
     // -------------------------------------------------------
@@ -5391,30 +5391,42 @@ case "quantity": {
     // HIDDEN FIELD
     // -------------------------------------------------------
 
-    case "hidden":
-      return (
-        <div
-          style={{
-            border: "1px dashed #8c9196",
-            borderRadius: "8px",
-            padding: "10px 24px",
-            background: "#f7f7f7",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: "8px",
-          }}
-        >
-          <Text as="span" variant="bodySm" tone="subdued">
-            {value || "Hidden field"}
-          </Text>
+   case "hidden":
+  return (
+    <div
+      style={{
+        border: "1px dashed #8c9196",
+        borderRadius: "8px",
+        padding: "10px 24px",
+        background: "#f7f7f7",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: "8px",
+        width: "100%",
+        boxSizing: "border-box",
+      }}
+    >
+      <Text
+        as="span"
+        variant="bodySm"
+        tone="subdued"
+        alignment="center"
+      >
+        {value || "Hidden field"}
+      </Text>
 
-          <Text as="p" variant="bodySm" tone="subdued">
-            This field will not be visible to customers on the published form.
-          </Text>
-        </div>
-      );
+      <Text
+        as="p"
+        variant="bodySm"
+        tone="subdued"
+        alignment="center"
+      >
+        This field will not be visible to customers on the published form.
+      </Text>
+    </div>
+  );
 
     // -------------------------------------------------------
     // RANGE SLIDER

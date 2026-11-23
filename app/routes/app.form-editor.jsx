@@ -61,7 +61,7 @@ import {
   EmailIcon,
   AppsIcon,
   SettingsIcon,
-   FileIcon,
+  FileIcon,
   MagicIcon,
   LanguageTranslateIcon,
   MenuIcon,
@@ -208,6 +208,7 @@ const getDefaultPage = () => ({
 // ---------------------------------------------------------------------
 
 
+
 const normalizeRows = (pages) =>
   pages.map((page) => {
     const originalRows = page.rows ?? [];
@@ -227,20 +228,22 @@ const normalizeRows = (pages) =>
       }
     });
 
-    // These are the only rows that will remain after normalization.
     const survivingRowIds = new Set(
       updatedRows.map((row) => String(row.id))
     );
 
-    // STEP 2: Find the nearest surviving row around a removed row.
-    const getPositionForRow = (rowId) => {
-      const index = originalRows.findIndex(
+    // Get the original position of a row.
+    const getRowIndex = (rowId) =>
+      originalRows.findIndex(
         (row) => String(row.id) === String(rowId)
       );
 
+    // STEP 2: Find the nearest surviving row.
+    const getPositionForRow = (rowId) => {
+      const index = getRowIndex(rowId);
+
       if (index === -1) return {};
 
-      // Prefer the next surviving row.
       const nextRow = originalRows
         .slice(index + 1)
         .find((row) =>
@@ -254,7 +257,6 @@ const normalizeRows = (pages) =>
         };
       }
 
-      // Otherwise, use the previous surviving row.
       const previousRow = originalRows
         .slice(0, index)
         .reverse()
@@ -269,14 +271,13 @@ const normalizeRows = (pages) =>
         };
       }
 
-      // No surviving rows: this element becomes unanchored.
       return {
         insertBeforeRowId: undefined,
         insertAfterRowId: undefined,
       };
     };
 
-    // STEP 3: Convert every singleton row into a standalone element.
+    // STEP 3: Convert singleton rows into root elements.
     originalRows.forEach((row) => {
       const allItems = [
         ...(row.fields ?? []),
@@ -291,18 +292,16 @@ const normalizeRows = (pages) =>
       });
     });
 
-    // STEP 4: Repair existing standalone elements.
+    // STEP 4: Repair existing root elements.
     const repairedRootElements = existingRootElements.map(
       (element) => {
         const beforeId = element.insertBeforeRowId;
         const afterId = element.insertAfterRowId;
 
-        // No anchor: preserve the standalone element as it is.
         if (!beforeId && !afterId) {
           return element;
         }
 
-        // A valid before anchor takes priority.
         if (
           beforeId &&
           survivingRowIds.has(String(beforeId))
@@ -314,7 +313,6 @@ const normalizeRows = (pages) =>
           };
         }
 
-        // A valid after anchor takes priority if before is invalid.
         if (
           afterId &&
           survivingRowIds.has(String(afterId))
@@ -326,7 +324,6 @@ const normalizeRows = (pages) =>
           };
         }
 
-        // Both anchors are invalid, or the only anchor is invalid.
         const removedRowId = beforeId || afterId;
 
         return {
@@ -338,16 +335,97 @@ const normalizeRows = (pages) =>
       }
     );
 
-    // STEP 5: Return normalized page.
+    
+    // STEP 5: Calculate visual ordering.
+    const orderedElements = [];
+
+    // Existing standalone elements.
+    repairedRootElements.forEach((element, index) => {
+      const originalElement = existingRootElements[index];
+
+      // IMPORTANT:
+      // Calculate order using the ORIGINAL anchor,
+      // not the repaired anchor.
+      const oldBefore = originalElement.insertBeforeRowId;
+      const oldAfter = originalElement.insertAfterRowId;
+
+      let rowIndex = Infinity;
+      let position = 3;
+
+      if (oldBefore != null) {
+        const originalIndex = getRowIndex(oldBefore);
+
+        if (originalIndex !== -1) {
+          rowIndex = originalIndex;
+          position = 0;
+        }
+      } else if (oldAfter != null) {
+        const originalIndex = getRowIndex(oldAfter);
+
+        if (originalIndex !== -1) {
+          rowIndex = originalIndex;
+          position = 2;
+        }
+      }
+
+      orderedElements.push({
+        element,
+        rowIndex,
+        position,
+        originalOrder: index,
+      });
+    });
+
+    // Newly converted singleton elements.
+    convertedElements.forEach((element) => {
+      const sourceRowIndex = originalRows.findIndex((row) => {
+        const items = [
+          ...(row.fields ?? []),
+          ...(row.elements ?? []),
+        ];
+
+        return (
+          items.length === 1 &&
+          String(items[0].id) === String(element.id)
+        );
+      });
+
+      orderedElements.push({
+        element,
+        rowIndex:
+          sourceRowIndex === -1
+            ? Infinity
+            : sourceRowIndex,
+        position: 1,
+        originalOrder: existingRootElements.length,
+      });
+    });
+
+    // Sort using original visual position:
+    // before row -> converted row item -> after row -> unanchored roots.
+    orderedElements.sort((a, b) => {
+      if (a.rowIndex !== b.rowIndex) {
+        return a.rowIndex - b.rowIndex;
+      }
+
+      if (a.position !== b.position) {
+        return a.position - b.position;
+      }
+
+      return a.originalOrder - b.originalOrder;
+    });
+
+
+    // STEP 6: Return normalized page.
     return {
       ...page,
       rows: updatedRows,
-      rootElements: [
-        ...repairedRootElements,
-        ...convertedElements,
-      ],
+      rootElements: orderedElements.map(
+        (item) => item.element
+      ),
     };
   });
+
 
 
 
@@ -2189,512 +2267,453 @@ export default function FormEditor() {
   // =====================================================================
 
 
-  const handlePreviewDragEnd = ({ active, over }) => {
-    if (!over) return;
 
-    const activeData = active.data.current;
-    const overData = over.data.current;
+const handlePreviewDragEnd = ({ active, over }) => {
+  if (!over) return;
 
-    // Only handle elements dragged from LivePreview.
-    if (
-      !activeData ||
-      !overData ||
-      activeData.type !== "previewElement"
-    ) {
-      return;
+  const activeData = active.data.current;
+  const overData = over.data.current;
+
+  console.log("ACTUAL DROP TARGET:", {
+    activeData: active?.data?.current,
+    overData,
+  });
+
+  // Only handle elements dragged from LivePreview.
+  if (
+    !activeData ||
+    !overData ||
+    activeData.type !== "previewElement"
+  ) {
+    return;
+  }
+
+  // Only allow drops onto supported preview targets.
+  if (
+    !["previewDrop", "previewRowInsert", "rootDrop"].includes(
+      overData.type
+    )
+  ) {
+    return;
+  }
+
+  // Do not move an element to another page accidentally.
+  if (overData.pageId == null) return;
+
+  setPages((previousPages) => {
+    // STEP 1: Create independent copies.
+    const updatedPages = previousPages.map((page) => ({
+      ...page,
+      rows: (page.rows ?? []).map((row) => ({
+        ...row,
+        fields: [...(row.fields ?? [])],
+        elements: [...(row.elements ?? [])],
+      })),
+      rootElements: [...(page.rootElements ?? [])],
+    }));
+
+    // STEP 2: Find source and target pages.
+    const sourcePage = updatedPages.find(
+      (page) =>
+        String(page.id) === String(activeData.pageId)
+    );
+
+    const targetPage = updatedPages.find(
+      (page) =>
+        String(page.id) === String(overData.pageId)
+    );
+
+    if (!sourcePage || !targetPage) {
+      return previousPages;
     }
 
-    // Only allow drops onto supported preview targets.
-    if (
-      !["previewDrop", "previewRowInsert", "rootDrop"].includes(
-        overData.type
-      )
-    ) {
-      return;
-    }
+    // STEP 3: Remove the dragged element.
+    let draggedElement = null;
 
-    // Do not move an element to another page accidentally.
-    if (overData.pageId == null) return;
-
-    setPages((previousPages) => {
-      // STEP 1: Create independent copies.
-      const updatedPages = previousPages.map((page) => ({
-        ...page,
-        rows: (page.rows ?? []).map((row) => ({
-          ...row,
-          fields: [...(row.fields ?? [])],
-          elements: [...(row.elements ?? [])],
-        })),
-        rootElements: [...(page.rootElements ?? [])],
-      }));
-
-      // STEP 2: Find source and target pages.
-      const sourcePage = updatedPages.find(
-        (page) =>
-          String(page.id) === String(activeData.pageId)
+    if (activeData.collection === "rootElements") {
+      const sourceIndex = sourcePage.rootElements.findIndex(
+        (item) =>
+          String(item.id) === String(activeData.elementId)
       );
 
-      const targetPage = updatedPages.find(
-        (page) =>
-          String(page.id) === String(overData.pageId)
-      );
+      if (sourceIndex === -1) return previousPages;
 
-      if (!sourcePage || !targetPage) {
+      [draggedElement] = sourcePage.rootElements.splice(
+        sourceIndex,
+        1
+      );
+    } else {
+      if (
+        !["fields", "elements"].includes(activeData.collection)
+      ) {
         return previousPages;
       }
 
-      // STEP 3: Remove the dragged element.
-      let draggedElement = null;
+      const sourceRow = sourcePage.rows.find(
+        (row) =>
+          String(row.id) === String(activeData.rowId)
+      );
 
-      if (activeData.collection === "rootElements") {
-        const sourceIndex = sourcePage.rootElements.findIndex(
-          (item) =>
-            String(item.id) === String(activeData.elementId)
-        );
+      if (!sourceRow) return previousPages;
 
-        if (sourceIndex === -1) return previousPages;
+      const sourceItems = sourceRow[activeData.collection];
 
-        [draggedElement] = sourcePage.rootElements.splice(
-          sourceIndex,
-          1
-        );
-      } else {
-        if (
-          !["fields", "elements"].includes(activeData.collection)
-        ) {
-          return previousPages;
-        }
+      const sourceIndex = sourceItems.findIndex(
+        (item) =>
+          String(item.id) === String(activeData.elementId)
+      );
 
-        const sourceRow = sourcePage.rows.find(
-          (row) =>
-            String(row.id) === String(activeData.rowId)
-        );
+      if (sourceIndex === -1) return previousPages;
 
-        if (!sourceRow) return previousPages;
+      [draggedElement] = sourceItems.splice(sourceIndex, 1);
+    }
 
-        const sourceItems = sourceRow[activeData.collection];
+    if (!draggedElement) return previousPages;
 
-        const sourceIndex = sourceItems.findIndex(
-          (item) =>
-            String(item.id) === String(activeData.elementId)
-        );
+    // Remove old standalone positioning metadata.
+    const {
+      insertBeforeRowId,
+      insertAfterRowId,
+      ...elementWithoutPosition
+    } = draggedElement;
 
-        if (sourceIndex === -1) return previousPages;
+    draggedElement = elementWithoutPosition;
 
-        [draggedElement] = sourceItems.splice(sourceIndex, 1);
+    // Helper to remove empty rows.
+    const removeEmptyRows = (page) => {
+      page.rows = page.rows.filter(
+        (row) =>
+          (row.fields?.length ?? 0) > 0 ||
+          (row.elements?.length ?? 0) > 0
+      );
+    };
+
+   
+    // CASE 1: DROP BETWEEN ROWS.
+    if (overData.type === "previewRowInsert") {
+      const originalTargetRows = [...targetPage.rows];
+
+      const originalTargetIndex = originalTargetRows.findIndex(
+        (row) =>
+          String(row.id) === String(overData.targetRowId)
+      );
+
+      if (originalTargetIndex === -1) {
+        return previousPages;
       }
 
-      if (!draggedElement) return previousPages;
+      // Remove empty rows after removing the dragged element.
+      removeEmptyRows(sourcePage);
 
-      // Remove old standalone positioning metadata.
-      const {
-        insertBeforeRowId,
-        insertAfterRowId,
-        ...elementWithoutPosition
-      } = draggedElement;
+      // Check whether the target row still exists.
+      const targetRowAfterRemoval = targetPage.rows.find(
+        (row) =>
+          String(row.id) === String(overData.targetRowId)
+      );
 
-      draggedElement = elementWithoutPosition;
-
-      // Helper to remove empty rows.
-      const removeEmptyRows = (page) => {
-        page.rows = page.rows.filter(
-          (row) =>
-            (row.fields?.length ?? 0) > 0 ||
-            (row.elements?.length ?? 0) > 0
-        );
-      };
-
-
-      // CASE 1: DROP BETWEEN ROWS.
-      if (overData.type === "previewRowInsert") {
-        const originalTargetRows = [...targetPage.rows];
-
-        const originalTargetIndex = originalTargetRows.findIndex(
-          (row) =>
-            String(row.id) === String(overData.targetRowId)
-        );
-
-        if (originalTargetIndex === -1) {
-          return previousPages;
-        }
-
-        // Remove empty rows after removing the dragged element.
-        removeEmptyRows(sourcePage);
-
-        // Check whether the target row still exists.
-        const targetRowAfterRemoval = targetPage.rows.find(
-          (row) =>
-            String(row.id) === String(overData.targetRowId)
-        );
-
-        // --------------------------------------------------
-        // CASE 1A: Target row has exactly ONE remaining item.
-        // Normalize first so the remaining item is converted
-        // into a root element before inserting the dragged one.
-        // --------------------------------------------------
-        const remainingItems = targetRowAfterRemoval
-          ? [
+      // Get the remaining items in the target row.
+      const remainingItems = targetRowAfterRemoval
+        ? [
             ...(targetRowAfterRemoval.fields ?? []),
             ...(targetRowAfterRemoval.elements ?? []),
           ]
-          : [];
+        : [];
 
-        if (remainingItems.length === 1) {
-          const remainingElementId = remainingItems[0].id;
+      // DEBUG 1: Check how many items remain.
+      console.log("REMAINING ITEMS COUNT:", remainingItems.length);
 
-          // First normalize the remaining singleton.
-          const normalizedPages = normalizeRows(updatedPages);
+     
+      // --------------------------------------------------
+      // CASE 1A: Target row has exactly ONE remaining item.
+      // --------------------------------------------------
+      if (remainingItems.length === 1) {
+        const remainingElementId = remainingItems[0].id;
 
-          const normalizedTargetPage = normalizedPages.find(
-            (page) =>
-              String(page.id) === String(overData.pageId)
+        // Normalize the remaining singleton.
+        const normalizedPages = normalizeRows(updatedPages);
+
+        const normalizedTargetPage = normalizedPages.find(
+          (page) =>
+            String(page.id) === String(overData.pageId)
+        );
+
+        if (!normalizedTargetPage) {
+          return normalizedPages;
+        }
+
+        // Find the remaining element after normalization.
+        const remainingElementIndex =
+          normalizedTargetPage.rootElements.findIndex(
+            (element) =>
+              String(element.id) === String(remainingElementId)
           );
 
-          if (!normalizedTargetPage) {
-            return normalizedPages;
-          }
-
-          // Find the remaining element after normalization.
-          const remainingElementIndex =
-            normalizedTargetPage.rootElements.findIndex(
-              (element) =>
-                String(element.id) === String(remainingElementId)
-            );
-
-          const standaloneElement = {
+        if (remainingElementIndex === -1) {
+          normalizedTargetPage.rootElements.push({
             ...draggedElement,
-          };
-
-          // Insert immediately before or after the remaining item.
-          if (remainingElementIndex !== -1) {
-            normalizedTargetPage.rootElements.splice(
-              overData.placement === "before"
-                ? remainingElementIndex
-                : remainingElementIndex + 1,
-              0,
-              standaloneElement
-            );
-          } else {
-            normalizedTargetPage.rootElements.push(
-              standaloneElement
-            );
-          }
+          });
 
           return normalizedPages;
         }
 
-        // --------------------------------------------------
-        // CASE 1B: Target row still has multiple items.
-        // Keep the existing anchor-based behavior.
-        // --------------------------------------------------
-        const targetStillExists = targetPage.rows.some(
-          (row) =>
-            String(row.id) === String(overData.targetRowId)
-        );
+        const remainingElement =
+          normalizedTargetPage.rootElements[remainingElementIndex];
 
-        let standaloneElement;
-
-        if (targetStillExists) {
-          standaloneElement = {
-            ...draggedElement,
-            ...(overData.placement === "before"
-              ? { insertBeforeRowId: overData.targetRowId }
-              : { insertAfterRowId: overData.targetRowId }),
-          };
-        } else {
-          // Target row became empty.
-          const nextSurvivingRow = originalTargetRows
-            .slice(originalTargetIndex + 1)
-            .find((originalRow) =>
-              targetPage.rows.some(
-                (row) => String(row.id) === String(originalRow.id)
-              )
-            );
-
-          const previousSurvivingRow = originalTargetRows
-            .slice(0, originalTargetIndex)
-            .reverse()
-            .find((originalRow) =>
-              targetPage.rows.some(
-                (row) => String(row.id) === String(originalRow.id)
-              )
-            );
-
-          if (nextSurvivingRow) {
-            standaloneElement = {
-              ...draggedElement,
-              insertBeforeRowId: nextSurvivingRow.id,
-            };
-          } else if (previousSurvivingRow) {
-            standaloneElement = {
-              ...draggedElement,
-              insertAfterRowId: previousSurvivingRow.id,
-            };
-          } else {
-            standaloneElement = draggedElement;
-          }
-        }
-
-        targetPage.rootElements.push(standaloneElement);
-
-        removeEmptyRows(targetPage);
-
-        return normalizeRows(updatedPages);
-      }
-
-      // CASE 2: DROP ON GENERAL PREVIEW AREA.
-      // Keep the element in its original position.
-      if (overData.type === "rootDrop") {
-        return previousPages;
-      }
-
-      // CASE 3: DROP ABOVE OR BELOW ANOTHER ELEMENT.
-      const {
-        placement,
-        targetRowId,
-        targetElementId,
-        targetCollection,
-      } = overData;
-
-      if (placement === "top" || placement === "bottom") {
-        // CASE 3A: Target is another standalone root element.
-        if (targetCollection === "rootElements") {
-          const targetIndex = targetPage.rootElements.findIndex(
-            (item) =>
-              String(item.id) === String(targetElementId)
-          );
-
-          if (targetIndex === -1) return previousPages;
-
-          const targetElement = targetPage.rootElements[targetIndex];
-
-          // Preserve the target element's original visual position.
-          const positionProps = {};
-
-          if (targetElement.insertBeforeRowId != null) {
-            positionProps.insertBeforeRowId =
-              targetElement.insertBeforeRowId;
-          } else if (targetElement.insertAfterRowId != null) {
-            positionProps.insertAfterRowId =
-              targetElement.insertAfterRowId;
-          }
-
-          const positionedDraggedElement = {
-            ...draggedElement,
-            ...positionProps,
-          };
-
-          targetPage.rootElements.splice(
-            placement === "top"
-              ? targetIndex
-              : targetIndex + 1,
-            0,
-            positionedDraggedElement
-          );
-
-          removeEmptyRows(sourcePage);
-
-          return normalizeRows(updatedPages);
-        }
-
-        // CASE 3B: Target is inside a row.
-        const targetIndex = targetPage.rows.findIndex(
-          (row) =>
-            String(row.id) === String(targetRowId)
-        );
-
-        if (targetIndex === -1) return previousPages;
-
-        const newRow = {
-          id: crypto.randomUUID(),
-          fields:
-            activeData.collection === "fields"
-              ? [draggedElement]
-              : [],
-          elements:
-            activeData.collection === "fields"
-              ? []
-              : [draggedElement],
+        // IMPORTANT:
+        // Copy the remaining element's position metadata.
+        // Both elements must belong to the same visual group.
+        const standaloneElement = {
+          ...draggedElement,
+          ...(remainingElement.insertBeforeRowId != null
+            ? {
+                insertBeforeRowId:
+                  remainingElement.insertBeforeRowId,
+                insertAfterRowId: undefined,
+              }
+            : {}),
+          ...(remainingElement.insertAfterRowId != null
+            ? {
+                insertAfterRowId:
+                  remainingElement.insertAfterRowId,
+                insertBeforeRowId: undefined,
+              }
+            : {}),
         };
 
-        targetPage.rows.splice(
-          placement === "top"
-            ? targetIndex
-            : targetIndex + 1,
+        // Insert according to the actual drop position.
+        normalizedTargetPage.rootElements.splice(
+          overData.placement === "before"
+            ? remainingElementIndex
+            : remainingElementIndex + 1,
           0,
-          newRow
+          standaloneElement
         );
 
-        removeEmptyRows(sourcePage);
-
-        return normalizeRows(updatedPages);
+        return normalizedPages;
       }
 
-      // CASE 4: DROP LEFT OR RIGHT OF ANOTHER ELEMENT.
-      if (placement === "left" || placement === "right") {
 
-        // CASE 4A: Target is a standalone root element.
-        if (targetCollection === "rootElements") {
-          // Save the root-element order before removing the target.
-          const originalRootElements = [...targetPage.rootElements];
+      // --------------------------------------------------
+      // CASE 1B: Target row still has multiple items.
+      // --------------------------------------------------
+      const targetStillExists = targetPage.rows.some(
+        (row) =>
+          String(row.id) === String(overData.targetRowId)
+      );
 
-          const targetIndex = originalRootElements.findIndex(
-            (item) =>
-              String(item.id) === String(targetElementId)
+      let standaloneElement;
+
+      if (targetStillExists) {
+        standaloneElement = {
+          ...draggedElement,
+          ...(overData.placement === "before"
+            ? { insertBeforeRowId: overData.targetRowId }
+            : { insertAfterRowId: overData.targetRowId }),
+        };
+      } else {
+        // Target row became empty.
+        const nextSurvivingRow = originalTargetRows
+          .slice(originalTargetIndex + 1)
+          .find((originalRow) =>
+            targetPage.rows.some(
+              (row) =>
+                String(row.id) === String(originalRow.id)
+            )
           );
 
-          if (targetIndex === -1) return previousPages;
-
-          const targetElement = originalRootElements[targetIndex];
-
-          // Remove the target from rootElements.
-          targetPage.rootElements = targetPage.rootElements.filter(
-            (item) =>
-              String(item.id) !== String(targetElementId)
+        const previousSurvivingRow = originalTargetRows
+          .slice(0, originalTargetIndex)
+          .reverse()
+          .find((originalRow) =>
+            targetPage.rows.some(
+              (row) =>
+                String(row.id) === String(originalRow.id)
+            )
           );
 
-          // Save the target's existing position.
-          const targetBeforeRowId = targetElement.insertBeforeRowId;
-          const targetAfterRowId = targetElement.insertAfterRowId;
-
-          // Remove position metadata before converting it into a row.
-          const {
-            insertBeforeRowId,
-            insertAfterRowId,
-            ...targetElementWithoutPosition
-          } = targetElement;
-
-          // Create the new row.
-          const newRow = {
-            id: crypto.randomUUID(),
-            fields: [],
-            elements:
-              placement === "left"
-                ? [draggedElement, targetElementWithoutPosition]
-                : [targetElementWithoutPosition, draggedElement],
+        if (nextSurvivingRow) {
+          standaloneElement = {
+            ...draggedElement,
+            insertBeforeRowId: nextSurvivingRow.id,
           };
-
-          // Remove empty source rows.
-          removeEmptyRows(sourcePage);
-
-          // Find where the new row belongs.
-          let insertAt = targetPage.rows.length;
-
-          if (targetBeforeRowId != null) {
-            const beforeIndex = targetPage.rows.findIndex(
-              (row) =>
-                String(row.id) === String(targetBeforeRowId)
-            );
-
-            if (beforeIndex !== -1) {
-              insertAt = beforeIndex;
-            }
-          } else if (targetAfterRowId != null) {
-            const afterIndex = targetPage.rows.findIndex(
-              (row) =>
-                String(row.id) === String(targetAfterRowId)
-            );
-
-            if (afterIndex !== -1) {
-              insertAt = afterIndex + 1;
-            }
-          }
-
-          // Insert the new row.
-          targetPage.rows.splice(insertAt, 0, newRow);
-
-          // --------------------------------------------------
-          // IMPORTANT:
-          // If the target was an unanchored root element,
-          // preserve the positions of the other unanchored
-          // root elements around the new row.
-          //
-          // Roots before the target -> before the new row.
-          // Roots after the target  -> after the new row.
-          // --------------------------------------------------
-
-          if (
-            targetBeforeRowId == null &&
-            targetAfterRowId == null
-          ) {
-            targetPage.rootElements = targetPage.rootElements.map(
-              (element) => {
-                // Keep existing anchors unchanged.
-                if (
-                  element.insertBeforeRowId != null ||
-                  element.insertAfterRowId != null
-                ) {
-                  return element;
-                }
-
-                const originalIndex = originalRootElements.findIndex(
-                  (original) =>
-                    String(original.id) === String(element.id)
-                );
-
-                if (originalIndex === -1) {
-                  return element;
-                }
-
-                if (originalIndex < targetIndex) {
-                  return {
-                    ...element,
-                    insertBeforeRowId: newRow.id,
-                    insertAfterRowId: undefined,
-                  };
-                }
-
-                if (originalIndex > targetIndex) {
-                  return {
-                    ...element,
-                    insertBeforeRowId: undefined,
-                    insertAfterRowId: newRow.id,
-                  };
-                }
-
-                return element;
-              }
-            );
-          }
-
-          return normalizeRows(updatedPages);
+        } else if (previousSurvivingRow) {
+          standaloneElement = {
+            ...draggedElement,
+            insertAfterRowId: previousSurvivingRow.id,
+          };
+        } else {
+          standaloneElement = draggedElement;
         }
+      }
 
+      targetPage.rootElements.push(standaloneElement);
 
+      removeEmptyRows(targetPage);
 
-        // CASE 4B: Target is inside an existing row.
-        if (
-          !["fields", "elements"].includes(targetCollection)
-        ) {
-          return previousPages;
-        }
+      // Normalize using your original normalization logic.
+      const normalizedPages = normalizeRows(updatedPages);
 
-        const targetRow = targetPage.rows.find(
+      // Preserve the order when the SOURCE row becomes a singleton.
+      const isSamePage =
+        String(sourcePage.id) === String(targetPage.id);
+
+      if (isSamePage && activeData.rowId != null) {
+        const sourceRowAfterRemoval = sourcePage.rows.find(
           (row) =>
-            String(row.id) === String(targetRowId)
+            String(row.id) === String(activeData.rowId)
         );
 
-        if (!targetRow) return previousPages;
+        const remainingSourceItems = sourceRowAfterRemoval
+          ? [
+              ...(sourceRowAfterRemoval.fields ?? []),
+              ...(sourceRowAfterRemoval.elements ?? []),
+            ]
+          : [];
 
-        const targetItems = targetRow[targetCollection];
+        if (remainingSourceItems.length === 1) {
+          const normalizedSourcePage = normalizedPages.find(
+            (page) =>
+              String(page.id) === String(sourcePage.id)
+          );
 
-        if (!Array.isArray(targetItems)) {
-          return previousPages;
+          if (normalizedSourcePage) {
+            const remainingSourceElementId =
+              remainingSourceItems[0].id;
+
+            const roots = normalizedSourcePage.rootElements;
+
+            const remainingElementIndex = roots.findIndex(
+              (element) =>
+                String(element.id) ===
+                String(remainingSourceElementId)
+            );
+
+            const draggedElementIndex = roots.findIndex(
+              (element) =>
+                String(element.id) ===
+                String(activeData.elementId)
+            );
+
+            if (
+              remainingElementIndex !== -1 &&
+              draggedElementIndex !== -1
+            ) {
+              const remainingElement =
+                roots[remainingElementIndex];
+
+              const draggedRootElement =
+                roots[draggedElementIndex];
+
+              const samePosition =
+                String(
+                  remainingElement.insertBeforeRowId ?? ""
+                ) ===
+                  String(
+                    draggedRootElement.insertBeforeRowId ?? ""
+                  ) &&
+                String(
+                  remainingElement.insertAfterRowId ?? ""
+                ) ===
+                  String(
+                    draggedRootElement.insertAfterRowId ?? ""
+                  );
+
+              if (samePosition) {
+                const [elementToMove] = roots.splice(
+                  draggedElementIndex,
+                  1
+                );
+
+                const updatedRemainingIndex = roots.findIndex(
+                  (element) =>
+                    String(element.id) ===
+                    String(remainingSourceElementId)
+                );
+
+                if (updatedRemainingIndex !== -1) {
+                  roots.splice(
+                    updatedRemainingIndex + 1,
+                    0,
+                    elementToMove
+                  );
+                } else {
+                  roots.push(elementToMove);
+                }
+              }
+            }
+          }
         }
+      }
 
-        const targetIndex = targetItems.findIndex(
+      // DEBUG: Show the page after CASE 1B.
+      const debugPage = normalizedPages.find(
+        (page) => String(page.id) === String(sourcePage.id)
+      );
+
+      console.log(
+        "AFTER FIRST DRAG:",
+        JSON.stringify(
+          {
+            rows: debugPage?.rows,
+            rootElements: debugPage?.rootElements,
+          },
+          null,
+          2
+        )
+      );
+
+      return normalizedPages;
+    }
+
+
+    // CASE 2: DROP ON GENERAL PREVIEW AREA.
+    // Keep the element in its original position.
+    if (overData.type === "rootDrop") {
+      return previousPages;
+    }
+
+    // CASE 3: DROP ABOVE OR BELOW ANOTHER ELEMENT.
+    const {
+      placement,
+      targetRowId,
+      targetElementId,
+      targetCollection,
+    } = overData;
+
+    if (placement === "top" || placement === "bottom") {
+      // CASE 3A: Target is another standalone root element.
+      if (targetCollection === "rootElements") {
+        const targetIndex = targetPage.rootElements.findIndex(
           (item) =>
             String(item.id) === String(targetElementId)
         );
 
         if (targetIndex === -1) return previousPages;
 
-        targetItems.splice(
-          placement === "left"
+        const targetElement = targetPage.rootElements[targetIndex];
+
+        // Preserve the target element's original visual position.
+        const positionProps = {};
+
+        if (targetElement.insertBeforeRowId != null) {
+          positionProps.insertBeforeRowId =
+            targetElement.insertBeforeRowId;
+        } else if (targetElement.insertAfterRowId != null) {
+          positionProps.insertAfterRowId =
+            targetElement.insertAfterRowId;
+        }
+
+        const positionedDraggedElement = {
+          ...draggedElement,
+          ...positionProps,
+        };
+
+        targetPage.rootElements.splice(
+          placement === "top"
             ? targetIndex
             : targetIndex + 1,
           0,
-          draggedElement
+          positionedDraggedElement
         );
 
         removeEmptyRows(sourcePage);
@@ -2702,11 +2721,223 @@ export default function FormEditor() {
         return normalizeRows(updatedPages);
       }
 
-      // Unsupported placement.
-      return previousPages;
-    });
+      // CASE 3B: Target is inside a row.
+      const targetIndex = targetPage.rows.findIndex(
+        (row) =>
+          String(row.id) === String(targetRowId)
+      );
+
+      if (targetIndex === -1) return previousPages;
+
+      const newRow = {
+        id: crypto.randomUUID(),
+        fields:
+          activeData.collection === "fields"
+            ? [draggedElement]
+            : [],
+        elements:
+          activeData.collection === "fields"
+            ? []
+            : [draggedElement],
+      };
+
+      targetPage.rows.splice(
+        placement === "top"
+          ? targetIndex
+          : targetIndex + 1,
+        0,
+        newRow
+      );
+
+      removeEmptyRows(sourcePage);
+
+      return normalizeRows(updatedPages);
+    }
+
+    // CASE 4: DROP LEFT OR RIGHT OF ANOTHER ELEMENT.
+    if (placement === "left" || placement === "right") {
+      // CASE 4A: Target is a standalone root element.
+
+// CASE 4A: Target is a standalone root element.
+if (targetCollection === "rootElements") {
+  // Save root-element order before removing the target.
+  const originalRootElements = [...targetPage.rootElements];
+
+  const targetIndex = originalRootElements.findIndex(
+    (item) =>
+      String(item.id) === String(targetElementId)
+  );
+
+  if (targetIndex === -1) return previousPages;
+
+  const targetElement = originalRootElements[targetIndex];
+
+  // Save the target's original position.
+  const targetBeforeRowId = targetElement.insertBeforeRowId;
+  const targetAfterRowId = targetElement.insertAfterRowId;
+
+  // Remove target from rootElements.
+  targetPage.rootElements = targetPage.rootElements.filter(
+    (item) =>
+      String(item.id) !== String(targetElementId)
+  );
+
+  // Remove position metadata from the target.
+  const {
+    insertBeforeRowId,
+    insertAfterRowId,
+    ...targetElementWithoutPosition
+  } = targetElement;
+
+  // Create the new row.
+  const newRow = {
+    id: crypto.randomUUID(),
+    fields: [],
+    elements:
+      placement === "left"
+        ? [draggedElement, targetElementWithoutPosition]
+        : [targetElementWithoutPosition, draggedElement],
   };
 
+  // Remove empty source rows.
+  removeEmptyRows(sourcePage);
+
+  // Find the new row's insertion position.
+  let insertAt = targetPage.rows.length;
+
+  if (targetBeforeRowId != null) {
+    const beforeIndex = targetPage.rows.findIndex(
+      (row) =>
+        String(row.id) === String(targetBeforeRowId)
+    );
+
+    if (beforeIndex !== -1) {
+      insertAt = beforeIndex;
+    }
+  } else if (targetAfterRowId != null) {
+    const afterIndex = targetPage.rows.findIndex(
+      (row) =>
+        String(row.id) === String(targetAfterRowId)
+    );
+
+    if (afterIndex !== -1) {
+      insertAt = afterIndex + 1;
+    }
+  }
+
+  // Insert the new row.
+  targetPage.rows.splice(insertAt, 0, newRow);
+
+  // Update other root elements that share the target's
+  // original visual position.
+  targetPage.rootElements = targetPage.rootElements.map(
+    (element) => {
+      const originalIndex = originalRootElements.findIndex(
+        (original) =>
+          String(original.id) === String(element.id)
+      );
+
+      if (originalIndex === -1) return element;
+
+      // Determine whether this element belongs to the
+      // same visual group as the target.
+      const sameBeforeGroup =
+        targetBeforeRowId != null &&
+        String(element.insertBeforeRowId) ===
+          String(targetBeforeRowId);
+
+      const sameAfterGroup =
+        targetAfterRowId != null &&
+        String(element.insertAfterRowId) ===
+          String(targetAfterRowId);
+
+      const bothUnanchored =
+        targetBeforeRowId == null &&
+        targetAfterRowId == null &&
+        element.insertBeforeRowId == null &&
+        element.insertAfterRowId == null;
+
+      const samePositionGroup =
+        sameBeforeGroup ||
+        sameAfterGroup ||
+        bothUnanchored;
+
+      if (!samePositionGroup) {
+        return element;
+      }
+
+      // Elements before the target should stay before
+      // the newly created row.
+      if (originalIndex < targetIndex) {
+        return {
+          ...element,
+          insertBeforeRowId: newRow.id,
+          insertAfterRowId: undefined,
+        };
+      }
+
+      // Elements after the target should move after
+      // the newly created row.
+      if (originalIndex > targetIndex) {
+        return {
+          ...element,
+          insertBeforeRowId: undefined,
+          insertAfterRowId: newRow.id,
+        };
+      }
+
+      return element;
+    }
+  );
+
+  return normalizeRows(updatedPages);
+}
+
+
+      // CASE 4B: Target is inside an existing row.
+      if (
+        !["fields", "elements"].includes(targetCollection)
+      ) {
+        return previousPages;
+      }
+
+      const targetRow = targetPage.rows.find(
+        (row) =>
+          String(row.id) === String(targetRowId)
+      );
+
+      if (!targetRow) return previousPages;
+
+      const targetItems = targetRow[targetCollection];
+
+      if (!Array.isArray(targetItems)) {
+        return previousPages;
+      }
+
+      const targetIndex = targetItems.findIndex(
+        (item) =>
+          String(item.id) === String(targetElementId)
+      );
+
+      if (targetIndex === -1) return previousPages;
+
+      targetItems.splice(
+        placement === "left"
+          ? targetIndex
+          : targetIndex + 1,
+        0,
+        draggedElement
+      );
+
+      removeEmptyRows(sourcePage);
+
+      return normalizeRows(updatedPages);
+    }
+
+    // Unsupported placement.
+    return previousPages;
+  });
+};
 
 
   // =====================================================================
@@ -2749,6 +2980,14 @@ export default function FormEditor() {
     const rowInsertCollisions = collisions.filter(
       (collision) =>
         getData(collision)?.type === "previewRowInsert"
+    );
+
+    console.log(
+      "ROW INSERT COLLISIONS:",
+      rowInsertCollisions.map((collision) => ({
+        id: collision.id,
+        data: getData(collision),
+      }))
     );
 
     if (rowInsertCollisions.length > 0) {
