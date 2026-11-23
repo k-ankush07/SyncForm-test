@@ -61,10 +61,12 @@ import {
   EmailIcon,
   AppsIcon,
   SettingsIcon,
+   FileIcon,
   MagicIcon,
   LanguageTranslateIcon,
   MenuIcon,
 } from "@shopify/polaris-icons";
+
 
 // Drag & drop
 import {
@@ -73,6 +75,7 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
+  DragOverlay,
 } from "@dnd-kit/core";
 import { arrayMove } from "@dnd-kit/sortable";
 
@@ -458,6 +461,9 @@ export default function FormEditor() {
 
   // This state is for selecting pages and rows.
   const [selectedTarget, setSelectedTarget] = useState(null);
+
+  // Drag & Drop show 
+  const [activeDragItemLive, setActiveDragItemLive] = useState(null);
 
   // Element picker popover state.
   const [elementPickerOpen, setElementPickerOpen] = useState(false);
@@ -2298,7 +2304,7 @@ export default function FormEditor() {
         );
       };
 
-     
+
       // CASE 1: DROP BETWEEN ROWS.
       if (overData.type === "previewRowInsert") {
         const originalTargetRows = [...targetPage.rows];
@@ -2328,9 +2334,9 @@ export default function FormEditor() {
         // --------------------------------------------------
         const remainingItems = targetRowAfterRemoval
           ? [
-              ...(targetRowAfterRemoval.fields ?? []),
-              ...(targetRowAfterRemoval.elements ?? []),
-            ]
+            ...(targetRowAfterRemoval.fields ?? []),
+            ...(targetRowAfterRemoval.elements ?? []),
+          ]
           : [];
 
         if (remainingItems.length === 1) {
@@ -2526,7 +2532,7 @@ export default function FormEditor() {
 
       // CASE 4: DROP LEFT OR RIGHT OF ANOTHER ELEMENT.
       if (placement === "left" || placement === "right") {
-      
+
         // CASE 4A: Target is a standalone root element.
         if (targetCollection === "rootElements") {
           // Save the root-element order before removing the target.
@@ -3085,10 +3091,27 @@ export default function FormEditor() {
           </div>
 
           {/* Preview with its own drag & drop context */}
+
+          {/* Preview with its own drag & drop context */}
           <DndContext
             sensors={sensors}
             collisionDetection={previewCollisionDetection}
-            onDragEnd={handlePreviewDragEnd}
+            onDragStart={(event) => {
+              const data = event.active.data.current;
+
+              setActiveDragItemLive({
+                label: data?.label || "Element",
+                icon: data?.icon || FileIcon,
+                type: data?.type,
+              });
+            }}
+            onDragEnd={(event) => {
+              handlePreviewDragEnd(event);
+              setActiveDragItemLive(null);
+            }}
+            onDragCancel={() => {
+              setActiveDragItemLive(null);
+            }}
           >
             <LivePreview
               pages={pages}
@@ -3109,7 +3132,23 @@ export default function FormEditor() {
               isMobilePreview={isMobilePreview}
               isModelPreview={isModelPreview}
             />
+
+            {/* Floating drag preview */}
+            <DragOverlay dropAnimation={null}>
+              {activeDragItemLive && (
+                <div className="live-drag-preview">
+                  <span className="live-drag-preview__icon">
+                    <Icon source={activeDragItemLive.icon} />
+                  </span>
+
+                  <span className="live-drag-preview__label">
+                    {activeDragItemLive.label}
+                  </span>
+                </div>
+              )}
+            </DragOverlay>
           </DndContext>
+
         </div>
 
         {/* Shared element picker (used by both the sidebar and the preview) */}

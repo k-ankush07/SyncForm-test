@@ -174,7 +174,7 @@
   overflow: hidden;
 }
 
-.template-editor__settings-inner > .Polaris-Box {
+.template-editor__settings-inner>.Polaris-Box {
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -626,9 +626,9 @@
 }
 
 /* Individual element width */
-.preview-row-grid > .preview-element,
-.live-preview--classic .preview-row-grid > .preview-element,
-.live-preview--query .preview-row-grid > .preview-element {
+.preview-row-grid>.preview-element,
+.live-preview--classic .preview-row-grid>.preview-element,
+.live-preview--query .preview-row-grid>.preview-element {
   flex: 0 1 var(--element-column-width, 100%) !important;
   width: var(--element-column-width, 100%) !important;
   min-width: 0 !important;
@@ -638,24 +638,25 @@
 }
 
 /* Inner form controls can shrink */
-.preview-row-grid > .preview-element .Polaris-TextField,
-.preview-row-grid > .preview-element .Polaris-Select,
-.preview-row-grid > .preview-element .Polaris-TextField__Input {
+.preview-row-grid>.preview-element .Polaris-TextField,
+.preview-row-grid>.preview-element .Polaris-Select,
+.preview-row-grid>.preview-element .Polaris-TextField__Input {
   width: 100%;
   min-width: 0;
   max-width: 100%;
   box-sizing: border-box;
-  
+
 }
 
 /* Root elements always take full width */
-.preview-root-drop-area > .Polaris-BlockStack > .preview-element {
+.preview-root-drop-area>.Polaris-BlockStack>.preview-element {
   width: 100%;
   min-width: 0;
 }
 
 /* Small screens: keep elements in one row */
 @media (max-width: 600px) {
+
   .preview-row-grid,
   .live-preview--classic .preview-row-grid,
   .live-preview--query .preview-row-grid {
@@ -822,7 +823,9 @@
     visibility 120ms ease;
 }
 
-.preview-element:hover .preview-drop-zone {
+/* Show drop zones on normal hover and while dragging over them */
+.preview-element:hover .preview-drop-zone,
+.preview-drop-zone--active {
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
@@ -869,7 +872,7 @@
   background: #2c6ecb;
   border-radius: 4px;
   opacity: 0;
-  pointer-events: none;
+  /* pointer-events: none; */
   transition:
     transform 220ms cubic-bezier(0.22, 1, 0.36, 1) 120ms,
     opacity 100ms ease 120ms;
@@ -947,18 +950,34 @@
 }
 
 /* Active state while dragging (must stay after the base line/button rules) */
+/* =========================================
+   ACTIVE STATE WHILE DRAGGING
+========================================= */
+
 .preview-drop-zone--active {
-  outline: 1px solid #2c6ecb;
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
 }
 
+/* Show plus button */
 .preview-drop-zone--active .preview-insert-button {
   opacity: 1;
   transform: translate(-50%, -50%) scale(1);
 }
 
-.preview-drop-zone--active .preview-drop-line {
+/* Horizontal line: top and bottom */
+.preview-drop-zone--top.preview-drop-zone--active .preview-drop-line,
+.preview-drop-zone--bottom.preview-drop-zone--active .preview-drop-line {
   opacity: 1;
-  transform: translate(-50%, -50%) scale(1);
+  transform: translate(-50%, -50%) scaleX(1);
+}
+
+/* Vertical line: left and right */
+.preview-drop-zone--left.preview-drop-zone--active .preview-drop-line,
+.preview-drop-zone--right.preview-drop-zone--active .preview-drop-line {
+  opacity: 1;
+  transform: translate(-50%, -50%) scaleY(1);
 }
 
 /* Plus button hover (stays visible while hovered) */
@@ -990,6 +1009,8 @@
   background: #2c6ecb;
   opacity: 0;
   transition: opacity 0.18s ease;
+  cursor: pointer;
+  pointer-events: auto;
 }
 
 /* Hidden plus by default */
@@ -1069,7 +1090,7 @@
 }
 
 /* Inside the editor the toolbar keeps a fixed height */
-.template-editor__preview > .live-preview__toolbar {
+.template-editor__preview>.live-preview__toolbar {
   flex: 0 0 50px !important;
   height: 50px !important;
   min-height: 50px !important;
@@ -1145,7 +1166,7 @@
   border-radius: 8px;
 }
 
-.template-editor__preview .live-preview__toolbar-right > .Polaris-Button {
+.template-editor__preview .live-preview__toolbar-right>.Polaris-Button {
   flex: 0 0 auto;
 }
 
@@ -1437,12 +1458,12 @@
   line-height: 1.4;
 }
 
-.live-preview--classic .preview-page > .Polaris-BlockStack {
+.live-preview--classic .preview-page>.Polaris-BlockStack {
   width: 100%;
   min-width: 0;
 }
 
-.live-preview--classic .preview-row-grid > div {
+.live-preview--classic .preview-row-grid>div {
   width: 100%;
   min-width: 0;
 }
@@ -1606,7 +1627,7 @@
 }
 
 /* Outer preview card */
-.template-editor__preview > .Polaris-Card {
+.template-editor__preview>.Polaris-Card {
   flex: 1 1 auto;
   width: 100% !important;
   min-width: 0;
@@ -1621,7 +1642,7 @@
 }
 
 /* Preview fills the remaining workspace below the toolbar */
-.template-editor__preview > .live-preview {
+.template-editor__preview>.live-preview {
   flex: 1 1 0 !important;
   width: 100% !important;
   height: 0 !important;
@@ -1778,9 +1799,9 @@
 }
 
 /* Full-width fields (beats the custom element width from section 6) */
-.live-preview--mobile-preview .preview-row-grid > .preview-element,
-.live-preview--mobile-preview.live-preview--classic .preview-row-grid > .preview-element,
-.live-preview--mobile-preview.live-preview--query .preview-row-grid > .preview-element {
+.live-preview--mobile-preview .preview-row-grid>.preview-element,
+.live-preview--mobile-preview.live-preview--classic .preview-row-grid>.preview-element,
+.live-preview--mobile-preview.live-preview--query .preview-row-grid>.preview-element {
   flex: 0 0 auto !important;
   width: 100% !important;
   max-width: 100% !important;
@@ -2323,6 +2344,7 @@
 .target-days-option.selected span:last-child {
   font-weight: 600;
 }
+
 /* //phone elemnt preview */
 
 /* =========================================
@@ -2384,6 +2406,7 @@
 .phone-field-shell:focus-within {
   z-index: 2;
 }
+
 /* //for password */
 
 /* =========================================
@@ -2397,7 +2420,7 @@
   border-radius: 8px !important;
   box-shadow: none !important;
   transition: border-color 0.15s ease,
-              box-shadow 0.15s ease !important;
+    box-shadow 0.15s ease !important;
 }
 
 /* Actual password input */
@@ -2412,8 +2435,7 @@
 }
 
 /* Focus state */
-.password-field-control .Polaris-TextField:focus-within
-.Polaris-TextField__Backdrop {
+.password-field-control .Polaris-TextField:focus-within .Polaris-TextField__Backdrop {
   border-color: #2C6ECB !important;
   box-shadow: 0 0 0 2px rgba(44, 110, 203, 0.18) !important;
 }
@@ -2421,7 +2443,7 @@
 /* Password visibility button */
 .password-visibility-button {
   transition: background-color 0.15s ease,
-              color 0.15s ease;
+    color 0.15s ease;
 }
 
 .password-visibility-button:hover:not(:disabled) {
@@ -2486,6 +2508,39 @@
   outline: none !important;
   box-shadow: none !important;
 }
+
+
+.live-drag-preview {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 170px;
+  padding: 12px 14px;
+  background: #ffffff;
+  border: 1px solid #e1e3e5;
+  border-radius: 9px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+  pointer-events: none;
+  opacity: 0.98;
+}
+
+.live-drag-preview__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  color: #5c5f62;
+  flex-shrink: 0;
+}
+
+.live-drag-preview__label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #303030;
+  white-space: nowrap;
+}
+
 /* //end */
 
 /* =====================================================
@@ -2505,4 +2560,4 @@
 /* .preview-element input,
 .preview-element textarea {
   caret-color: transparent !important;
-} */ 
+} */

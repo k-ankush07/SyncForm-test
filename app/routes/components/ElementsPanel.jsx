@@ -1482,23 +1482,23 @@ function SortablePage({
 
     // Apply drag styling to the page.
     const pageStyle = {
-        transform: CSS.Transform.toString(transform),
-        transition,
+    // transform: CSS.Transform.toString(transform),
+    transition,
 
-        background: isDragging ? "#FFFFFF" : "transparent",
+    // background: isDragging ? "#FFFFFF" : "transparent",
 
-        boxShadow: isDragging
-            ? "0 8px 24px rgba(0, 0, 0, 0.15)"
-            : "none",
+    // boxShadow: isDragging
+    //     ? "0 8px 24px rgba(0, 0, 0, 0.15)"
+    //     : "none",
 
-        border: isDragging
-            ? "1px solid #E5E7EB"
-            : "1px solid transparent",
+    // border: isDragging
+    //     ? "1px solid #E5E7EB"
+    //     : "1px solid transparent",
 
-        borderRadius: "10px",
-        position: "relative",
-        zIndex: isDragging ? 10 : "auto",
-    };
+    borderRadius: "10px",
+    position: "relative",
+    // zIndex: isDragging ? 10 : "auto",
+};
 
     // Create insertion buttons above or below root elements.
     const renderRootInsertButton = (element, placement) => (

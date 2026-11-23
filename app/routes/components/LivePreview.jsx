@@ -39,9 +39,6 @@
 //   6. PreviewRootDropArea
 //   7. LivePreview
 // =====================================================================
-
-
-// =====================================================================
 // 1. IMPORTS
 // =====================================================================
 
@@ -66,6 +63,7 @@ import {
 import PreviewField from "./PreviewField";
 import { validateElement } from "./elementValidation.js";
 import { getElementSettingsType } from "../components/elementsettings/utils/elementSettingsConfig";
+import { ELEMENT_TYPES } from "../../utils/elementsConfig.js";
 
 
 // =====================================================================
@@ -75,6 +73,7 @@ import { getElementSettingsType } from "../components/elementsettings/utils/elem
 //   left / right = insert elements side by side
 // Each zone also has a "+" button that opens the element picker.
 // =====================================================================
+
 
 function PreviewDropZone({
   pageId,
@@ -107,8 +106,26 @@ function PreviewDropZone({
         .filter(Boolean)
         .join(" ")}
     >
-      <span className="preview-drop-line" />
+      {/* Clicking the line opens the element picker */}
+      <span
+        className="preview-drop-line"
+        onClick={(event) => {
+          event.stopPropagation();
 
+          onOpenElementPicker?.(
+            {
+              pageId,
+              rowId,
+              elementId,
+              collection,
+              placement,
+            },
+            event
+          );
+        }}
+      />
+
+      {/* Existing + button */}
       <button
         type="button"
         className="preview-insert-button"
@@ -139,6 +156,7 @@ function PreviewDropZone({
 }
 
 
+
 // =====================================================================
 // 3. PREVIEW ROW INSERT
 // Drop zone + "+" button placed between rows
@@ -167,7 +185,24 @@ function PreviewRowInsert({
       className={`preview-row-insert ${isOver ? "preview-row-insert--active" : ""
         }`}
     >
-      <span className="preview-row-insert__line" />
+      {/* Clicking the line opens the element picker */}
+      <span
+        className="preview-row-insert__line"
+        onClick={(event) => {
+          event.stopPropagation();
+
+          onOpenElementPicker?.(
+            {
+              pageId,
+              rowId,
+              placement,
+              collection: "rows",
+            },
+            event
+          );
+        }}
+        style={{ cursor: "pointer" }}
+      />
 
       <button
         type="button"
@@ -228,12 +263,15 @@ function DraggablePreviewElement({
     !isModelPreview && element.id === selectedElementId;
 
   const isHidden = element.visible === false;
+  const elementTypeConfig = ELEMENT_TYPES.find(
+  (item) => item.type === element.type
+);
   console.log("PREVIEW ELEMENT:", {
-  elementId: element.id,
-  elementType: element.type,
-  rowId,
-  collection,
-});
+    elementId: element.id,
+    elementType: element.type,
+    rowId,
+    collection,
+  });
 
   // Drag behavior for this element.
   const {
@@ -252,6 +290,8 @@ function DraggablePreviewElement({
       rowId,
       collection,
       elementId: element.id,
+      label: elementTypeConfig?.label || element.type,
+      icon: elementTypeConfig?.icon,
     },
   });
 
@@ -357,10 +397,11 @@ function DraggablePreviewElement({
     Math.max(1, Number(element.columnWidth) || 100)
   );
 
-  const dragStyle = {
-    transform: transform
-      ? `translate3d(${transform.x}px, ${transform.y}px, 0)`
-      : undefined,
+ const dragStyle = {
+    // transform: transform
+    //   ? `translate3d(${transform.x}px, ${transform.y}px, 0)`
+    //   : undefined,
+
     zIndex: isDragging ? 100 : undefined,
     opacity: isDragging ? 0.45 : 1,
     "--element-column-width": `${columnWidth}%`,
@@ -368,24 +409,9 @@ function DraggablePreviewElement({
     width: `${columnWidth}%`,
     minWidth: 0,
     boxSizing: "border-box",
-  };
+};
 
-  // const handlePreviewFocus = (event) => {
-  //   if (isModelPreview) return;
 
-  //   const target = event.target;
-
-  //   if (!(target instanceof Element)) return;
-
-  //   // Prevent text inputs and other controls from keeping focus.
-  //   if (
-  //     target.matches(
-  //       "input:not([type='checkbox']):not([type='radio']), textarea, select"
-  //     )
-  //   ) {
-  //     target.blur();
-  //   }
-  // };
 
 
   return (
