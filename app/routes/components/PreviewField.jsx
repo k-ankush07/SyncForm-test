@@ -39,8 +39,10 @@ import FormProgressIndicator from "./RichTextEditor/FormProgressIndicator";
 // imports 
 import { getSavedTextValue } from "../../utils/fieldValueHelpers.js"
 import useFieldValue from "../../utils/hooks/useFieldValue.js";
-
+import usePhoneField from "../../utils/hooks/usePhoneField.js";
 import usePasswordField from "../../utils/hooks/usePasswordField.js";
+import useChoiceField from "../../utils/hooks/useChoiceField.js";
+import useCountryField from "../../utils/hooks/useCountryField.js";
 
 
 
@@ -522,8 +524,6 @@ function FlatpickrField({
 // left icon + divider + input.
 // =====================================================================
 
-
-
 function PreviewInputShell({
   label,
   required,
@@ -728,13 +728,24 @@ export default function PreviewField({
     enableSelection: usesSelection,
   });
 
+  const {
+    handleCheckboxChange,
+    handleRadioChange,
+    handleCheckboxOtherChange,
+    handleRadioOtherChange,
+    handleOtherTextChange,
+  } = useChoiceField({
+    selected,
+    setSelected,
+    otherValue,
+    setOtherValue,
+    reportChange,
+    maxSelections: Number(normalizedElement.maxSelections) || 0,
+  });
+
+
   const [nameError, setNameError] = useState("");
   const [numberError, setNumberError] = useState("");
-
-
-
-
-
   // ===========================================================
   // 3.5 CHECKBOX AND CONSENT STATE
   // ===========================================================
@@ -788,58 +799,44 @@ export default function PreviewField({
         ? savedValue.confirmEmail ?? ""
         : ""
   );
-
   // ===========================================================
   // 3.7 PHONE STATE
   // ===========================================================
 
-  const configuredPhoneCountry =
-    normalizedElement.defaultCountryCode &&
-      normalizedElement.defaultCountryCode !== "auto"
-      ? normalizedElement.defaultCountryCode.toLowerCase()
-      : "in";
-
-  const getSavedPhoneCountry = () => {
-    if (
-      savedValue &&
-      typeof savedValue === "object" &&
-      savedValue.country
-    ) {
-      return String(savedValue.country).toLowerCase();
-    }
-
-    return configuredPhoneCountry;
-  };
-
-  const [phoneCountry, setPhoneCountry] = useState(
-    getSavedPhoneCountry
-  );
-
-  const [countryDropdownOpen, setCountryDropdownOpen] = useState(false);
-
-  // ===========================================================
-  // 3.8 COUNTRY AND DROPDOWN STATE
-  // ===========================================================
-
-  const [countrySearch, setCountrySearch] = useState("");
-
-  const [selectedCountry, setSelectedCountry] = useState(() => {
-    if (typeof savedValue === "string") {
-      return savedValue;
-    }
-
-    return typeof normalizedElement.defaultValue === "string"
-      ? normalizedElement.defaultValue
-      : "";
+  const {
+    phoneCountry,
+    setPhoneCountry,
+    countryDropdownOpen,
+    setCountryDropdownOpen,
+    reportPhoneValue,
+    handlePhoneCountryChange,
+    handlePhoneChange,
+  } = usePhoneField({
+    savedValue,
+    normalizedElement,
+    type,
+    value,
+    setValue,
+    reportChange,
+    phoneCountryList: countries,
   });
 
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [dropdownSearch, setDropdownSearch] = useState("");
+  // ===========================================================
+  // COUNTRY FIELD
+  // ===========================================================
 
-  useEffect(() => {
-    setDropdownOpen(false);
-    setDropdownSearch("");
-  }, [normalizedElement.id]);
+  const {
+    countrySearch,
+    setCountrySearch,
+    selectedCountry,
+    isCountryDropdownOpen,
+    setIsCountryDropdownOpen,
+    handleCountrySelect,
+  } = useCountryField({
+    savedValue,
+    normalizedElement,
+    updateValue,
+  });
 
   // ===========================================================
   // 3.9 DATE AND TIME STATE
@@ -1024,17 +1021,6 @@ export default function PreviewField({
 
   useEffect(() => {
 
-    // const nextConfirmPassword =
-    //   savedValue && typeof savedValue === "object"
-    //     ? savedValue.confirmPassword ?? ""
-    //     : "";
-
-    // setConfirmPasswordValue((previous) =>
-    //   previous === nextConfirmPassword
-    //     ? previous
-    //     : nextConfirmPassword
-    // );
-
     const nextConfirmEmail =
       savedValue && typeof savedValue === "object"
         ? savedValue.confirmEmail ?? ""
@@ -1046,54 +1032,13 @@ export default function PreviewField({
         : nextConfirmEmail
     );
 
-    // setPasswordValidationTriggered(false);
-    // setShowPassword(false);
-    // setShowConfirmPassword(false);
-    // setNameError("");
-    // setNumberError("");
+
   }, [
     normalizedElement.id,
     normalizedElement.defaultValue,
     savedValue,
   ]);
 
-  // ===========================================================
-  // 5. SYNCHRONIZE PHONE VALUE
-  // ===========================================================
-
-  // Only phone fields may use this effect.
-  // This prevents phone defaults from overwriting name/email/text fields.
-
-  useEffect(() => {
-    if (type !== "phone") return;
-
-    const nextPhoneNumber =
-      savedValue &&
-        typeof savedValue === "object" &&
-        !Array.isArray(savedValue)
-        ? savedValue.number ?? ""
-        : savedValue ?? normalizedElement.defaultValue ?? "";
-
-    const nextCountry = getSavedPhoneCountry();
-
-    setValue((previous) => {
-      const next = String(nextPhoneNumber);
-
-      return previous === next ? previous : next;
-    });
-
-    setPhoneCountry((previous) =>
-      previous === nextCountry ? previous : nextCountry
-    );
-
-    setCountryDropdownOpen(false);
-  }, [
-    type,
-    normalizedElement.id,
-    normalizedElement.defaultCountryCode,
-    normalizedElement.defaultValue,
-    savedValue,
-  ]);
 
   // ===========================================================
   // 6. SYNCHRONIZE DATE VALUE
@@ -1112,29 +1057,7 @@ export default function PreviewField({
     savedValue,
   ]);
 
-  // ===========================================================
-  // 7. RESTORE COUNTRY SELECTION
-  // ===========================================================
-
-  useEffect(() => {
-    const nextCountry =
-      typeof savedValue === "string"
-        ? savedValue
-        : typeof normalizedElement.defaultValue === "string"
-          ? normalizedElement.defaultValue
-          : "";
-
-    setSelectedCountry((previous) =>
-      previous === nextCountry ? previous : nextCountry
-    );
-
-    setCountrySearch("");
-    setCountryDropdownOpen(false);
-  }, [
-    normalizedElement.id,
-    normalizedElement.defaultValue,
-    savedValue,
-  ]);
+  
 
   // ===========================================================
   // 8. FIELD CHANGE HANDLERS
@@ -1164,7 +1087,6 @@ export default function PreviewField({
 
     setNameError("");
   };
-
 
 
   // ===========================================================
@@ -1202,97 +1124,6 @@ export default function PreviewField({
     normalizedElement.phoneValidation !== false ||
     normalizedElement.showCountryCode !== false;
 
-  // Send the phone number together with its country information.
-  const reportPhoneValue = (
-    nextNumber,
-    countryCode = phoneCountry
-  ) => {
-    const selectedPhoneCountry = phoneCountryList.find(
-      (country) =>
-        country.value.toLowerCase() ===
-        String(countryCode).toLowerCase()
-    );
-
-    reportChange({
-      country:
-        selectedPhoneCountry?.value?.toLowerCase() ||
-        countryCode,
-      dialCode: selectedPhoneCountry?.dialCode || "",
-      number: nextNumber,
-    });
-  };
-
-  // Change selected phone country.
-  const handlePhoneCountryChange = (countryCode) => {
-    const nextCountry = countryCode.toLowerCase();
-
-    setPhoneCountry(nextCountry);
-    reportPhoneValue(value, nextCountry);
-  };
-
-  // Handle phone input and detect international calling codes.
-  const handlePhoneChange = (newValue) => {
-    const input = String(newValue ?? "");
-
-    if (input.startsWith("+") || input.startsWith("00")) {
-      const internationalInput = input.startsWith("00")
-        ? `+${input.slice(2)}`
-        : input;
-
-      const digits = internationalInput
-        .slice(1)
-        .replace(/\D/g, "");
-
-      const matches = phoneCountryList
-        .filter((country) => {
-          const dialCode = country.dialCode.replace(/\D/g, "");
-          return digits.startsWith(dialCode);
-        })
-        .sort(
-          (a, b) =>
-            b.dialCode.replace(/\D/g, "").length -
-            a.dialCode.replace(/\D/g, "").length
-        );
-
-      if (matches.length > 0) {
-        const longestCode = matches[0].dialCode;
-
-        const sameCodeMatches = matches.filter(
-          (country) => country.dialCode === longestCode
-        );
-
-        const matchedCountry =
-          sameCodeMatches.find(
-            (country) =>
-              country.value.toLowerCase() === phoneCountry
-          ) || sameCodeMatches[0];
-
-        const dialDigits = matchedCountry.dialCode.replace(
-          /\D/g,
-          ""
-        );
-
-        const phoneNumber = digits.slice(dialDigits.length);
-
-        setPhoneCountry(matchedCountry.value.toLowerCase());
-        setValue(phoneNumber);
-
-        reportPhoneValue(phoneNumber, matchedCountry.value);
-        return;
-      }
-
-      // Preserve an incomplete international number while typing.
-      setValue(internationalInput);
-      reportPhoneValue(internationalInput);
-      return;
-    }
-
-    // National phone number: digits only.
-    const phoneNumber = input.replace(/\D/g, "");
-
-    setValue(phoneNumber);
-    reportPhoneValue(phoneNumber);
-  };
 
   // Limit radio and checkbox columns to a maximum of five.
   const optionsPerLine = Math.min(
@@ -2191,12 +2022,9 @@ export default function PreviewField({
         </BlockStack>
       );
     }
-
-
     // -------------------------------------------------------
     // COUNTRY
     // -------------------------------------------------------
-
     case "country": {
       const selectedCountryDetails = countries.find(
         (country) => country.value === selectedCountry
@@ -2211,25 +2039,17 @@ export default function PreviewField({
         );
       });
 
-      const handleCountrySelect = (country) => {
-        setSelectedCountry(country.value);
-        updateValue(country.value);
-        setCountryDropdownOpen(false);
-        setCountrySearch("");
-      };
-
       return (
         <BlockStack gap="200">
           {fieldLabelWithIcon}
 
           <div style={{ position: "relative", width: "100%" }}>
-
             {/* SELECTED COUNTRY / DROPDOWN BUTTON */}
             <button
               type="button"
               disabled={isReadOnly}
               onClick={() =>
-                setCountryDropdownOpen((previous) => !previous)
+                setIsCountryDropdownOpen((previous) => !previous)
               }
               style={{
                 display: "flex",
@@ -2309,7 +2129,7 @@ export default function PreviewField({
                   color: "#6D7175",
                   display: "inline-block",
                   transition: "transform 250ms ease",
-                  transform: countryDropdownOpen
+                  transform: isCountryDropdownOpen
                     ? "rotate(180deg)"
                     : "rotate(0deg)",
                 }}
@@ -2326,20 +2146,20 @@ export default function PreviewField({
                   top: "calc(100% + 4px)",
                   left: 0,
                   width: "100%",
-                  maxHeight: countryDropdownOpen ? "280px" : "0px",
-                  opacity: countryDropdownOpen ? 1 : 0,
-                  visibility: countryDropdownOpen
+                  maxHeight: isCountryDropdownOpen ? "280px" : "0px",
+                  opacity: isCountryDropdownOpen ? 1 : 0,
+                  visibility: isCountryDropdownOpen
                     ? "visible"
                     : "hidden",
-                  transform: countryDropdownOpen
+                  transform: isCountryDropdownOpen
                     ? "translateY(0)"
                     : "translateY(-8px)",
                   background: "#FFFFFF",
-                  border: countryDropdownOpen
+                  border: isCountryDropdownOpen
                     ? "1px solid #E1E3E5"
                     : "1px solid transparent",
                   borderRadius: "8px",
-                  boxShadow: countryDropdownOpen
+                  boxShadow: isCountryDropdownOpen
                     ? "0 4px 16px rgba(0,0,0,0.12)"
                     : "none",
                   zIndex: 10000,
@@ -2347,10 +2167,9 @@ export default function PreviewField({
                   overflow: "hidden",
                   transition:
                     "max-height 250ms ease, opacity 200ms ease, transform 250ms ease, visibility 250ms ease, border-color 250ms ease",
-                  pointerEvents: countryDropdownOpen ? "auto" : "none",
+                  pointerEvents: isCountryDropdownOpen ? "auto" : "none",
                 }}
               >
-
                 {/* SEARCH INPUT */}
                 {normalizedElement.enableSearch && (
                   <div
@@ -2851,20 +2670,13 @@ export default function PreviewField({
     // CHECKBOX
     // -------------------------------------------------------
 
-
     case "checkbox":
     case "checkboxes":
     case "checkbox_group": {
-      // =====================================================
       // 1. CHECK OTHER OPTION
-      // =====================================================
-
       const otherChecked = selected.includes("__other__");
 
-      // =====================================================
-      // 2. GET MINIMUM AND MAXIMUM SELECTION LIMITS
-      // =====================================================
-
+      // 2. GET SELECTION LIMITS
       const minSelections = Math.max(
         0,
         Number(normalizedElement.minSelections) || 0
@@ -2879,27 +2691,18 @@ export default function PreviewField({
       const isMaxReached =
         maxSelections > 0 && selected.length >= maxSelections;
 
-      // =====================================================
-      // 3. CHECK COLUMN WIDTH AND SET OPTIONS PER LINE
-      // =====================================================
-
+      // 3. CHECK COLUMN WIDTH
       const columnWidth = String(normalizedElement.columnWidth);
 
       let checkboxColumns = null;
 
       if (columnWidth === "33") {
-        // 33% width = 2 options per line
         checkboxColumns = 2;
       } else if (columnWidth === "50") {
-        // 50% width = 3 options per line
         checkboxColumns = 3;
       }
 
-      // =====================================================
       // 4. FINAL CHECKBOX GRID STYLE
-      // Preserve existing styles for other column widths
-      // =====================================================
-
       const checkboxGridStyle =
         checkboxColumns !== null
           ? {
@@ -2909,18 +2712,10 @@ export default function PreviewField({
           }
           : choiceGridStyle;
 
-      // =====================================================
       // 5. RENDER CHECKBOX GROUP
-      // =====================================================
-
       return (
         <BlockStack gap="200">
-
-          {/* FIELD LABEL */}
-
           {fieldLabelWithIcon}
-
-          {/* CHECKBOX OPTIONS GRID */}
 
           <div style={checkboxGridStyle}>
             {options.map((option, index) => {
@@ -2934,34 +2729,14 @@ export default function PreviewField({
                   disabled={
                     isReadOnly || (!isChecked && isMaxReached)
                   }
-                  onChange={(checked) => {
-                    let updated = [...selected];
-
-                    if (checked) {
-                      // Prevent selecting more than maximum
-                      if (
-                        maxSelections > 0 &&
-                        updated.length >= maxSelections
-                      ) {
-                        return;
-                      }
-
-                      updated.push(option.value);
-                    } else {
-                      updated = updated.filter(
-                        (value) => value !== option.value
-                      );
-                    }
-
-                    setSelected(updated);
-                    reportChange(updated);
-                  }}
+                  onChange={(checked) =>
+                    handleCheckboxChange(option.value, checked)
+                  }
                 />
               );
             })}
 
             {/* OTHER CHECKBOX */}
-
             {normalizedElement.otherOption && (
               <Checkbox
                 label={normalizedElement.otherLabel || "Other"}
@@ -2969,43 +2744,12 @@ export default function PreviewField({
                 disabled={
                   isReadOnly || (!otherChecked && isMaxReached)
                 }
-                onChange={(isChecked) => {
-                  let updated = [...selected];
-
-                  if (isChecked) {
-                    if (
-                      maxSelections > 0 &&
-                      updated.length >= maxSelections
-                    ) {
-                      return;
-                    }
-
-                    updated.push("__other__");
-                  } else {
-                    updated = updated.filter(
-                      (value) => value !== "__other__"
-                    );
-                  }
-
-                  setSelected(updated);
-
-                  const nextOtherValue = isChecked ? otherValue : "";
-
-                  if (!isChecked) {
-                    setOtherValue("");
-                  }
-
-                  reportChange({
-                    value: updated,
-                    otherValue: nextOtherValue,
-                  });
-                }}
+                onChange={handleCheckboxOtherChange}
               />
             )}
           </div>
 
           {/* OTHER TEXT FIELD */}
-
           {normalizedElement.otherOption && otherChecked && (
             <TextField
               placeholder={
@@ -3013,26 +2757,17 @@ export default function PreviewField({
               }
               value={otherValue}
               disabled={isReadOnly}
-              onChange={(newValue) => {
-                setOtherValue(newValue);
-
-                reportChange({
-                  value: selected,
-                  otherValue: newValue,
-                });
-              }}
+              onChange={(newValue) =>
+                handleOtherTextChange(newValue)
+              }
               autoComplete="off"
             />
           )}
 
-          {/* DESCRIPTION */}
-
           {descriptionText}
-
         </BlockStack>
       );
     }
-
 
 
     // -------------------------------------------------------
@@ -3065,12 +2800,7 @@ export default function PreviewField({
                   value={option.value}
                   checked={selected[0] === option.value}
                   disabled={isReadOnly}
-                  onChange={() => {
-                    setSelected([option.value]);
-                    setOtherValue("");
-
-                    reportChange(option.value);
-                  }}
+                  onChange={() => handleRadioChange(option.value)}
                 />
 
                 <span>{option.label}</span>
@@ -3093,14 +2823,7 @@ export default function PreviewField({
                   value="__other__"
                   checked={otherChecked}
                   disabled={isReadOnly}
-                  onChange={() => {
-                    setSelected(["__other__"]);
-
-                    reportChange({
-                      value: "__other__",
-                      otherValue,
-                    });
-                  }}
+                  onChange={handleRadioOtherChange}
                 />
 
                 <span>
@@ -3118,14 +2841,9 @@ export default function PreviewField({
               }
               value={otherValue}
               disabled={isReadOnly}
-              onChange={(newValue) => {
-                setOtherValue(newValue);
-
-                reportChange({
-                  value: "__other__",
-                  otherValue: newValue,
-                });
-              }}
+              onChange={(newValue) =>
+                handleOtherTextChange(newValue, true)
+              }
               autoComplete="off"
             />
           )}
@@ -3134,6 +2852,7 @@ export default function PreviewField({
         </BlockStack>
       );
     }
+
 
     // -------------------------------------------------------
     // CONSENT
@@ -4720,9 +4439,6 @@ export default function PreviewField({
     // -------------------------------------------------------
     // IMAGE OPTIONS
     // -------------------------------------------------------
-
-
-
     case "image_options": {
       const maxImages = Math.max(
         1,
