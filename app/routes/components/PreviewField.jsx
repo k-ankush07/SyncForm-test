@@ -6,6 +6,7 @@ import monthSelectPlugin from "flatpickr/dist/plugins/monthSelect";
 import "flatpickr/dist/plugins/monthSelect/style.css";
 import SignaturePad from "signature_pad";
 import "flag-icons/css/flag-icons.min.css";
+import PreviewTextInput from "./PreviewTextInput";
 import * as PolarisIcons from "@shopify/polaris-icons";
 import { Spanish } from "flatpickr/dist/l10n/es.js";
 import { French } from "flatpickr/dist/l10n/fr.js";
@@ -514,29 +515,41 @@ function FlatpickrField({
 // left icon + divider + input.
 // =====================================================================
 
+
+
 function PreviewInputShell({
   label,
   required,
+  hideLabel = false,
   icon,
   description,
   children,
+  className = "",
+  style = {},
+  inputStyle = {},
+  iconStyle = {},
+  labelStyle = {},
+  labelVariant = "bodyMd",
 }) {
   return (
     <BlockStack gap="200">
-      {/* FIELD LABEL */}
-      {label && (
-        <Text as="label" variant="bodyMd">
-          {label}
-          {required && (
-            <span style={{ color: "var(--p-color-text-critical)" }}>
-              {" "}*
-            </span>
-          )}
+      {/* COMMON LABEL */}
+      {!hideLabel && label && (
+        <Text as="label" variant={labelVariant}>
+          <span style={labelStyle}>
+            {label}
+            {required && (
+              <span style={{ color: "var(--p-color-text-critical)" }}>
+                {" "}*
+              </span>
+            )}
+          </span>
         </Text>
       )}
 
-      {/* INPUT WITH LEFT ICON */}
+      {/* COMMON INPUT SHELL */}
       <div
+        className={`preview-input-shell ${className}`}
         style={{
           display: "flex",
           width: "100%",
@@ -546,11 +559,13 @@ function PreviewInputShell({
           borderRadius: "8px",
           boxSizing: "border-box",
           overflow: "hidden",
+          ...style,
         }}
       >
-        {/* LEFT ICON AREA */}
+        {/* COMMON ICON */}
         {icon && (
           <div
+            className="preview-input-shell__icon"
             style={{
               width: "42px",
               minWidth: "42px",
@@ -561,25 +576,28 @@ function PreviewInputShell({
               borderRight: "1px solid #D8DADD",
               borderRadius: "8px 0 0 8px",
               boxSizing: "border-box",
+              ...iconStyle,
             }}
           >
             <Icon source={icon} />
           </div>
         )}
 
-        {/* INPUT AREA */}
+        {/* INPUT CONTENT */}
         <div
+          className="preview-input-shell__content"
           style={{
             flex: 1,
             minWidth: 0,
+            ...inputStyle,
           }}
         >
           {children}
         </div>
       </div>
 
-      {/* DESCRIPTION */}
-      {description}
+      {/* COMMON DESCRIPTION */}
+      {description && description}
     </BlockStack>
   );
 }
@@ -588,6 +606,21 @@ function PreviewInputShell({
 // =============================================================
 // 3. MAIN PREVIEW FIELD COMPONENT
 // =============================================================
+
+// one common function to get all min max value 
+const getCharacterLimits = (element) => {
+  return {
+    minLength:
+      element.limitCharacters && element.minCharacters !== ""
+        ? Number(element.minCharacters)
+        : undefined,
+
+    maxLength:
+      element.limitCharacters && element.maxCharacters !== ""
+        ? Number(element.maxCharacters)
+        : undefined,
+  };
+};
 
 export default function PreviewField({
   element,
@@ -639,7 +672,7 @@ export default function PreviewField({
 
   const hideLabel = Boolean(normalizedElement.hideLabel);
   const description = normalizedElement.description || "";
-  const placeholder = normalizedElement.placeholder || label;
+  const placeholder = normalizedElement.placeholder || "";
   const defaultValue = normalizedElement.defaultValue ?? "";
   const required = Boolean(normalizedElement.required);
 
@@ -1431,11 +1464,11 @@ export default function PreviewField({
     ) : undefined,
   };
 
-  const commonSelectProps = {
-    label,
-    labelHidden: hideLabel,
-    helpText: description || undefined,
-  };
+  // const commonSelectProps = {
+  //   label,
+  //   labelHidden: hideLabel,
+  //   helpText: description || undefined,
+  // };
 
   // ===========================================================
   // 11. HTML SANITIZATION
@@ -1743,30 +1776,17 @@ export default function PreviewField({
     return null;
   }
 
-// console.log("PREVIEW FIELD DEBUG:", {
-//   originalType: element?.type,
-//   finalType: type,
-//   label,
-//   value,
-//   isModelPreview,
-// });
+
   switch (type) {
-    
-    // -------------------------------------------------------
-    // EMAIL
-    // -------------------------------------------------------
+
 
     // -------------------------------------------------------
     // EMAIL
     // -------------------------------------------------------
 
     case "email": {
-      const {
-        label: _label,
-        prefix: _prefix,
-        helpText: _helpText,
-        ...emailFieldProps
-      } = commonTextFieldProps;
+      const { minLength, maxLength } =
+        getCharacterLimits(normalizedElement);
 
       return (
         <BlockStack gap="300">
@@ -1775,10 +1795,10 @@ export default function PreviewField({
             label={label}
             required={required}
             icon={selectedIcon}
+              hideLabel={hideLabel}
             description={descriptionText}
           >
-            <TextField
-              {...emailFieldProps}
+            <PreviewTextInput
               type="email"
               autoComplete="email"
               value={value}
@@ -1790,25 +1810,11 @@ export default function PreviewField({
                   confirmEmail: confirmEmailValue,
                 });
               }}
-              label=""
-              labelHidden
               placeholder={placeholder}
               readOnly={isReadOnly}
               disabled={isReadOnly}
-              requiredIndicator={false}
-              borderless
-              minLength={
-                normalizedElement.limitCharacters &&
-                  normalizedElement.minCharacters !== ""
-                  ? Number(normalizedElement.minCharacters)
-                  : undefined
-              }
-              maxLength={
-                normalizedElement.limitCharacters &&
-                  normalizedElement.maxCharacters !== ""
-                  ? Number(normalizedElement.maxCharacters)
-                  : undefined
-              }
+              minLength={minLength}
+              maxLength={maxLength}
             />
           </PreviewInputShell>
 
@@ -1822,7 +1828,7 @@ export default function PreviewField({
                 normalizedElement.confirmEmailDescription || undefined
               }
             >
-              <TextField
+              <PreviewTextInput
                 type="email"
                 autoComplete="email"
                 value={confirmEmailValue}
@@ -1834,16 +1840,12 @@ export default function PreviewField({
                     confirmEmail: nextValue,
                   });
                 }}
-                label=""
-                labelHidden
                 placeholder={
                   normalizedElement.confirmEmailPlaceholder ||
                   "Confirm your email"
                 }
                 readOnly={isReadOnly}
                 disabled={isReadOnly}
-                requiredIndicator={false}
-                borderless
               />
             </PreviewInputShell>
           )}
@@ -1851,36 +1853,39 @@ export default function PreviewField({
       );
     }
 
+
     // -------------------------------------------------------
     // NAME
     // -------------------------------------------------------
-
     case "name":
     case "first_name":
-    case "last_name":
+    case "last_name": {
+      const { minLength, maxLength } =
+        getCharacterLimits(normalizedElement);
       return (
-        <TextField
-          {...commonTextFieldProps}
-          autoComplete="given-name"
-          value={value}
-          onChange={handleNameChange}
-          readOnly={isReadOnly}
-          error={nameError || undefined}
+        <PreviewInputShell
+          label={label}
+          required={required}
+          hideLabel={hideLabel}
+          icon={selectedIcon}
+          description={descriptionText}
+        >
 
-          minLength={
-            normalizedElement.limitCharacters &&
-              normalizedElement.minCharacters !== ""
-              ? Number(normalizedElement.minCharacters)
-              : undefined
-          }
-          maxLength={
-            normalizedElement.limitCharacters &&
-              normalizedElement.maxCharacters !== ""
-              ? Number(normalizedElement.maxCharacters)
-              : undefined
-          }
-        />
+          <PreviewTextInput
+            value={value}
+            onChange={handleNameChange}
+            autoComplete="given-name"
+            placeholder={placeholder}
+            readOnly={isReadOnly}
+            error={nameError || undefined}
+            minLength={minLength}
+            maxLength={maxLength}
+          />
+
+        </PreviewInputShell>
       );
+    }
+
 
     // -------------------------------------------------------
     // PHONE
@@ -2149,7 +2154,11 @@ export default function PreviewField({
     // PASSWORD
     // -------------------------------------------------------
 
+
     case "password": {
+      const { minLength, maxLength } =
+        getCharacterLimits(normalizedElement);
+
       const passwordError = passwordValidationTriggered
         ? getPasswordError()
         : "";
@@ -2168,17 +2177,6 @@ export default function PreviewField({
           onClick={() => setShowPassword((previous) => !previous)}
           aria-label={showPassword ? "Hide password" : "Show password"}
           className="password-visibility-button"
-          style={{
-            border: "none",
-            background: "transparent",
-            padding: "6px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "#6D7175",
-            cursor: isReadOnly ? "default" : "pointer",
-            borderRadius: "5px",
-          }}
         >
           <Icon
             source={
@@ -2190,13 +2188,40 @@ export default function PreviewField({
         </button>
       );
 
+      const confirmPasswordSuffix = (
+        <button
+          type="button"
+          disabled={isReadOnly}
+          onClick={() =>
+            setShowConfirmPassword((previous) => !previous)
+          }
+          aria-label={
+            showConfirmPassword
+              ? "Hide confirm password"
+              : "Show confirm password"
+          }
+          className="password-visibility-button"
+        >
+          <Icon
+            source={
+              showConfirmPassword
+                ? PolarisIcons.HideIcon
+                : PolarisIcons.ViewIcon
+            }
+          />
+        </button>
+      );
+
       return (
         <BlockStack gap="300">
-
-          {/* PASSWORD INPUT */}
-          <div className="password-field-control">
-            <TextField
-              {...commonTextFieldProps}
+          {/* MAIN PASSWORD */}
+          <PreviewInputShell
+            label={label}
+            required={required}
+            icon={selectedIcon}
+            description={descriptionText}
+          >
+            <PreviewTextInput
               type={showPassword ? "text" : "password"}
               autoComplete="new-password"
               value={value}
@@ -2212,42 +2237,34 @@ export default function PreviewField({
                     : newValue
                 );
               }}
+              placeholder={placeholder}
               readOnly={isReadOnly}
+              disabled={isReadOnly}
               error={passwordError || undefined}
-              minLength={
-                normalizedElement.limitCharacters &&
-                  normalizedElement.minCharacters !== ""
-                  ? Number(normalizedElement.minCharacters)
-                  : undefined
-              }
-              maxLength={
-                normalizedElement.limitCharacters &&
-                  normalizedElement.maxCharacters !== ""
-                  ? Number(normalizedElement.maxCharacters)
-                  : undefined
-              }
+              minLength={minLength}
+              maxLength={maxLength}
               suffix={passwordSuffix}
             />
-          </div>
+          </PreviewInputShell>
 
           {/* CONFIRM PASSWORD */}
           {normalizedElement.confirmPassword && (
-            <div className="password-field-control">
-              <TextField
+            <PreviewInputShell
+              label={
+                normalizedElement.hideLabel
+                  ? ""
+                  : normalizedElement.confirmPasswordLabel ||
+                  "Confirm Password"
+              }
+              required={required}
+              icon={selectedIcon}
+              description={
+                normalizedElement.confirmPasswordDescription || undefined
+              }
+            >
+              <PreviewTextInput
                 type={showConfirmPassword ? "text" : "password"}
-                label={
-                  normalizedElement.hideLabel
-                    ? ""
-                    : normalizedElement.confirmPasswordLabel ||
-                    "Confirm Password"
-                }
-                placeholder={
-                  normalizedElement.confirmPasswordPlaceholder ||
-                  "Confirm your password"
-                }
-                helpText={
-                  normalizedElement.confirmPasswordDescription || undefined
-                }
+                autoComplete="new-password"
                 value={confirmPasswordValue}
                 onChange={(newValue) => {
                   setConfirmPasswordValue(newValue);
@@ -2257,63 +2274,23 @@ export default function PreviewField({
                     confirmPassword: newValue,
                   });
                 }}
-                autoComplete="new-password"
+                placeholder={
+                  normalizedElement.confirmPasswordPlaceholder ||
+                  "Confirm your password"
+                }
                 readOnly={isReadOnly}
-                prefix={commonTextFieldProps.prefix}
-                minLength={
-                  normalizedElement.limitCharacters &&
-                    normalizedElement.minCharacters !== ""
-                    ? Number(normalizedElement.minCharacters)
-                    : undefined
-                }
-                maxLength={
-                  normalizedElement.limitCharacters &&
-                    normalizedElement.maxCharacters !== ""
-                    ? Number(normalizedElement.maxCharacters)
-                    : undefined
-                }
+                disabled={isReadOnly}
                 error={confirmPasswordError || undefined}
-                suffix={
-                  <button
-                    type="button"
-                    disabled={isReadOnly}
-                    onClick={() =>
-                      setShowConfirmPassword((previous) => !previous)
-                    }
-                    aria-label={
-                      showConfirmPassword
-                        ? "Hide confirm password"
-                        : "Show confirm password"
-                    }
-                    className="password-visibility-button"
-                    style={{
-                      border: "none",
-                      background: "transparent",
-                      padding: "6px",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      color: "#6D7175",
-                      cursor: isReadOnly ? "default" : "pointer",
-                      borderRadius: "5px",
-                    }}
-                  >
-                    <Icon
-                      source={
-                        showConfirmPassword
-                          ? PolarisIcons.HideIcon
-                          : PolarisIcons.ViewIcon
-                      }
-                    />
-                  </button>
-                }
+                minLength={minLength}
+                maxLength={maxLength}
+                suffix={confirmPasswordSuffix}
               />
-            </div>
+            </PreviewInputShell>
           )}
-
         </BlockStack>
       );
     }
+
 
     // -------------------------------------------------------
     // COUNTRY
@@ -3291,7 +3268,6 @@ export default function PreviewField({
     // BUTTON
     // -------------------------------------------------------
 
-
     case "button": {
       const buttonSelected = Array.isArray(selected)
         ? selected
@@ -3390,8 +3366,6 @@ export default function PreviewField({
         </BlockStack>
       );
     }
-
-
 
     // -------------------------------------------------------
     // URL
@@ -3915,152 +3889,149 @@ export default function PreviewField({
     // QUANTITY
     // -------------------------------------------------------
 
-case "quantity": {
-  const parsedMin = Number(normalizedElement.minValue);
-  const parsedMax = Number(normalizedElement.maxValue);
+    case "quantity": {
+      const parsedMin = Number(normalizedElement.minValue);
+      const parsedMax = Number(normalizedElement.maxValue);
 
-  const min =
-    normalizedElement.setMinValue && Number.isFinite(parsedMin)
-      ? parsedMin
-      : 0;
+      const min =
+        normalizedElement.setMinValue && Number.isFinite(parsedMin)
+          ? parsedMin
+          : 0;
 
-  const max =
-    normalizedElement.setMaxValue &&
-    normalizedElement.maxValue !== "" &&
-    Number.isFinite(parsedMax)
-      ? Math.max(min, parsedMax)
-      : Infinity;
+      const max =
+        normalizedElement.setMaxValue &&
+          normalizedElement.maxValue !== "" &&
+          Number.isFinite(parsedMax)
+          ? Math.max(min, parsedMax)
+          : Infinity;
 
-  const parsedValue = Number(value);
+      const parsedValue = Number(value);
 
-  const currentValue =
-    value === "" ||
-    value === null ||
-    value === undefined ||
-    !Number.isFinite(parsedValue)
-      ? min
-      : parsedValue;
+      const currentValue =
+        value === "" ||
+          value === null ||
+          value === undefined ||
+          !Number.isFinite(parsedValue)
+          ? min
+          : parsedValue;
 
-  const safeValue = Math.min(max, Math.max(min, currentValue));
+      const safeValue = Math.min(max, Math.max(min, currentValue));
 
-  const decreaseValue = () => {
-    if (isReadOnly || safeValue <= min) return;
-    updateValue(String(Math.max(min, safeValue - 1)));
-  };
+      const decreaseValue = () => {
+        if (isReadOnly || safeValue <= min) return;
+        updateValue(String(Math.max(min, safeValue - 1)));
+      };
 
-  const increaseValue = () => {
-    if (isReadOnly || safeValue >= max) return;
-    updateValue(String(Math.min(max, safeValue + 1)));
-  };
+      const increaseValue = () => {
+        if (isReadOnly || safeValue >= max) return;
+        updateValue(String(Math.min(max, safeValue + 1)));
+      };
 
-  const buttonStyle = {
-    all: "unset",
-    width: "36px",
-    height: "36px",
-    flexShrink: 0,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontSize: "22px",
-    fontWeight: 400,
-    color: "#303030",
-    cursor: "pointer",
-    textAlign: "center",
-    boxSizing: "border-box",
-  };
+      const buttonStyle = {
+        all: "unset",
+        width: "36px",
+        height: "36px",
+        flexShrink: 0,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontSize: "22px",
+        fontWeight: 400,
+        color: "#303030",
+        cursor: "pointer",
+        textAlign: "center",
+        boxSizing: "border-box",
+      };
 
-  return (
-    <div style={{ width: "100%", minWidth: 0 }}>
-      {!hideLabel && (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "4px",
-            marginBottom: "6px",
-            fontSize: "14px",
-            fontWeight: 500,
-            color: "#303030",
-          }}
-        >
-          {label}
-          {required && (
-            <span style={{ color: "#D72C0D" }}>*</span>
+      return (
+        <div style={{ width: "100%", minWidth: 0 }}>
+          {!hideLabel && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "4px",
+                marginBottom: "6px",
+                fontSize: "14px",
+                fontWeight: 500,
+                color: "#303030",
+              }}
+            >
+              {label}
+              {required && (
+                <span style={{ color: "#D72C0D" }}>*</span>
+              )}
+            </div>
           )}
+
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              width: "100%",
+              minHeight: "48px",
+              padding: "0 8px",
+              background: "#F6F6F7",
+              border: "1px solid #D8DADD",
+              borderRadius: "8px",
+              boxSizing: "border-box",
+              gap: "8px",
+            }}
+          >
+            <button
+              type="button"
+              aria-label="Decrease quantity"
+              disabled={isReadOnly || safeValue <= min}
+              onClick={decreaseValue}
+              style={{
+                ...buttonStyle,
+                color: safeValue <= min ? "#C9CCCF" : "#303030",
+                cursor:
+                  isReadOnly || safeValue <= min
+                    ? "not-allowed"
+                    : "pointer",
+              }}
+            >
+              −
+            </button>
+
+            <span
+              style={{
+                flex: 1,
+                minWidth: 0,
+                textAlign: "center",
+                fontSize: "14px",
+                fontWeight: 500,
+                color: "#303030",
+                fontVariantNumeric: "tabular-nums",
+              }}
+            >
+              {safeValue}
+            </span>
+
+            <button
+              type="button"
+              aria-label="Increase quantity"
+              disabled={isReadOnly || safeValue >= max}
+              onClick={increaseValue}
+              style={{
+                ...buttonStyle,
+                color: safeValue >= max ? "#C9CCCF" : "#303030",
+                cursor:
+                  isReadOnly || safeValue >= max
+                    ? "not-allowed"
+                    : "pointer",
+              }}
+            >
+              +
+            </button>
+          </div>
+
+          {descriptionText}
         </div>
-      )}
-
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          width: "100%",
-          minHeight: "48px",
-          padding: "0 8px",
-          background: "#F6F6F7",
-          border: "1px solid #D8DADD",
-          borderRadius: "8px",
-          boxSizing: "border-box",
-          gap: "8px",
-        }}
-      >
-        <button
-          type="button"
-          aria-label="Decrease quantity"
-          disabled={isReadOnly || safeValue <= min}
-          onClick={decreaseValue}
-          style={{
-            ...buttonStyle,
-            color: safeValue <= min ? "#C9CCCF" : "#303030",
-            cursor:
-              isReadOnly || safeValue <= min
-                ? "not-allowed"
-                : "pointer",
-          }}
-        >
-          −
-        </button>
-
-        <span
-          style={{
-            flex: 1,
-            minWidth: 0,
-            textAlign: "center",
-            fontSize: "14px",
-            fontWeight: 500,
-            color: "#303030",
-            fontVariantNumeric: "tabular-nums",
-          }}
-        >
-          {safeValue}
-        </span>
-
-        <button
-          type="button"
-          aria-label="Increase quantity"
-          disabled={isReadOnly || safeValue >= max}
-          onClick={increaseValue}
-          style={{
-            ...buttonStyle,
-            color: safeValue >= max ? "#C9CCCF" : "#303030",
-            cursor:
-              isReadOnly || safeValue >= max
-                ? "not-allowed"
-                : "pointer",
-          }}
-        >
-          +
-        </button>
-      </div>
-
-      {descriptionText}
-    </div>
-  );
-}
-
-
-
+      );
+    }
 
     // -------------------------------------------------------
     // REPEATER
@@ -5391,42 +5362,42 @@ case "quantity": {
     // HIDDEN FIELD
     // -------------------------------------------------------
 
-   case "hidden":
-  return (
-    <div
-      style={{
-        border: "1px dashed #8c9196",
-        borderRadius: "8px",
-        padding: "10px 24px",
-        background: "#f7f7f7",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: "8px",
-        width: "100%",
-        boxSizing: "border-box",
-      }}
-    >
-      <Text
-        as="span"
-        variant="bodySm"
-        tone="subdued"
-        alignment="center"
-      >
-        {value || "Hidden field"}
-      </Text>
+    case "hidden":
+      return (
+        <div
+          style={{
+            border: "1px dashed #8c9196",
+            borderRadius: "8px",
+            padding: "10px 24px",
+            background: "#f7f7f7",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "8px",
+            width: "100%",
+            boxSizing: "border-box",
+          }}
+        >
+          <Text
+            as="span"
+            variant="bodySm"
+            tone="subdued"
+            alignment="center"
+          >
+            {value || "Hidden field"}
+          </Text>
 
-      <Text
-        as="p"
-        variant="bodySm"
-        tone="subdued"
-        alignment="center"
-      >
-        This field will not be visible to customers on the published form.
-      </Text>
-    </div>
-  );
+          <Text
+            as="p"
+            variant="bodySm"
+            tone="subdued"
+            alignment="center"
+          >
+            This field will not be visible to customers on the published form.
+          </Text>
+        </div>
+      );
 
     // -------------------------------------------------------
     // RANGE SLIDER
@@ -6144,16 +6115,6 @@ case "quantity": {
                 ? maxLength
                 : undefined
             }
-
-            /* 
-                error={
-                  nameValidation &&
-                    value &&
-                    !/^[a-zA-Z\s'-]*$/.test(value)
-                    ? "Please enter a valid name."
-                    : undefined
-                }
-                */
 
 
             onChange={(newValue) => {

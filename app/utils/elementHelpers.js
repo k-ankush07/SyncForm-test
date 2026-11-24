@@ -14,6 +14,11 @@ const DEFAULT_ELEMENT_SETTINGS = {
 };
 
 export function createElementConfig(item) {
+  const isNewElement = !item.id;
+
+const placeholder = isNewElement
+  ? item.settings?.placeholder ?? item.placeholder ?? item.label ?? item.type
+  : item.settings?.placeholder ?? item.placeholder ?? "";
   if (!item?.type) {
     throw new Error("Element type is required");
   }
@@ -115,6 +120,7 @@ const products =
 
     options,
     products,
+      placeholder,
     otherOption: false,
     optionsPerLine: 1,
 

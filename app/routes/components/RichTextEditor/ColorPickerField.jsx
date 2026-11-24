@@ -1,17 +1,19 @@
 
-import React, { useState, useCallback, useEffect } from "react";
+import React, {
+    useState,
+    useEffect,
+    useRef,
+    useCallback,
+} from "react";
+
+import { createPortal } from "react-dom";
 
 import {
     Box,
-    Button,
     ColorPicker,
-    InlineStack,
-    Popover,
     Text,
     TextField,
 } from "@shopify/polaris";
-
-import { DeleteIcon } from "@shopify/polaris-icons";
 
 // HEX to HSB
 function hexToHsb(hex) {
@@ -33,6 +35,7 @@ function hexToHsb(hex) {
         else hue = (r - g) / delta + 4;
 
         hue *= 60;
+
         if (hue < 0) hue += 360;
     }
 
@@ -46,7 +49,10 @@ function hexToHsb(hex) {
 // HSB to HEX
 function hsbToHex({ hue, saturation, brightness }) {
     const chroma = brightness * saturation;
-    const x = chroma * (1 - Math.abs(((hue / 60) % 2) - 1));
+
+    const x =
+        chroma * (1 - Math.abs(((hue / 60) % 2) - 1));
+
     const m = brightness - chroma;
 
     let rgb;
@@ -68,6 +74,29 @@ function hsbToHex({ hue, saturation, brightness }) {
     ).toUpperCase();
 }
 
+// Normalize HEX
+function normalizeHex(hex) {
+    let color = hex.trim();
+
+    if (!color.startsWith("#")) {
+        color = `#${color}`;
+    }
+
+    if (/^#[0-9a-fA-F]{3}$/.test(color)) {
+        color =
+            "#" +
+            color
+                .slice(1)
+                .split("")
+                .map((char) => char + char)
+                .join("");
+    }
+
+    return /^#[0-9a-fA-F]{6}$/.test(color)
+        ? color.toUpperCase()
+        : null;
+}
+
 export default function ColorPickerField({
     label = "Color",
     value = "",
@@ -75,72 +104,189 @@ export default function ColorPickerField({
     helpText,
 }) {
     const [open, setOpen] = useState(false);
-    const [hexInput, setHexInput] = useState(value);
+    const [hexInput, setHexInput] = useState(value || "");
 
-    // Keep input synchronized with parent value
+    const [position, setPosition] = useState(null);
+
+    const activatorRef = useRef(null);
+    const popoverRef = useRef(null);
+
+    // Sync input with parent
     useEffect(() => {
         setHexInput(value || "");
     }, [value]);
 
-    // Open / close popover
-    const togglePopover = useCallback(() => {
-        setOpen((previous) => !previous);
+    // Calculate custom popover position
+    const updatePosition = useCallback(() => {
+        if (!activatorRef.current || !popoverRef.current) {
+            return;
+        }
+
+        const rect =
+            activatorRef.current.getBoundingClientRect();
+
+        const popoverRect =
+            popoverRef.current.getBoundingClientRect();
+
+        const popoverWidth = popoverRect.width;
+        const popoverHeight = popoverRect.height;
+
+        const gap = 8;
+        const padding = 8;
+
+        // Align popover with activator's left edge
+        let left = rect.left;
+
+        // Prevent overflow on right
+        left = Math.min(
+            left,
+            window.innerWidth - popoverWidth - padding
+        );
+
+        // Prevent overflow on left
+        left = Math.max(padding, left);
+
+        // Prefer opening below
+        const spaceBelow =
+            window.innerHeight - rect.bottom;
+
+        const spaceAbove = rect.top;
+
+        let top;
+
+        if (
+            spaceBelow >= popoverHeight + gap ||
+            spaceBelow >= spaceAbove
+        ) {
+            top = rect.bottom + gap;
+
+            // Keep inside viewport
+            top = Math.min(
+                top,
+                window.innerHeight - popoverHeight - padding
+            );
+        } else {
+            top = rect.top - popoverHeight - gap;
+        }
+
+        setPosition({
+            top: Math.max(padding, top),
+            left,
+        });
     }, []);
 
-    const closePopover = useCallback(() => {
-        setOpen(false);
-    }, []);
+    // Update position when opened
+    useEffect(() => {
+        if (!open) return;
+
+        const update = () => {
+            updatePosition();
+        };
+
+        update();
+
+        window.addEventListener("resize", update);
+        window.addEventListener("scroll", update, true);
+
+        return () => {
+            window.removeEventListener("resize", update);
+            window.removeEventListener("scroll", update, true);
+        };
+    }, [open, updatePosition]);
+
+    // Close when clicking outside
+    useEffect(() => {
+        if (!open) return;
+
+        const handleOutsideClick = (event) => {
+            if (
+                activatorRef.current?.contains(event.target) ||
+                popoverRef.current?.contains(event.target)
+            ) {
+                return;
+            }
+
+            setOpen(false);
+        };
+
+        const handleEscape = (event) => {
+            if (event.key === "Escape") {
+                setOpen(false);
+            }
+        };
+
+        document.addEventListener(
+            "pointerdown",
+            handleOutsideClick
+        );
+
+        document.addEventListener(
+            "keydown",
+            handleEscape
+        );
+
+        return () => {
+            document.removeEventListener(
+                "pointerdown",
+                handleOutsideClick
+            );
+
+            document.removeEventListener(
+                "keydown",
+                handleEscape
+            );
+        };
+    }, [open]);
+
+    // Toggle popover
+    const togglePopover = () => {
+        if (open) {
+            setOpen(false);
+        } else {
+            setPosition(null);
+            setOpen(true);
+        }
+    };
 
     // Handle color picker selection
     const handleColorChange = (color) => {
         const hex = hsbToHex(color);
 
         setHexInput(hex);
+
         onChange(hex);
     };
 
-    // Handle manual HEX input
+    // Handle HEX input
     const handleHexChange = (input) => {
         setHexInput(input);
 
-        let hex = input.trim();
+        const hex = normalizeHex(input);
 
-        if (!hex.startsWith("#")) {
-            hex = `#${hex}`;
+        if (hex) {
+            onChange(hex);
         }
-
-        if (/^#[0-9a-fA-F]{6}$/.test(hex)) {
-            onChange(hex.toUpperCase());
-        } else if (/^#[0-9a-fA-F]{3}$/.test(hex)) {
-            const expanded =
-                "#" +
-                hex.slice(1)
-                    .split("")
-                    .map((char) => char + char)
-                    .join("");
-
-            onChange(expanded.toUpperCase());
-        }
-    };
-
-    // Reset color
-    const resetColor = () => {
-        setHexInput("");
-        onChange("");
     };
 
     // Current picker color
-    const pickerColor =
-        value && /^#[0-9a-fA-F]{6}$/.test(value)
-            ? hexToHsb(value)
-            : { hue: 0, saturation: 0, brightness: 0 };
+    const normalizedValue = normalizeHex(value || "");
 
-    // Clickable activator
+    const pickerColor = normalizedValue
+        ? hexToHsb(normalizedValue)
+        : {
+            hue: 0,
+            saturation: 0,
+            brightness: 0,
+        };
+
+    // Activator
     const activator = (
         <button
+            ref={activatorRef}
             type="button"
             onClick={togglePopover}
             aria-expanded={open}
+            aria-haspopup="dialog"
             style={{
                 display: "flex",
                 alignItems: "center",
@@ -159,14 +305,16 @@ export default function ColorPickerField({
                     height: "40px",
                     minWidth: "40px",
                     borderRadius: "50%",
-                    backgroundColor: value || "currentColor",
+                    backgroundColor: normalizedValue || "currentColor",
                     border: "1px solid rgba(0,0,0,0.12)",
                 }}
             />
 
             <span>
                 <span style={{ display: "block" }}>
-                    <Text variant="bodyMd">{label}</Text>
+                    <Text variant="bodyMd">
+                        {label}
+                    </Text>
                 </span>
 
                 <span style={{ display: "block" }}>
@@ -180,43 +328,60 @@ export default function ColorPickerField({
 
     return (
         <Box>
-            <Popover
-                active={open}
-                activator={activator}
-                onClose={closePopover}
-                zIndexOverride={100000}
-            >
-                <Box padding="300" width="270px">
-                    <ColorPicker
-                        color={pickerColor}
-                        onChange={handleColorChange}
-                        allowAlpha={false}
-                    />
+            {activator}
 
-                    <Box paddingBlockStart="300">
-                        <InlineStack align="center" gap="200">
-                            <Box width="100%">
-                                <TextField
-                                    label="HEX color"
-                                    labelHidden
-                                    value={hexInput}
-                                    onChange={handleHexChange}
-                                    autoComplete="off"
-                                    placeholder="#000000"
-                                />
-                            </Box>
+            {/* CUSTOM POPOVER */}
+            {open &&
+                typeof document !== "undefined" &&
+                createPortal(
+                    <div
+                        ref={popoverRef}
+                        role="dialog"
+                        aria-label={`${label} color picker`}
+                        className="custom-color-popover"
+                        style={{
+                            position: "fixed",
+                            top: position?.top ?? 0,
+                            left: position?.left ?? 0,
+                            width: "290px",
+                            padding: "12px",
+                            background: "#ffffff",
+                            border: "1px solid #e3e3e3",
+                            borderRadius: "12px",
+                            boxShadow:
+                                "0 4px 16px rgba(0,0,0,0.16)",
+                            zIndex: 100000,
+                            visibility: position ? "visible" : "hidden",
+                        }}
+                    >
+                        {/* COLOR PICKER */}
+                        <ColorPicker
+                            color={pickerColor}
+                            onChange={handleColorChange}
+                            allowAlpha={false}
+                        />
 
-                            <Button
-                                icon={DeleteIcon}
-                                variant="secondary"
-                                accessibilityLabel="Reset color"
-                                onClick={resetColor}
+                        {/* HEX INPUT */}
+                        <div
+                            style={{
+                                paddingTop: "12px",
+                                width: "100%",
+                            }}
+                        >
+                            <TextField
+                                label="HEX color"
+                                labelHidden
+                                value={hexInput}
+                                onChange={handleHexChange}
+                                autoComplete="off"
+                                placeholder="#000000"
                             />
-                        </InlineStack>
-                    </Box>
-                </Box>
-            </Popover>
+                        </div>
+                    </div>,
+                    document.body
+                )}
 
+            {/* HELP TEXT */}
             {helpText && (
                 <Box paddingBlockStart="200">
                     <Text variant="bodySm" tone="subdued">

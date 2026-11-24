@@ -105,9 +105,12 @@ export default function HeaderFooterSettings({ element, onChange }) {
                 <TextField
                     label="Font size"
                     type="number"
-                   value={String(element.headingFontSize ?? "")}
+                    value={String(element.headingFontSize ?? 24)}
                     onChange={(value) => {
-                        update("headingFontSize", value);
+                        update(
+                            "headingFontSize",
+                            value === "" ? "" : Number(value)
+                        );
                     }}
                     suffix="px"
                     autoComplete="off"

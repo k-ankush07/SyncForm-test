@@ -11,6 +11,9 @@ function normalizeElement(element) {
     return createElementConfig({
       type,
       label: element,
+      settings: {
+        placeholder: element,
+      },
     });
   }
 
@@ -18,11 +21,11 @@ function normalizeElement(element) {
     return null;
   }
 
-  // Normalize existing elements and preserve their properties.
   const normalized = createElementConfig({
     ...element,
     settings: {
       ...element,
+      placeholder: element.placeholder ?? element.label ?? element.type,
     },
   });
 
