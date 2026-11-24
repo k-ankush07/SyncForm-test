@@ -40,6 +40,9 @@ import FormProgressIndicator from "./RichTextEditor/FormProgressIndicator";
 import { getSavedTextValue } from "../../utils/fieldValueHelpers.js"
 import useFieldValue from "../../utils/hooks/useFieldValue.js";
 
+import usePasswordField from "../../utils/hooks/usePasswordField.js";
+
+
 
 // =============================================================
 // SIGNATURE PREVIEW COMPONENT
@@ -694,35 +697,36 @@ export default function PreviewField({
   // ===========================================================
   // 3.2 PARENT VALUE HANDLERS
   // ===========================================================
-const usesSelection = [
-  "checkbox",
-  "checkbox_group",
-  "radio",
-  "radio_button",
-  "radio_group",
-  "button",
-  "feedback",
-  "matrix",
-  "product",
-].includes(type);
+  const usesSelection = [
+    "checkbox",
+    "checkboxes",
+    "checkbox_group",
+    "radio",
+    "radio_button",
+    "radio_group",
+    "button",
+    "feedback",
+    "matrix",
+    "product",
+  ].includes(type);
 
-const {
-  value,
-  setValue,
-  reportChange,
-  updateValue,
-  selected,
-  setSelected,
-  otherValue,
-  setOtherValue,
-} = useFieldValue({
-  savedValue,
-  defaultValue,
-  fieldId: currentElement?.id,
-  onChange,
-  normalizedElement,
-  enableSelection: usesSelection,
-});
+  const {
+    value,
+    setValue,
+    reportChange,
+    updateValue,
+    selected,
+    setSelected,
+    otherValue,
+    setOtherValue,
+  } = useFieldValue({
+    savedValue,
+    defaultValue,
+    fieldId: currentElement?.id,
+    onChange,
+    normalizedElement,
+    enableSelection: usesSelection,
+  });
 
   const [nameError, setNameError] = useState("");
   const [numberError, setNumberError] = useState("");
@@ -764,26 +768,26 @@ const {
   // ===========================================================
   // 3.6 PASSWORD AND EMAIL CONFIRMATION STATE
   // ===========================================================
-
-  const [confirmPasswordValue, setConfirmPasswordValue] = useState(
-    () =>
-      savedValue && typeof savedValue === "object"
-        ? savedValue.confirmPassword ?? ""
-        : ""
-  );
-
+  const {
+    confirmPasswordValue,
+    setConfirmPasswordValue,
+    showPassword,
+    setShowPassword,
+    showConfirmPassword,
+    setShowConfirmPassword,
+    passwordValidationTriggered,
+    setPasswordValidationTriggered,
+  } = usePasswordField({
+    savedValue,
+    fieldId: normalizedElement.id,
+    defaultValue: normalizedElement.defaultValue,
+  });
   const [confirmEmailValue, setConfirmEmailValue] = useState(
     () =>
       savedValue && typeof savedValue === "object"
         ? savedValue.confirmEmail ?? ""
         : ""
   );
-
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
-  const [passwordValidationTriggered, setPasswordValidationTriggered] =
-    useState(false);
 
   // ===========================================================
   // 3.7 PHONE STATE
@@ -1020,16 +1024,16 @@ const {
 
   useEffect(() => {
 
-    const nextConfirmPassword =
-      savedValue && typeof savedValue === "object"
-        ? savedValue.confirmPassword ?? ""
-        : "";
+    // const nextConfirmPassword =
+    //   savedValue && typeof savedValue === "object"
+    //     ? savedValue.confirmPassword ?? ""
+    //     : "";
 
-    setConfirmPasswordValue((previous) =>
-      previous === nextConfirmPassword
-        ? previous
-        : nextConfirmPassword
-    );
+    // setConfirmPasswordValue((previous) =>
+    //   previous === nextConfirmPassword
+    //     ? previous
+    //     : nextConfirmPassword
+    // );
 
     const nextConfirmEmail =
       savedValue && typeof savedValue === "object"
@@ -1042,11 +1046,11 @@ const {
         : nextConfirmEmail
     );
 
-    setPasswordValidationTriggered(false);
-    setShowPassword(false);
-    setShowConfirmPassword(false);
-    setNameError("");
-    setNumberError("");
+    // setPasswordValidationTriggered(false);
+    // setShowPassword(false);
+    // setShowConfirmPassword(false);
+    // setNameError("");
+    // setNumberError("");
   }, [
     normalizedElement.id,
     normalizedElement.defaultValue,
@@ -1161,19 +1165,7 @@ const {
     setNameError("");
   };
 
-  // Number input: accept digits only and show an error otherwise.
-  const handleNumberChange = (newValue) => {
-    const input = String(newValue ?? "");
 
-    if (input !== "" && !/^\d+$/.test(input)) {
-      updateValue(input);
-      setNumberError("Please enter numbers only.");
-      return;
-    }
-
-    updateValue(input);
-    setNumberError("");
-  };
 
   // ===========================================================
   // 9. CHOICE AND PHONE HELPERS
