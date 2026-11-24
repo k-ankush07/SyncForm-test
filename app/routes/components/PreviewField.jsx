@@ -38,7 +38,7 @@ import FormProgressIndicator from "./RichTextEditor/FormProgressIndicator";
 
 // imports 
 import { getSavedTextValue } from "../../utils/fieldValueHelpers.js"
-
+import useFieldValue from "../../utils/hooks/useFieldValue.js";
 
 
 // =============================================================
@@ -694,98 +694,42 @@ export default function PreviewField({
   // ===========================================================
   // 3.2 PARENT VALUE HANDLERS
   // ===========================================================
+const usesSelection = [
+  "checkbox",
+  "checkbox_group",
+  "radio",
+  "radio_button",
+  "radio_group",
+  "button",
+  "feedback",
+  "matrix",
+  "product",
+].includes(type);
 
-  // Send a value to LivePreview using this element's ID.
-  const reportChange = (nextValue) => {
-    if (currentElement?.id == null) return;
-
-    onChange?.(currentElement.id, nextValue);
-  };
-
-  // Update local state immediately and save the same value in parent.
-  const updateValue = (nextValue) => {
-    setValue(nextValue);
-    reportChange(nextValue);
-  };
-
-  // ===========================================================
-  // 3.3 RESTORE SAVED TEXT VALUES
-  // ===========================================================
-
-
-
-  // Local text value used by TextField and other input controls. calculates the initial value only when the component initializes, rather than recalculating it on every render.
-  const [value, setValue] = useState(() => getSavedTextValue(savedValue, defaultValue));
+const {
+  value,
+  setValue,
+  reportChange,
+  updateValue,
+  selected,
+  setSelected,
+  otherValue,
+  setOtherValue,
+} = useFieldValue({
+  savedValue,
+  defaultValue,
+  fieldId: currentElement?.id,
+  onChange,
+  normalizedElement,
+  enableSelection: usesSelection,
+});
 
   const [nameError, setNameError] = useState("");
   const [numberError, setNumberError] = useState("");
 
-  // ===========================================================
-  // 3.4 CHOICE FIELD STATE
-  // ===========================================================
 
-  const getSavedSelection = () => {
-    if (savedValue !== undefined && savedValue !== null) {
-      if (Array.isArray(savedValue)) {
-        return savedValue;
-      }
 
-      if (typeof savedValue === "string") {
-        return savedValue ? [savedValue] : [];
-      }
 
-      if (
-        typeof savedValue === "object" &&
-        savedValue.value !== undefined
-      ) {
-        if (Array.isArray(savedValue.value)) {
-          return savedValue.value;
-        }
-
-        return savedValue.value ? [savedValue.value] : [];
-      }
-    }
-
-    return normalizedElement.defaultValue
-      ? [normalizedElement.defaultValue]
-      : [];
-  };
-
-  const getSavedOtherValue = () => {
-    if (
-      savedValue &&
-      typeof savedValue === "object" &&
-      !Array.isArray(savedValue)
-    ) {
-      return savedValue.otherValue || "";
-    }
-
-    return normalizedElement.otherValue || "";
-  };
-
-  const [selected, setSelected] = useState(getSavedSelection);
-  const [otherValue, setOtherValue] = useState(getSavedOtherValue);
-
-  // Restore choice values when the field changes or a saved answer arrives.
-  // Compare first so typing/selecting is not needlessly reset.
-  useEffect(() => {
-    const nextSelection = getSavedSelection();
-    const nextOtherValue = getSavedOtherValue();
-
-    setSelected((previous) =>
-      JSON.stringify(previous) === JSON.stringify(nextSelection)
-        ? previous
-        : nextSelection
-    );
-
-    setOtherValue((previous) =>
-      previous === nextOtherValue ? previous : nextOtherValue
-    );
-  }, [
-    normalizedElement.id,
-    normalizedElement.defaultValue,
-    savedValue,
-  ]);
 
   // ===========================================================
   // 3.5 CHECKBOX AND CONSENT STATE
@@ -1075,11 +1019,6 @@ export default function PreviewField({
   // the input or interrupting typing.
 
   useEffect(() => {
-    const nextTextValue = getSavedTextValue();
-
-    setValue((previous) =>
-      previous === nextTextValue ? previous : nextTextValue
-    );
 
     const nextConfirmPassword =
       savedValue && typeof savedValue === "object"
@@ -1440,12 +1379,6 @@ export default function PreviewField({
     ) : undefined,
   };
 
-  // const commonSelectProps = {
-  //   label,
-  //   labelHidden: hideLabel,
-  //   helpText: description || undefined,
-  // };
-
   // ===========================================================
   // 11. HTML SANITIZATION
   // ===========================================================
@@ -1771,7 +1704,7 @@ export default function PreviewField({
             label={label}
             required={required}
             icon={selectedIcon}
-              hideLabel={hideLabel}
+            hideLabel={hideLabel}
             description={descriptionText}
           >
             <PreviewTextInput
