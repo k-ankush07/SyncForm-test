@@ -1,19 +1,12 @@
 import React, { useEffect, useState, useRef } from "react";
 import flatpickr from "flatpickr";
-import flatpickrLocales from "flatpickr/dist/l10n/index.js";
 import "flatpickr/dist/flatpickr.min.css";
-import monthSelectPlugin from "flatpickr/dist/plugins/monthSelect";
 import "flatpickr/dist/plugins/monthSelect/style.css";
 import SignaturePad from "signature_pad";
 import "flag-icons/css/flag-icons.min.css";
 import PreviewTextInput from "./PreviewTextInput";
 import * as PolarisIcons from "@shopify/polaris-icons";
-import { Spanish } from "flatpickr/dist/l10n/es.js";
-import { French } from "flatpickr/dist/l10n/fr.js";
-import { German } from "flatpickr/dist/l10n/de.js";
-import { Italian } from "flatpickr/dist/l10n/it.js";
-import { Portuguese } from "flatpickr/dist/l10n/pt.js";
-import { Dutch } from "flatpickr/dist/l10n/nl.js";
+
 import {
   Icon,
   Text,
@@ -23,10 +16,6 @@ import {
   InlineStack,
   Button,
   BlockStack,
-  Combobox,
-  Listbox,
-
-
 } from "@shopify/polaris";
 
 import createDOMPurify from "dompurify";
@@ -36,21 +25,15 @@ import { countries } from "../components/elementsettings/utils/countries.js";
 import FormProgressIndicator from "./RichTextEditor/FormProgressIndicator";
 
 
-// imports 
-import { getSavedTextValue } from "../../utils/fieldValueHelpers.js"
+// imports hooks 
 import useFieldValue from "../../utils/hooks/useFieldValue.js";
 import usePhoneField from "../../utils/hooks/usePhoneField.js";
 import usePasswordField from "../../utils/hooks/usePasswordField.js";
 import useChoiceField from "../../utils/hooks/useChoiceField.js";
 import useCountryField from "../../utils/hooks/useCountryField.js";
-
-
-
-// =============================================================
-// SIGNATURE PREVIEW COMPONENT
-// Hooks must live inside a component, not inside a switch case.
-// =============================================================
-
+import useDateField from "../../utils/hooks/useDateField.js";
+import useFileField from "../../utils/hooks/useFileField.js";
+import useEmailField from "../../utils/hooks/useEmailField.js";
 
 // =============================================================
 // 1. SIGNATURE PREVIEW
@@ -358,7 +341,6 @@ function SignaturePreview({
     </BlockStack>
   );
 }
-
 
 // =============================================================
 // 2. REUSABLE FLATPICKR FIELD
@@ -781,24 +763,38 @@ export default function PreviewField({
   // ===========================================================
   const {
     confirmPasswordValue,
-    setConfirmPasswordValue,
     showPassword,
     setShowPassword,
     showConfirmPassword,
     setShowConfirmPassword,
     passwordValidationTriggered,
     setPasswordValidationTriggered,
+    handlePasswordChange,
+    handleConfirmPasswordChange,
+    passwordError,
+    confirmPasswordError,
   } = usePasswordField({
     savedValue,
     fieldId: normalizedElement.id,
-    defaultValue: normalizedElement.defaultValue,
+    value,
+    setValue,
+    reportChange,
+    normalizedElement,
+    required,
+    label,
   });
-  const [confirmEmailValue, setConfirmEmailValue] = useState(
-    () =>
-      savedValue && typeof savedValue === "object"
-        ? savedValue.confirmEmail ?? ""
-        : ""
-  );
+
+  const {
+    confirmEmailValue,
+    handleEmailChange,
+    handleConfirmEmailChange,
+  } = useEmailField({
+    savedValue,
+    normalizedElement,
+    value,
+    setValue,
+    reportChange,
+  });
   // ===========================================================
   // 3.7 PHONE STATE
   // ===========================================================
@@ -838,37 +834,47 @@ export default function PreviewField({
     updateValue,
   });
 
+
   // ===========================================================
   // 3.9 DATE AND TIME STATE
   // ===========================================================
-
-  const getSavedDateValue = () => {
-    if (savedValue !== undefined && savedValue !== null) {
-      return String(savedValue);
-    }
-
-    return String(
-      normalizedElement.defaultDate ??
-      normalizedElement.defaultValue ??
-      ""
-    );
-  };
-
-  const [dateValue, setDateValue] = useState(getSavedDateValue);
+  const {
+    dateValue,
+    updateDateValue,
+    dateOnlyValue,
+    timeOnlyValue,
+    datePickerOptions,
+    dateTimePickerOptions,
+    timePickerOptions,
+    timeOptions,
+    dateError,
+    validateDate,
+    format,
+    timeType,
+    onlyShowMonth,
+  } = useDateField({
+    savedValue,
+    normalizedElement,
+    reportChange,
+  });
 
   // ===========================================================
   // 3.10 FILE AND IMAGE STATE
   // ===========================================================
 
-  const [imagePreview, setImagePreview] = useState([]);
-
-  const fileInputRef = useRef(null);
-
-  const [selectedFiles, setSelectedFiles] = useState(() =>
-    Array.isArray(savedValue) ? savedValue : []
-  );
-
-  const [fileError, setFileError] = useState("");
+  const {
+    selectedFiles,
+    setSelectedFiles,
+    fileInputRef,
+    fileError,
+    acceptedFileTypes,
+    acceptAttribute,
+    handleFileSelection,
+  } = useFileField({
+    savedValue,
+    normalizedElement,
+    reportChange,
+  });
 
   // ===========================================================
   // 3.11 RATING AND RANGE STATE
@@ -1006,63 +1012,6 @@ export default function PreviewField({
   };
 
 
-  // ===========================================================
-  // 4. SYNCHRONIZE SAVED TEXT VALUES
-  // ===========================================================
-
-  // IMPORTANT:
-  // savedValue is a dependency because the parent may restore data
-  // after loading. However, we only update local state when the
-  // incoming value is actually different from the current value.
-  //
-  // During typing, the parent sends back the same value the user
-  // just entered. The comparison prevents that update from resetting
-  // the input or interrupting typing.
-
-  useEffect(() => {
-
-    const nextConfirmEmail =
-      savedValue && typeof savedValue === "object"
-        ? savedValue.confirmEmail ?? ""
-        : "";
-
-    setConfirmEmailValue((previous) =>
-      previous === nextConfirmEmail
-        ? previous
-        : nextConfirmEmail
-    );
-
-
-  }, [
-    normalizedElement.id,
-    normalizedElement.defaultValue,
-    savedValue,
-  ]);
-
-
-  // ===========================================================
-  // 6. SYNCHRONIZE DATE VALUE
-  // ===========================================================
-
-  useEffect(() => {
-    const nextDateValue = getSavedDateValue();
-
-    setDateValue((previous) =>
-      previous === nextDateValue ? previous : nextDateValue
-    );
-  }, [
-    normalizedElement.id,
-    normalizedElement.defaultDate,
-    normalizedElement.defaultValue,
-    savedValue,
-  ]);
-
-  
-
-  // ===========================================================
-  // 8. FIELD CHANGE HANDLERS
-  // ===========================================================
-
   // Name validation and optional numbers-only setting.
   const handleNameChange = (newValue) => {
     const input = String(newValue ?? "");
@@ -1087,7 +1036,6 @@ export default function PreviewField({
 
     setNameError("");
   };
-
 
   // ===========================================================
   // 9. CHOICE AND PHONE HELPERS
@@ -1216,290 +1164,6 @@ export default function PreviewField({
     return purifier.sanitize(html);
   };
 
-  // ===========================================================
-  // 12. PASSWORD VALIDATION
-  // ===========================================================
-
-  const getPasswordError = () => {
-    const password = String(value || "");
-
-    if (required && !password.trim()) {
-      return `${label} is required.`;
-    }
-
-    if (normalizedElement.limitCharacters) {
-      const min =
-        normalizedElement.minCharacters !== ""
-          ? Number(normalizedElement.minCharacters)
-          : null;
-
-      const max =
-        normalizedElement.maxCharacters !== ""
-          ? Number(normalizedElement.maxCharacters)
-          : null;
-
-      if (min !== null && password.length < min) {
-        return `Password must contain at least ${min} characters.`;
-      }
-
-      if (max !== null && password.length > max) {
-        return `Password cannot exceed ${max} characters.`;
-      }
-    }
-
-    const validationRule = normalizedElement.passwordValidation;
-
-    if (validationRule && validationRule !== "none") {
-      const regexString =
-        validationRule === "advancedValidateRule"
-          ? normalizedElement.advancedPasswordValidation
-          : validationRule;
-
-      if (regexString) {
-        try {
-          const regex = new RegExp(regexString);
-
-          if (!regex.test(password)) {
-            return "Password does not meet the required conditions.";
-          }
-        } catch (error) {
-          return "The password validation rule is invalid.";
-        }
-      }
-    }
-
-    if (
-      normalizedElement.confirmPassword &&
-      password !== confirmPasswordValue
-    ) {
-      return "Passwords do not match.";
-    }
-
-    return "";
-  };
-
-  // ===========================================================
-  // 13. FILE VALIDATION
-  // ===========================================================
-
-  const acceptedFileTypes = Array.isArray(
-    normalizedElement.acceptedFileTypes
-  )
-    ? normalizedElement.acceptedFileTypes
-    : [];
-
-  const acceptAttribute = acceptedFileTypes
-    .map((extension) => `.${extension}`)
-    .join(",");
-
-  const fileSizeLimit =
-    Number(normalizedElement.fileSizeLimit) || 0;
-
-  const maxFileSize = fileSizeLimit * 1024 * 1024;
-
-  const numberOfFilesLimit =
-    Number(normalizedElement.numberOfFilesLimit) || 0;
-
-  const maxFiles = normalizedElement.allowMultiple
-    ? numberOfFilesLimit
-    : 1;
-
-  const handleFileSelection = (event) => {
-    const incomingFiles = Array.from(event.target.files || []);
-
-    setFileError("");
-
-    const validFiles = [];
-
-    for (const file of incomingFiles) {
-      const extension = file.name
-        .split(".")
-        .pop()
-        .toLowerCase();
-
-      if (
-        acceptedFileTypes.length > 0 &&
-        !acceptedFileTypes.includes(extension)
-      ) {
-        setFileError(`.${extension} files are not allowed.`);
-        continue;
-      }
-
-      if (maxFileSize > 0 && file.size > maxFileSize) {
-        setFileError(
-          `${file.name} exceeds the ${fileSizeLimit} MB size limit.`
-        );
-        continue;
-      }
-
-      validFiles.push(file);
-    }
-
-    const combinedFiles = normalizedElement.allowMultiple
-      ? [...selectedFiles, ...validFiles]
-      : validFiles.slice(0, 1);
-
-    let finalFiles;
-
-    if (maxFiles > 0 && combinedFiles.length > maxFiles) {
-      setFileError(
-        `You can select a maximum of ${maxFiles} files.`
-      );
-
-      finalFiles = combinedFiles.slice(0, maxFiles);
-    } else {
-      finalFiles = combinedFiles;
-    }
-
-    setSelectedFiles(finalFiles);
-
-    // Send the actual File objects to the parent.
-    reportChange(finalFiles);
-
-    // Allow selecting the same file again.
-    event.target.value = "";
-  };
-
-  // ===========================================================
-  // 14. DATE HELPERS
-  // ===========================================================
-
-  const getDateOnly = (date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-
-    return `${year}-${month}-${day}`;
-  };
-
-  const parseDateValue = (dateValueToParse) => {
-    if (!dateValueToParse) return null;
-
-    // Parse YYYY-MM-DD as a local date to avoid UTC date shifts.
-    const match = String(dateValueToParse).match(
-      /^(\d{4})-(\d{2})-(\d{2})$/
-    );
-
-    if (match) {
-      return new Date(
-        Number(match[1]),
-        Number(match[2]) - 1,
-        Number(match[3])
-      );
-    }
-
-    const parsed = new Date(dateValueToParse);
-
-    return Number.isNaN(parsed.getTime()) ? null : parsed;
-  };
-
-  const addDays = (date, days) => {
-    const result = new Date(date);
-
-    result.setDate(result.getDate() + Number(days || 0));
-
-    return result;
-  };
-
-  // ===========================================================
-  // 15. TIME HELPERS
-  // ===========================================================
-
-  const getTimeMinutes = (timeValue) => {
-    if (!timeValue) return null;
-
-    const text = String(timeValue).trim();
-
-    // 12-hour format, for example 01:30 PM.
-    const twelveHour = text.match(
-      /^(\d{1,2}):(\d{2})\s*(AM|PM)$/i
-    );
-
-    if (twelveHour) {
-      let hours = Number(twelveHour[1]) % 12;
-
-      if (twelveHour[3].toUpperCase() === "PM") {
-        hours += 12;
-      }
-
-      return hours * 60 + Number(twelveHour[2]);
-    }
-
-    // 24-hour format, for example 13:30.
-    const twentyFourHour = text.match(
-      /^(\d{1,2}):(\d{2})$/
-    );
-
-    if (twentyFourHour) {
-      return (
-        Number(twentyFourHour[1]) * 60 +
-        Number(twentyFourHour[2])
-      );
-    }
-
-    return null;
-  };
-
-  const formatTimeOption = (totalMinutes, timeFormat) => {
-    const hours = Math.floor(totalMinutes / 60);
-    const minutes = totalMinutes % 60;
-
-    if (timeFormat === "12h") {
-      const period = hours >= 12 ? "PM" : "AM";
-      const displayHour = hours % 12 || 12;
-
-      return `${String(displayHour).padStart(2, "0")}:${String(
-        minutes
-      ).padStart(2, "0")} ${period}`;
-    }
-
-    return `${String(hours).padStart(2, "0")}:${String(
-      minutes
-    ).padStart(2, "0")}`;
-  };
-
-  const getTimeOptions = (elementToUse) => {
-    const step = Math.max(
-      1,
-      Math.min(60, Number(elementToUse.timeStep) || 15)
-    );
-
-    const timeFormat = elementToUse.timeFormat || "24h";
-
-    const start =
-      elementToUse.enableStartTime === true
-        ? getTimeMinutes(elementToUse.startTime)
-        : 0;
-
-    const end =
-      elementToUse.enableEndTime === true
-        ? getTimeMinutes(elementToUse.endTime)
-        : 23 * 60 + 59;
-
-    if (start === null || end === null || start > end) {
-      return [];
-    }
-
-    const timeOptions = [];
-
-    for (
-      let minutes = start;
-      minutes <= end;
-      minutes += step
-    ) {
-      const formattedTime = formatTimeOption(
-        minutes,
-        timeFormat
-      );
-
-      timeOptions.push({
-        label: formattedTime,
-        value: formattedTime,
-      });
-    }
-
-    return timeOptions;
-  };
   // =========================================================
   // 8. ELEMENT RENDERING
   // =========================================================
@@ -1508,14 +1172,10 @@ export default function PreviewField({
     return null;
   }
 
-
   switch (type) {
-
-
     // -------------------------------------------------------
     // EMAIL
     // -------------------------------------------------------
-
     case "email": {
       const { minLength, maxLength } =
         getCharacterLimits(normalizedElement);
@@ -1534,14 +1194,7 @@ export default function PreviewField({
               type="email"
               autoComplete="email"
               value={value}
-              onChange={(nextValue) => {
-                setValue(nextValue);
-
-                reportChange({
-                  email: nextValue,
-                  confirmEmail: confirmEmailValue,
-                });
-              }}
+              onChange={handleEmailChange}
               placeholder={placeholder}
               readOnly={isReadOnly}
               disabled={isReadOnly}
@@ -1564,14 +1217,7 @@ export default function PreviewField({
                 type="email"
                 autoComplete="email"
                 value={confirmEmailValue}
-                onChange={(nextValue) => {
-                  setConfirmEmailValue(nextValue);
-
-                  reportChange({
-                    email: value,
-                    confirmEmail: nextValue,
-                  });
-                }}
+                onChange={handleConfirmEmailChange}
                 placeholder={
                   normalizedElement.confirmEmailPlaceholder ||
                   "Confirm your email"
@@ -1886,21 +1532,9 @@ export default function PreviewField({
     // PASSWORD
     // -------------------------------------------------------
 
-
     case "password": {
       const { minLength, maxLength } =
         getCharacterLimits(normalizedElement);
-
-      const passwordError = passwordValidationTriggered
-        ? getPasswordError()
-        : "";
-
-      const confirmPasswordError =
-        passwordValidationTriggered &&
-          normalizedElement.confirmPassword &&
-          value !== confirmPasswordValue
-          ? "Passwords do not match."
-          : "";
 
       const passwordSuffix = (
         <button
@@ -1957,18 +1591,7 @@ export default function PreviewField({
               type={showPassword ? "text" : "password"}
               autoComplete="new-password"
               value={value}
-              onChange={(newValue) => {
-                updateValue(newValue);
-
-                reportChange(
-                  normalizedElement.confirmPassword
-                    ? {
-                      password: newValue,
-                      confirmPassword: confirmPasswordValue,
-                    }
-                    : newValue
-                );
-              }}
+              onChange={handlePasswordChange}
               placeholder={placeholder}
               readOnly={isReadOnly}
               disabled={isReadOnly}
@@ -1998,14 +1621,7 @@ export default function PreviewField({
                 type={showConfirmPassword ? "text" : "password"}
                 autoComplete="new-password"
                 value={confirmPasswordValue}
-                onChange={(newValue) => {
-                  setConfirmPasswordValue(newValue);
-
-                  reportChange({
-                    password: value,
-                    confirmPassword: newValue,
-                  });
-                }}
+                onChange={handleConfirmPasswordChange}
                 placeholder={
                   normalizedElement.confirmPasswordPlaceholder ||
                   "Confirm your password"
@@ -2022,6 +1638,7 @@ export default function PreviewField({
         </BlockStack>
       );
     }
+
     // -------------------------------------------------------
     // COUNTRY
     // -------------------------------------------------------
@@ -3029,378 +2646,16 @@ export default function PreviewField({
     // DATE
     // -------------------------------------------------------
 
+
     case "date": {
-      const format = normalizedElement.format || "date_time";
-
-      const dateFormat = normalizedElement.dateFormat || "Y-m-d";
-      const timeFormat = normalizedElement.timeFormat || "24h";
-      const timeType = normalizedElement.timeType || "picker";
-
-      const timeStep = Math.max(
-        1,
-        Math.min(60, Number(normalizedElement.timeStep) || 15)
-      );
-
-      // ===========================================================
-      // LANGUAGE / LOCALE
-      // ===========================================================
-
-      const localeMap = {
-        es: Spanish,
-        spanish: Spanish,
-
-        fr: French,
-        french: French,
-
-        de: German,
-        german: German,
-
-        it: Italian,
-        italian: Italian,
-
-        pt: Portuguese,
-        portuguese: Portuguese,
-
-        nl: Dutch,
-        dutch: Dutch,
-      };
-
-      const selectedLanguage = normalizedElement.otherLanguage
-        ? String(normalizedElement.localization || "en").toLowerCase()
-        : "en";
-
-      const selectedLocale =
-        localeMap[selectedLanguage] || undefined;
-
-      // ===========================================================
-      // CURRENT DATE
-      // ===========================================================
-
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-
-      // ===========================================================
-      // DATE BOUNDARIES
-      // ===========================================================
-
-      let minDate;
-      let maxDate;
-
-      if (normalizedElement.startDateType === "today") {
-        minDate = today;
-      } else if (normalizedElement.startDateType === "specificDate") {
-        minDate =
-          parseDateValue(normalizedElement.specificStartDate) || undefined;
-      } else if (normalizedElement.startDateType === "relativeDate") {
-        minDate =
-          addDays(
-            today,
-            Number(normalizedElement.relativeStartDate) || 0
-          ) || undefined;
-      }
-
-      if (normalizedElement.endDateType === "today") {
-        maxDate = today;
-      } else if (normalizedElement.endDateType === "specificDate") {
-        maxDate =
-          parseDateValue(normalizedElement.specificDate) || undefined;
-      } else if (normalizedElement.endDateType === "relativeDate") {
-        maxDate =
-          addDays(
-            today,
-            Number(normalizedElement.relativeEndDate) || 0
-          ) || undefined;
-      }
-
-      // ===========================================================
-      // DATE RESTRICTIONS
-      // ===========================================================
-
-      const limitEnabled = Boolean(
-        normalizedElement.limitDatePicker && format === "date"
-      );
-
-      const limitType = normalizedElement.limitDateType || "disable";
-
-      const specificDates = String(
-        normalizedElement.specificDates || ""
-      )
-        .split(",")
-        .map((item) => parseDateValue(item.trim()))
-        .filter(Boolean)
-        .map((date) => getDateOnly(date));
-
-      const rangeParts = String(
-        normalizedElement.rangeDates || ""
-      )
-        .split(/\s+to\s+/i)
-        .map((item) => parseDateValue(item.trim()))
-        .filter(Boolean);
-
-      const rangeStart = rangeParts[0]
-        ? getDateOnly(rangeParts[0])
-        : null;
-
-      const rangeEnd = rangeParts[1]
-        ? getDateOnly(rangeParts[1])
-        : rangeStart;
-
-      const selectedDays = Array.isArray(
-        normalizedElement.targetDaysOfWeek
-      )
-        ? normalizedElement.targetDaysOfWeek.map((day) =>
-          String(day).toLowerCase()
-        )
-        : [];
-
-      const weekdayNames = [
-        "sunday",
-        "monday",
-        "tuesday",
-        "wednesday",
-        "thursday",
-        "friday",
-        "saturday",
-      ];
-
-      const hasSpecificDates = Boolean(
-        limitEnabled && normalizedElement.enableSpecificDates
-      );
-
-      const hasRangeDates = Boolean(
-        limitEnabled && normalizedElement.enableRangeDates
-      );
-
-      const hasWeekdays = Boolean(
-        limitEnabled && normalizedElement.enableDaysOfWeek
-      );
-
-      const hasAnyRestriction =
-        hasSpecificDates || hasRangeDates || hasWeekdays;
-
-      // ===========================================================
-      // DATE RANGE CHECK
-      // ===========================================================
-
-      const isDateInRange = (dateString) => {
-        if (!rangeStart) return false;
-
-        return (
-          dateString >= rangeStart &&
-          dateString <= (rangeEnd || rangeStart)
-        );
-      };
-
-      // ===========================================================
-      // CHECK CONFIGURED DATES
-      // ===========================================================
-
-      const matchesConfiguredDates = (date) => {
-        const dateString = getDateOnly(date);
-        const weekday = weekdayNames[date.getDay()];
-
-        const matchesSpecific =
-          hasSpecificDates &&
-          specificDates.includes(dateString);
-
-        const matchesRange =
-          hasRangeDates &&
-          isDateInRange(dateString);
-
-        const matchesWeekday =
-          hasWeekdays &&
-          selectedDays.includes(weekday);
-
-        return (
-          matchesSpecific ||
-          matchesRange ||
-          matchesWeekday
-        );
-      };
-
-      // ===========================================================
-      // ENABLE / DISABLE DATES
-      // ===========================================================
-
-      let enableDates;
-      let disableDates;
-
-      if (limitEnabled && hasAnyRestriction) {
-        if (limitType === "enable") {
-          enableDates = [
-            (date) => matchesConfiguredDates(date),
-          ];
-        } else {
-          disableDates = [
-            (date) => matchesConfiguredDates(date),
-          ];
-        }
-      }
-
-      // ===========================================================
-      // MONTH ONLY
-      // ===========================================================
-
-      const onlyShowMonth = Boolean(
-        normalizedElement.onlyShowMonth && format === "date"
-      );
-
-      // ===========================================================
-      // SAFE PICKER VALUES
-      // ===========================================================
-
-      const currentValue =
-        typeof dateValue === "string"
-          ? dateValue.trim()
-          : dateValue;
-
-      const isTimeOnlyValue =
-        typeof currentValue === "string" &&
-        /^\d{1,2}:\d{2}\s?(AM|PM)$/i.test(currentValue);
-
-      const isDateOnlyValue =
-        typeof currentValue === "string" &&
-        /^\d{4}-\d{2}-\d{2}$/.test(currentValue);
-
-      const dateOnlyValue = isTimeOnlyValue
-        ? ""
-        : currentValue || "";
-
-      const timeOnlyValue = isDateOnlyValue
-        ? ""
-        : currentValue || "";
-
-      // ===========================================================
-      // DATE + TIME FORMAT
-      // ===========================================================
-
-      const combinedDateFormat =
-        timeFormat === "12h"
-          ? `${dateFormat} h:i K`
-          : `${dateFormat} H:i`;
-
-      // ===========================================================
-      // COMMON OPTIONS
-      // ===========================================================
-
-      const commonPickerOptions = {
-        clickOpens: true,
-        disableMobile: true,
-        allowInput: false,
-        static: false,
-        animate: true,
-
-        // Apply selected language.
-        ...(selectedLocale ? { locale: selectedLocale } : {}),
-      };
-
-      // ===========================================================
-      // DATE ONLY OPTIONS
-      // ===========================================================
-
-      const datePickerOptions = {
-        ...commonPickerOptions,
-
-        enableTime: false,
-        noCalendar: false,
-
-        dateFormat: onlyShowMonth ? "Y-m" : dateFormat,
-
-        minDate,
-        maxDate,
-
-        ...(enableDates ? { enable: enableDates } : {}),
-        ...(disableDates ? { disable: disableDates } : {}),
-
-        monthSelectorType: "dropdown",
-
-        ...(onlyShowMonth
-          ? {
-            plugins: [
-              new monthSelectPlugin({
-                shorthand: false,
-                dateFormat: "Y-m",
-                altFormat: "F Y",
-                theme: "light",
-              }),
-            ],
-          }
-          : {}),
-      };
-
-      // ===========================================================
-      // DATE + TIME OPTIONS
-      // ===========================================================
-
-      const dateTimePickerOptions = {
-        ...commonPickerOptions,
-
-        enableTime: true,
-        noCalendar: false,
-
-        dateFormat: combinedDateFormat,
-
-        time_24hr: timeFormat !== "12h",
-        minuteIncrement: timeStep,
-
-        minDate,
-        maxDate,
-
-        monthSelectorType: "dropdown",
-      };
-
-      // ===========================================================
-      // TIME ONLY OPTIONS
-      // ===========================================================
-
-      const timePickerOptions = {
-        ...commonPickerOptions,
-
-        enableTime: true,
-        noCalendar: true,
-
-        dateFormat:
-          timeFormat === "12h" ? "h:i K" : "H:i",
-
-        time_24hr: timeFormat !== "12h",
-        minuteIncrement: timeStep,
-
-        defaultHour: 12,
-        defaultMinute: 0,
-      };
-
-      // ===========================================================
-      // TIME DROPDOWN OPTIONS
-      // ===========================================================
-
-      const timeOptions = getTimeOptions(normalizedElement);
-
-      // ===========================================================
-      // UPDATE VALUE
-      // ===========================================================
-
-      // UPDATE VALUE
-
-      const updateDateValue = (nextValue) => {
-        const safeValue = nextValue ?? "";
-
-        setDateValue(safeValue);
-        reportChange(safeValue);
-      };
-
-      // ===========================================================
-      // RENDER
-      // ===========================================================
-
       return (
         <BlockStack gap="300">
           {!hideLabel && fieldLabelWithIcon}
 
           {/* DATE + TIME */}
-
           {format === "date_time" && (
             <FlatpickrField
-              key={`combined-date-time-${selectedLanguage}`}
+              key={`combined-date-time-${normalizedElement.otherLanguage ? normalizedElement.localization || "en" : "en"}`}
               value={dateValue || ""}
               options={dateTimePickerOptions}
               onChange={updateDateValue}
@@ -3410,10 +2665,9 @@ export default function PreviewField({
           )}
 
           {/* DATE ONLY */}
-
           {format === "date" && (
             <FlatpickrField
-              key={`date-picker-${selectedLanguage}-${onlyShowMonth ? "month" : "day"}`}
+              key={`date-picker-${normalizedElement.otherLanguage ? normalizedElement.localization || "en" : "en"}-${onlyShowMonth ? "month" : "day"}`}
               value={dateOnlyValue}
               options={datePickerOptions}
               onChange={updateDateValue}
@@ -3427,10 +2681,9 @@ export default function PreviewField({
           )}
 
           {/* TIME PICKER */}
-
           {format === "time" && timeType === "picker" && (
             <FlatpickrField
-              key={`time-picker-${selectedLanguage}`}
+              key={`time-picker-${normalizedElement.otherLanguage ? normalizedElement.localization || "en" : "en"}`}
               value={timeOnlyValue}
               options={timePickerOptions}
               onChange={updateDateValue}
@@ -3440,7 +2693,6 @@ export default function PreviewField({
           )}
 
           {/* TIME DROPDOWN */}
-
           {format === "time" && timeType === "dropdown" && (
             <Select
               label="Select time"
@@ -3456,6 +2708,7 @@ export default function PreviewField({
         </BlockStack>
       );
     }
+
 
     // -------------------------------------------------------
     // NUMBER
@@ -3832,8 +3085,6 @@ export default function PreviewField({
         </BlockStack>
       );
     }
-
-
 
     // -------------------------------------------------------
     // RATING LEVEL
@@ -5019,8 +4270,6 @@ export default function PreviewField({
     // -------------------------------------------------------
     // RANGE SLIDER
     // -------------------------------------------------------
-
-
     case "range_slider": {
       const min = Number(normalizedElement.min ?? 0);
       const max = Number(normalizedElement.max ?? 100);
@@ -5064,12 +4313,9 @@ export default function PreviewField({
         </BlockStack>
       );
     }
-
-
     // -------------------------------------------------------
     // MATRIX
     // -------------------------------------------------------
-
 
     case "matrix": {
       const normalizeMatrixItems = (list, fallback, prefix) => {
@@ -5304,8 +4550,6 @@ export default function PreviewField({
         </BlockStack>
       );
     }
-
-
     // -------------------------------------------------------
     // SWITCH
     // -------------------------------------------------------
@@ -5348,7 +4592,6 @@ export default function PreviewField({
     // -------------------------------------------------------
     // IMAGE DROPDOWN
     // -------------------------------------------------------
-
 
     case "image_dropdown": {
       const imageOptions = rawOptions.filter(
