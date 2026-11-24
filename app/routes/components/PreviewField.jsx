@@ -36,6 +36,10 @@ import { countries } from "../components/elementsettings/utils/countries.js";
 import FormProgressIndicator from "./RichTextEditor/FormProgressIndicator";
 
 
+// imports 
+import { getSavedTextValue } from "../../utils/fieldValueHelpers.js"
+
+
 
 // =============================================================
 // SIGNATURE PREVIEW COMPONENT
@@ -708,38 +712,10 @@ export default function PreviewField({
   // 3.3 RESTORE SAVED TEXT VALUES
   // ===========================================================
 
-  // Convert the parent's saved value into the text displayed by inputs.
-  // Some field types save objects rather than plain strings.
-  const getSavedTextValue = () => {
-    if (savedValue === undefined || savedValue === null) {
-      return String(defaultValue ?? "");
-    }
 
-    if (typeof savedValue === "object" && !Array.isArray(savedValue)) {
-      if ("email" in savedValue) {
-        return String(savedValue.email ?? "");
-      }
 
-      if ("password" in savedValue) {
-        return String(savedValue.password ?? "");
-      }
-
-      if ("number" in savedValue) {
-        return String(savedValue.number ?? "");
-      }
-
-      return String(defaultValue ?? "");
-    }
-
-    if (Array.isArray(savedValue)) {
-      return "";
-    }
-
-    return String(savedValue);
-  };
-
-  // Local text value used by TextField and other input controls.
-  const [value, setValue] = useState(getSavedTextValue);
+  // Local text value used by TextField and other input controls. calculates the initial value only when the component initializes, rather than recalculating it on every render.
+  const [value, setValue] = useState(() => getSavedTextValue(savedValue, defaultValue));
 
   const [nameError, setNameError] = useState("");
   const [numberError, setNumberError] = useState("");
