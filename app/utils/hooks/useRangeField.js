@@ -6,6 +6,7 @@ export default function useRangeField({
   normalizedElement = {},
   reportChange,
 }) {
+  // 1. Range configuration
   const min = Number(normalizedElement.min ?? 0);
   const max = Number(normalizedElement.max ?? 100);
 
@@ -14,7 +15,10 @@ export default function useRangeField({
     Number(normalizedElement.step) || 1
   );
 
-  // Get the initial or restored range value.
+  const showRangeValue =
+    normalizedElement.showRangeValue !== false;
+
+  // 2. Initial or restored value
   const getRangeValue = useCallback(() => {
     const initialValue =
       savedValue !== undefined && savedValue !== null
@@ -26,14 +30,14 @@ export default function useRangeField({
       : min;
   }, [
     savedValue,
-    normalizedElement.min,
-    normalizedElement.max,
+    min,
+    max,
     normalizedElement.defaultValue,
   ]);
 
   const [rangeValue, setRangeValue] = useState(getRangeValue);
 
-  // Synchronize when the field or its saved configuration changes.
+  // 3. Synchronize when field configuration changes
   useEffect(() => {
     const nextValue = getRangeValue();
 
@@ -42,7 +46,7 @@ export default function useRangeField({
     );
   }, [normalizedElement.id, getRangeValue]);
 
-  // Update the range and notify the parent.
+  // 4. Handle slider changes
   const handleRangeChange = useCallback(
     (nextValue) => {
       const numericValue = Number(nextValue);
@@ -59,9 +63,10 @@ export default function useRangeField({
 
   return {
     rangeValue,
-    min,
-    max,
-    step,
+    rangeMin: min,
+    rangeMax: max,
+    rangeStep: step,
+    showRangeValue,
     handleRangeChange,
   };
 }

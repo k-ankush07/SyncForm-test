@@ -2,11 +2,9 @@ import React, { useEffect, useState, useRef } from "react";
 import flatpickr from "flatpickr";
 import "flatpickr/dist/flatpickr.min.css";
 import "flatpickr/dist/plugins/monthSelect/style.css";
-import SignaturePad from "signature_pad";
 import "flag-icons/css/flag-icons.min.css";
 import PreviewTextInput from "./PreviewTextInput";
 import * as PolarisIcons from "@shopify/polaris-icons";
-
 import {
   Icon,
   Text,
@@ -43,315 +41,13 @@ import useTextField from "../../utils/hooks/useTextField.js";
 import useDropdownField from "../../utils/hooks/useDropdownField";
 import useProductField from "../../utils/hooks/useProductField";
 import useImageDropdownField from "../../utils/hooks/useImageDropdownField";
-// =============================================================
 // 1. SIGNATURE PREVIEW
-// =============================================================
+import SignaturePreview from "../../utils/SignaturePreview.jsx";
 
-function SignaturePreview({
-  element,
-  label,
-  hideLabel,
-  required,
-  descriptionText,
-  isReadOnly,
-  onChange,
-}) {
-  const canvasRef = useRef(null);
-  const signaturePadRef = useRef(null);
-  const onChangeRef = useRef(onChange);
-  const uploadedPreviewUrlRef = useRef(null);
 
-  const [uploadedSignature, setUploadedSignature] = useState(null);
-
-  // Always use the latest callback without recreating SignaturePad.
-  useEffect(() => {
-    onChangeRef.current = onChange;
-  }, [onChange]);
-
-  const showCanvas = element.showCanvas !== false;
-  const allowFileUpload = element.allowFileUpload === true;
-
-  const canvasHeight = Number(element.canvasHeight) || 150;
-  const penColor = element.penColor || "#000000";
-  const penWidth = Number(element.penWidth) || 2;
-  const canvasBackground = element.canvasBackground || "#ffffff";
-
-  // Create and configure SignaturePad.
-  useEffect(() => {
-    if (!showCanvas || !canvasRef.current) return;
-
-    const canvas = canvasRef.current;
-
-    const signaturePad = new SignaturePad(canvas, {
-      penColor,
-      minWidth: penWidth,
-      maxWidth: penWidth,
-      backgroundColor: canvasBackground,
-    });
-
-    signaturePadRef.current = signaturePad;
-
-    // Send the completed drawing to the parent.
-    const handleEndStroke = () => {
-      if (signaturePad.isEmpty()) {
-        onChangeRef.current?.(null);
-        return;
-      }
-
-      onChangeRef.current?.({
-        type: "drawn",
-        dataUrl: signaturePad.toDataURL("image/png"),
-      });
-    };
-
-    signaturePad.addEventListener("endStroke", handleEndStroke);
-
-    // Resize the canvas without losing an existing drawing.
-    const resizeCanvas = () => {
-      const ratio = Math.max(window.devicePixelRatio || 1, 1);
-
-      const drawingData = signaturePad.isEmpty()
-        ? null
-        : signaturePad.toData();
-
-      canvas.width = Math.max(1, canvas.offsetWidth * ratio);
-      canvas.height = Math.max(1, canvasHeight * ratio);
-
-      const context = canvas.getContext("2d");
-
-      context.setTransform(ratio, 0, 0, ratio, 0, 0);
-
-      signaturePad.clear();
-
-      if (drawingData) {
-        signaturePad.fromData(drawingData);
-      }
-    };
-
-    resizeCanvas();
-
-    const resizeObserver =
-      typeof ResizeObserver !== "undefined"
-        ? new ResizeObserver(resizeCanvas)
-        : null;
-
-    resizeObserver?.observe(canvas);
-
-    return () => {
-      resizeObserver?.disconnect();
-      signaturePad.removeEventListener("endStroke", handleEndStroke);
-      signaturePad.off();
-
-      if (signaturePadRef.current === signaturePad) {
-        signaturePadRef.current = null;
-      }
-    };
-  }, [
-    element.id,
-    showCanvas,
-    canvasHeight,
-    penColor,
-    penWidth,
-    canvasBackground,
-  ]);
-
-  // Release the previous upload preview URL when replaced.
-  const handleSignatureUpload = (event) => {
-    const file = event.target.files?.[0];
-
-    if (!file) return;
-
-    if (!["image/png", "image/jpeg"].includes(file.type)) {
-      event.target.value = "";
-      return;
-    }
-
-    const previewUrl = URL.createObjectURL(file);
-
-    if (uploadedPreviewUrlRef.current) {
-      URL.revokeObjectURL(uploadedPreviewUrlRef.current);
-    }
-
-    uploadedPreviewUrlRef.current = previewUrl;
-
-    setUploadedSignature({
-      file,
-      previewUrl,
-    });
-
-    // Send the actual File object to the parent.
-    onChangeRef.current?.({
-      type: "uploaded",
-      file,
-    });
-
-    // Allow selecting the same file again.
-    event.target.value = "";
-  };
-
-  // Revoke the final preview URL when this component unmounts.
-  useEffect(() => {
-    return () => {
-      if (uploadedPreviewUrlRef.current) {
-        URL.revokeObjectURL(uploadedPreviewUrlRef.current);
-        uploadedPreviewUrlRef.current = null;
-      }
-    };
-  }, []);
-
-  // Clear the drawing and notify the parent.
-  const clearSignature = () => {
-    signaturePadRef.current?.clear();
-    onChangeRef.current?.(null);
-  };
-
-  return (
-    <BlockStack gap="200">
-      {!hideLabel && (
-        <Text as="p" variant="bodyMd">
-          {label}
-          {required && (
-            <span style={{ color: "var(--p-color-text-critical)" }}>
-              {" "}*
-            </span>
-          )}
-        </Text>
-      )}
-
-      {/* Signature drawing canvas. */}
-      {showCanvas && (
-        <BlockStack gap="200">
-          <div
-            style={{
-              border: "1px dashed #8c9196",
-              borderRadius: "8px",
-              overflow: "hidden",
-              background: canvasBackground,
-            }}
-          >
-            <canvas
-              ref={canvasRef}
-              style={{
-                display: "block",
-                width: "100%",
-                height: `${canvasHeight}px`,
-                touchAction: isReadOnly ? "auto" : "none",
-                cursor: isReadOnly ? "default" : "crosshair",
-                pointerEvents: isReadOnly ? "none" : "auto",
-              }}
-            />
-          </div>
-
-          {element.allowClear !== false && (
-            <InlineStack align="end">
-              <Button
-                size="slim"
-                onClick={clearSignature}
-                disabled={isReadOnly}
-              >
-                Clear signature
-              </Button>
-            </InlineStack>
-          )}
-        </BlockStack>
-      )}
-
-      {/* Separator when both drawing and uploading are enabled. */}
-      {showCanvas && allowFileUpload && (
-        <Text as="p" variant="bodySm" tone="subdued">
-          OR
-        </Text>
-      )}
-
-      {/* Signature image upload. */}
-      {allowFileUpload && (
-        <BlockStack gap="200">
-          {uploadedSignature ? (
-            <BlockStack gap="200">
-              <img
-                src={uploadedSignature.previewUrl}
-                alt="Uploaded signature"
-                style={{
-                  maxWidth: "100%",
-                  maxHeight: "150px",
-                  objectFit: "contain",
-                  border: "1px solid #e1e3e5",
-                  borderRadius: "8px",
-                  padding: "8px",
-                }}
-              />
-
-              {element.allowReplace !== false && (
-                <label
-                  style={{
-                    cursor: isReadOnly ? "default" : "pointer",
-                    pointerEvents: isReadOnly ? "none" : "auto",
-                  }}
-                >
-                  <span
-                    style={{
-                      display: "inline-block",
-                      padding: "7px 14px",
-                      border: "1px solid #8c9196",
-                      borderRadius: "6px",
-                    }}
-                  >
-                    Replace signature
-                  </span>
-
-                  <input
-                    type="file"
-                    accept="image/png,image/jpeg"
-                    hidden
-                    disabled={isReadOnly}
-                    onChange={handleSignatureUpload}
-                  />
-                </label>
-              )}
-            </BlockStack>
-          ) : (
-            <label
-              style={{
-                border: "1px dashed #8c9196",
-                borderRadius: "8px",
-                padding: "24px",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: "8px",
-                cursor: isReadOnly ? "default" : "pointer",
-                pointerEvents: isReadOnly ? "none" : "auto",
-              }}
-            >
-              <Icon source={PolarisIcons.UploadIcon} />
-
-              <Text as="span" variant="bodyMd">
-                {element.uploadButtonText || "Upload signature"}
-              </Text>
-
-              <Text as="span" variant="bodySm" tone="subdued">
-                {element.acceptedFileTypes || "PNG, JPG, JPEG"}
-              </Text>
-
-              <input
-                type="file"
-                accept="image/png,image/jpeg"
-                hidden
-                disabled={isReadOnly}
-                onChange={handleSignatureUpload}
-              />
-            </label>
-          )}
-        </BlockStack>
-      )}
-
-      {descriptionText}
-    </BlockStack>
-  );
-}
 
 // =============================================================
-// 2. REUSABLE FLATPICKR FIELD
+// 1. REUSABLE FLATPICKR FIELD
 // =============================================================
 
 function FlatpickrField({
@@ -625,10 +321,10 @@ const isValidName = (value) => {
   return /^[\p{L}\p{M}\s'.-]+$/u.test(value);
 };
 
-// Remove invalid name characters.
-const filterNameCharacters = (value) => {
-  return value.replace(/[^\p{L}\p{M}\s'.-]/gu, "");
-};
+// // Remove invalid name characters.
+// const filterNameCharacters = (value) => {
+//   return value.replace(/[^\p{L}\p{M}\s'.-]/gu, "");
+// };
 
 // Keep numeric characters only.
 const filterNumbersOnly = (value) => {
@@ -736,44 +432,44 @@ export default function PreviewField({
   });
 
 
-const {
-  // Choice
-  options,
-  selectedValues,
-  optionsPerLine,
-  choiceGridStyle,
-  checkboxGridStyle,
-  otherChecked,
-  isMaxReached,
+  const {
+    // Choice
+    options,
+    selectedValues,
+    optionsPerLine,
+    choiceGridStyle,
+    checkboxGridStyle,
+    otherChecked,
+    isMaxReached,
 
-  handleCheckboxChange,
-  handleRadioChange,
-  handleCheckboxOtherChange,
-  handleRadioOtherChange,
-  handleOtherTextChange,
+    handleCheckboxChange,
+    handleRadioChange,
+    handleCheckboxOtherChange,
+    handleRadioOtherChange,
+    handleOtherTextChange,
 
-  // Matrix
-  matrixQuestions,
-  matrixAnswers,
-  matrixAllowMultiple,
-  getAnswerValue,
-  isAnswerSelected,
-  handleMatrixSelection,
+    // Matrix
+    matrixQuestions,
+    matrixAnswers,
+    matrixAllowMultiple,
+    getAnswerValue,
+    isAnswerSelected,
+    handleMatrixSelection,
 
-  // Feedback
-  feedbackEmojis,
-  feedbackAllowMultiple,
-  handleFeedbackSelection,
-} = useChoiceField({
-  selected,
-  setSelected,
-  otherValue,
-  setOtherValue,
-  reportChange,
-  normalizedElement,
-  maxSelections: Number(normalizedElement.maxSelections) || 0,
-  isReadOnly,
-});
+    // Feedback
+    feedbackEmojis,
+    feedbackAllowMultiple,
+    handleFeedbackSelection,
+  } = useChoiceField({
+    selected,
+    setSelected,
+    otherValue,
+    setOtherValue,
+    reportChange,
+    normalizedElement,
+    maxSelections: Number(normalizedElement.maxSelections) || 0,
+    isReadOnly,
+  });
 
   // show the name error 
   const {
@@ -983,8 +679,13 @@ const {
   const {
     rating,
     maxLevel,
+    ratingLevels,
+    ratingStars,
     customRatingIcon,
     ratingColor,
+    showNumberUnderIcon,
+    lowLabel,
+    highLabel,
     handleRatingChange,
   } = useRatingField({
     savedValue,
@@ -994,9 +695,10 @@ const {
   //range 
   const {
     rangeValue,
-    min: rangeMin,
-    max: rangeMax,
-    step: rangeStep,
+    rangeMin,
+    rangeMax,
+    rangeStep,
+    showRangeValue,
     handleRangeChange,
   } = useRangeField({
     savedValue,
@@ -2178,27 +1880,26 @@ const {
     case "checkbox":
     case "checkboxes":
     case "checkbox_group": {
-      const otherChecked = selectedValues.includes("__other__");
-
       return (
         <BlockStack gap="200">
           {fieldLabelWithIcon}
 
-          <div style={choiceGridStyle}>
-            {options.map((option) => (
-              <Checkbox
-                key={option.value}
-                label={option.label}
-                checked={selectedValues.includes(option.value)}
-                disabled={
-                  isReadOnly ||
-                  (!selectedValues.includes(option.value) && isMaxReached)
-                }
-                onChange={(checked) =>
-                  handleCheckboxChange(option.value, checked)
-                }
-              />
-            ))}
+          <div style={checkboxGridStyle}>
+            {options.map((option) => {
+              const isChecked = selectedValues.includes(option.value);
+
+              return (
+                <Checkbox
+                  key={option.value}
+                  label={option.label}
+                  checked={isChecked}
+                  disabled={isReadOnly || (!isChecked && isMaxReached)}
+                  onChange={(checked) =>
+                    handleCheckboxChange(option.value, checked)
+                  }
+                />
+              );
+            })}
           </div>
 
           {normalizedElement.otherOption && otherChecked && (
@@ -2217,14 +1918,11 @@ const {
         </BlockStack>
       );
     }
-    // -------------------------------------------------------
     // RADIO
     // -------------------------------------------------------
     case "radio":
     case "radio_button":
     case "radio_group": {
-      const otherChecked = selected[0] === "__other__";
-
       return (
         <BlockStack gap="200">
           {fieldLabelWithIcon}
@@ -2244,7 +1942,7 @@ const {
                   type="radio"
                   name={`radio-${normalizedElement.id}`}
                   value={option.value}
-                  checked={selected[0] === option.value}
+                  checked={selectedValues[0] === option.value}
                   disabled={isReadOnly}
                   onChange={() => handleRadioChange(option.value)}
                 />
@@ -2463,7 +2161,6 @@ const {
           />
         </BlockStack>
       )
-
     // -------------------------------------------------------
     // DATE
     // -------------------------------------------------------
@@ -2731,14 +2428,13 @@ const {
     }
     // -------------------------------------------------------
     // RATING LEVEL
-    // -------------------------------------------------------
     case "rating_level": {
       return (
         <BlockStack gap="200">
           {fieldLabelWithIcon}
 
           <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-            {Array.from({ length: maxLevel }, (_, i) => i + 1).map((n) => (
+            {ratingLevels.map((n) => (
               <button
                 key={n}
                 type="button"
@@ -2761,11 +2457,11 @@ const {
 
           <InlineStack align="space-between">
             <Text as="span" variant="bodySm" tone="subdued">
-              {normalizedElement.lowLabel || "Low"}
+              {lowLabel}
             </Text>
 
             <Text as="span" variant="bodySm" tone="subdued">
-              {normalizedElement.highLabel || "High"}
+              {highLabel}
             </Text>
           </InlineStack>
 
@@ -2801,7 +2497,7 @@ const {
                 minWidth: 0,
               }}
             >
-              {[1, 2, 3, 4, 5].map((star) => (
+              {ratingStars.map((star) => (
                 <div
                   key={star}
                   style={{
@@ -2831,9 +2527,7 @@ const {
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      color: star <= rating
-                        ? ratingColor
-                        : "#C9CCCF",
+                      color: star <= rating ? ratingColor : "#C9CCCF",
                       fontSize: "clamp(28px, 15cqw, 68px)",
                       lineHeight: 1,
                       boxSizing: "border-box",
@@ -2853,14 +2547,18 @@ const {
                           color: "inherit",
                         }}
                       >
-                        <Icon source={customRatingIcon} />
+                        {PolarisIcons[customRatingIcon] ? (
+                          <Icon source={PolarisIcons[customRatingIcon]} />
+                        ) : (
+                          "★"
+                        )}
                       </span>
                     ) : (
                       "★"
                     )}
                   </button>
 
-                  {normalizedElement.showNumberUnderIcon && (
+                  {showNumberUnderIcon && (
                     <span
                       style={{
                         fontSize: "14px",
@@ -2948,12 +2646,6 @@ const {
               }}
             >
               {feedbackEmojis.map((emoji, index) => {
-                const selectedValues = Array.isArray(selected)
-                  ? selected
-                  : selected
-                    ? [selected]
-                    : [];
-
                 const isSelected = selectedValues.includes(emoji);
 
                 return (
@@ -3807,7 +3499,6 @@ const {
       return (
         <BlockStack gap="200">
           {fieldLabelWithIcon}
-
           <input
             type="range"
             min={rangeMin}
@@ -3815,13 +3506,13 @@ const {
             step={rangeStep}
             value={rangeValue}
             disabled={isReadOnly}
-            onChange={(event) => {
-              handleRangeChange(event.target.value);
-            }}
+            onChange={(event) =>
+              handleRangeChange(event.target.value)
+            }
             style={{ width: "100%" }}
           />
 
-          {normalizedElement.showRangeValue !== false && (
+          {showRangeValue && (
             <Text as="p" variant="bodySm">
               {rangeValue}
             </Text>
@@ -4003,7 +3694,6 @@ const {
           {descriptionText}
         </BlockStack>
       );
-
     // IMAGE DROPDOWN
     // -------------------------------------------------------
     case "image_dropdown": {

@@ -76,32 +76,45 @@ export default function useChoiceField({
     minSelections;
 
   // ===========================================================
-  // 4. GRID CONFIGURATION
-  // ===========================================================
+// 4. GRID CONFIGURATION
+// ===========================================================
 
-  const optionsPerLine = Math.min(
-    5,
-    Math.max(1, Number(normalizedElement.optionsPerLine) || 1)
-  );
+const optionsPerLine = Math.min(
+  5,
+  Math.max(1, Number(normalizedElement.optionsPerLine) || 1)
+);
 
-  const columnWidth = String(normalizedElement.columnWidth);
+const columnWidth = String(normalizedElement.columnWidth);
 
-  const checkboxColumns =
-    columnWidth === "33"
-      ? 2
-      : columnWidth === "50"
-        ? 3
-        : optionsPerLine;
+const checkboxColumns =
+  columnWidth === "33"
+    ? 2
+    : columnWidth === "50"
+      ? 3
+      : optionsPerLine;
 
-  const choiceGridStyle = useMemo(
-    () => ({
-      display: "grid",
-      gridTemplateColumns: `repeat(${checkboxColumns}, minmax(0, 1fr))`,
-      gap: "12px",
-      width: "100%",
-    }),
-    [checkboxColumns]
-  );
+// General choice layout — preserve optionsPerLine for radio fields.
+const choiceGridStyle = useMemo(
+  () => ({
+    display: "grid",
+    gridTemplateColumns: `repeat(${optionsPerLine}, minmax(0, 1fr))`,
+    gap: "12px",
+    width: "100%",
+  }),
+  [optionsPerLine]
+);
+
+// Checkbox-specific layout — handles columnWidth separately.
+const checkboxGridStyle = useMemo(
+  () => ({
+    ...choiceGridStyle,
+    gridTemplateColumns: `repeat(${checkboxColumns}, minmax(0, 1fr))`,
+  }),
+  [choiceGridStyle, checkboxColumns]
+);
+
+// Shared Other selection state for checkbox and radio.
+const otherChecked = selectedValues.includes("__other__");
 
   // ===========================================================
   // 5. CHECKBOX HANDLERS
@@ -398,33 +411,38 @@ export default function useChoiceField({
   // 10. RETURN
   // ===========================================================
 
-  return {
-    options,
-    selectedValues,
+ return {
+  // Choice
+  options,
+  selectedValues,
+  otherChecked,
 
-    minSelections,
-    isMaxReached,
-    hasMinimumSelections,
+  minSelections,
+  isMaxReached,
+  hasMinimumSelections,
 
-    optionsPerLine,
-    checkboxColumns,
-    choiceGridStyle,
+  optionsPerLine,
+  checkboxColumns,
+  choiceGridStyle,
+  checkboxGridStyle,
 
-    handleCheckboxChange,
-    handleRadioChange,
-    handleCheckboxOtherChange,
-    handleRadioOtherChange,
-    handleOtherTextChange,
+  handleCheckboxChange,
+  handleRadioChange,
+  handleCheckboxOtherChange,
+  handleRadioOtherChange,
+  handleOtherTextChange,
 
-    matrixQuestions,
-    matrixAnswers,
-    matrixAllowMultiple,
-    getAnswerValue,
-    isAnswerSelected,
-    handleMatrixSelection,
+  // Matrix
+  matrixQuestions,
+  matrixAnswers,
+  matrixAllowMultiple,
+  getAnswerValue,
+  isAnswerSelected,
+  handleMatrixSelection,
 
-    feedbackEmojis,
-    feedbackAllowMultiple,
-    handleFeedbackSelection,
-  };
+  // Feedback
+  feedbackEmojis,
+  feedbackAllowMultiple,
+  handleFeedbackSelection,
+};
 }
