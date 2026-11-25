@@ -43,9 +43,6 @@ import useProductField from "../../utils/hooks/useProductField";
 import useImageDropdownField from "../../utils/hooks/useImageDropdownField";
 // 1. SIGNATURE PREVIEW
 import SignaturePreview from "../../utils/SignaturePreview.jsx";
-
-
-
 // =============================================================
 // 1. REUSABLE FLATPICKR FIELD
 // =============================================================
@@ -209,12 +206,12 @@ function FlatpickrField({
 // Gives text-based fields the same appearance as the phone field:
 // left icon + divider + input.
 // =====================================================================
-
 function PreviewInputShell({
   label,
   required,
   hideLabel = false,
   icon,
+  leadingContent, // fo r a diff fioeld phone to show flag insted of icon defult 
   description,
   children,
   className = "",
@@ -225,75 +222,63 @@ function PreviewInputShell({
   labelVariant = "bodyMd",
 }) {
   return (
-    <BlockStack gap="200">
-      {/* COMMON LABEL */}
+    <div className={`preview-input-shell-wrapper ${className}`}>
       {!hideLabel && label && (
-        <Text as="label" variant={labelVariant}>
-          <span style={labelStyle}>
-            {label}
-            {required && (
-              <span style={{ color: "var(--p-color-text-critical)" }}>
-                {" "}*
-              </span>
-            )}
-          </span>
-        </Text>
+        <div className="preview-input-shell__label">
+          <Text as="label" variant={labelVariant}>
+            <span style={labelStyle}>
+              {label}
+              {required && (
+                <span className="preview-input-shell__required">
+                  {" "}*
+                </span>
+              )}
+            </span>
+          </Text>
+        </div>
       )}
 
-      {/* COMMON INPUT SHELL */}
       <div
-        className={`preview-input-shell ${className}`}
+        className="preview-input-shell"
         style={{
-          display: "flex",
-          width: "100%",
-          minWidth: 0,
-          alignItems: "stretch",
-          background: "#F6F6F7",
-          borderRadius: "8px",
-          boxSizing: "border-box",
-          overflow: "hidden",
           ...style,
+          ...(leadingContent ? { overflow: "visible" } : {}),
         }}
       >
-        {/* COMMON ICON */}
-        {icon && (
-          <div
-            className="preview-input-shell__icon"
-            style={{
-              width: "42px",
-              minWidth: "42px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              background: "#E8E8E9",
-              borderRight: "1px solid #D8DADD",
-              borderRadius: "8px 0 0 8px",
-              boxSizing: "border-box",
-              ...iconStyle,
-            }}
-          >
-            <Icon source={icon} />
+        {leadingContent ? (
+          <div className="preview-input-shell__leading">
+            {leadingContent}
           </div>
+        ) : (
+          icon && (
+            <div
+              className="preview-input-shell__icon"
+              style={iconStyle}
+            >
+              <Icon source={icon} />
+            </div>
+          )
         )}
 
-        {/* INPUT CONTENT */}
         <div
           className="preview-input-shell__content"
-          style={{
-            flex: 1,
-            minWidth: 0,
-            ...inputStyle,
-          }}
+          style={inputStyle}
         >
           {children}
         </div>
       </div>
 
-      {/* COMMON DESCRIPTION */}
-      {description && description}
-    </BlockStack>
+      {description && (
+        <div className="preview-input-shell__description">
+          {description}
+        </div>
+      )}
+    </div>
   );
 }
+
+
+
 // =============================================================
 // 3. MAIN PREVIEW FIELD COMPONENT
 // =============================================================
@@ -481,7 +466,6 @@ export default function PreviewField({
     isValidName,
     filterNumbersOnly,
   });
-
   // show the number error get from this 
   const {
     numberError,
@@ -490,8 +474,6 @@ export default function PreviewField({
     normalizedElement,
     updateValue,
   });
-
-
   // Dropdown and image dropdown 
   const {
     dropdownOpen,
@@ -941,39 +923,15 @@ export default function PreviewField({
     // -------------------------------------------------------
     // PHONE
     // -------------------------------------------------------
-    case "phone":
+    case "phone": {
       return (
-        <BlockStack gap="200">
-          {!hideLabel && (
-            <Text as="label" variant="bodyMd">
-              {label}
-              {required && (
-                <span style={{ color: "var(--p-color-text-critical)" }}>
-                  {" "}*
-                </span>
-              )}
-            </Text>
-          )}
-
-          <div
-            className="phone-field-shell"
-            style={{
-              display: "flex",
-              width: "100%",
-              minWidth: 0,
-              alignItems: "stretch",
-              position: "relative",
-              zIndex: countryDropdownOpen ? 10000 : 1,
-              overflow: "visible",
-              isolation: "isolate",
-              background: "#F6F6F7",
-              borderRadius: "8px",
-              boxSizing: "border-box",
-              transition: "border-color 0.15s ease, box-shadow 0.15s ease",
-            }}
-          >
-            {/* COUNTRY SELECTOR */}
-            {showPhoneCountry ? (
+        <PreviewInputShell
+          label={label}
+          required={required}
+          hideLabel={hideLabel}
+          icon={!showPhoneCountry ? selectedIcon : undefined}
+          leadingContent={
+            showPhoneCountry ? (
               <div
                 style={{
                   position: "relative",
@@ -981,6 +939,7 @@ export default function PreviewField({
                   zIndex: countryDropdownOpen ? 10002 : 1,
                 }}
               >
+                {/* COUNTRY SELECTOR */}
                 <button
                   type="button"
                   disabled={isReadOnly}
@@ -988,7 +947,7 @@ export default function PreviewField({
                     setCountryDropdownOpen((previous) => !previous)
                   }
                   style={{
-                    height: "46px",
+                    height: "40px",
                     minWidth: "80px",
                     padding: "0 10px",
                     display: "flex",
@@ -1153,52 +1112,27 @@ export default function PreviewField({
                   </div>
                 )}
               </div>
-            ) : selectedIcon ? (
-              /* SELECTED FIELD ICON */
-              <div
-                style={{
-                  width: "42px",
-                  minWidth: "42px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  background: "#E8E8E9",
-                  borderRight: "1px solid #D8DADD",
-                  borderRadius: "8px 0 0 8px",
-                  boxSizing: "border-box",
-                }}
-              >
-                <Icon source={selectedIcon} />
-              </div>
-            ) : null}
-
-            {/* PHONE NUMBER INPUT */}
-            <div
-              className="phone-number-input"
-              style={{
-                flex: 1,
-                minWidth: 0,
-              }}
-            >
-
-              <TextField
-                value={value}
-                onChange={handlePhoneChange}
-                placeholder={placeholder}
-                autoComplete="tel"
-                label=""
-                labelHidden
-                disabled={isReadOnly}
-                requiredIndicator={false}
-                error={undefined}
-                borderless
-              />
-            </div>
-          </div>
-
-          {descriptionText}
-        </BlockStack>
-      )
+            ) : null
+          }
+          description={descriptionText}
+          style={{
+            overflow: showPhoneCountry ? "visible" : "hidden",
+            height: "40px",
+          }}
+        >
+          <PreviewTextInput
+            type="tel"
+            inputMode="tel"
+            value={value || ""}
+            onChange={handlePhoneChange}
+            placeholder={placeholder || ""}
+            autoComplete="tel"
+            readOnly={isReadOnly}
+            disabled={isReadOnly}
+          />
+        </PreviewInputShell>
+      );
+    }
     // -------------------------------------------------------
     // PASSWORD
     // -------------------------------------------------------
@@ -1254,6 +1188,7 @@ export default function PreviewField({
           <PreviewInputShell
             label={label}
             required={required}
+            hideLabel={hideLabel}
             icon={selectedIcon}
             description={descriptionText}
           >
@@ -1276,12 +1211,11 @@ export default function PreviewField({
           {normalizedElement.confirmPassword && (
             <PreviewInputShell
               label={
-                normalizedElement.hideLabel
-                  ? ""
-                  : normalizedElement.confirmPasswordLabel ||
-                  "Confirm Password"
+                normalizedElement.confirmPasswordLabel ||
+                "Confirm Password"
               }
               required={required}
+              hideLabel={normalizedElement.hideLabel}
               icon={selectedIcon}
               description={
                 normalizedElement.confirmPasswordDescription || undefined
@@ -1311,6 +1245,7 @@ export default function PreviewField({
     // -------------------------------------------------------
     // COUNTRY
     // -------------------------------------------------------
+
     case "country": {
       const selectedCountryDetails = countries.find(
         (country) => country.value === selectedCountry
@@ -1326,11 +1261,27 @@ export default function PreviewField({
       });
 
       return (
-        <BlockStack gap="200">
-          {fieldLabelWithIcon}
-
-          <div style={{ position: "relative", width: "100%" }}>
+        <PreviewInputShell
+          label={label}
+          required={required}
+          hideLabel={hideLabel}
+          icon={selectedIcon}
+          description={descriptionText}
+          style={{
+            overflow: "visible",
+            position: "relative",
+            zIndex: isCountryDropdownOpen ? 10001 : 1,
+          }}
+        >
+          <div
+            style={{
+              position: "relative",
+              width: "100%",
+              height: "40px",
+            }}
+          >
             {/* SELECTED COUNTRY / DROPDOWN BUTTON */}
+
             <button
               type="button"
               disabled={isReadOnly}
@@ -1343,13 +1294,16 @@ export default function PreviewField({
                 justifyContent: "space-between",
                 gap: "10px",
                 width: "100%",
-                minHeight: "40px",
+                height: "40px",
                 padding: "8px 12px",
-                background: "#FFFFFF",
-                border: "1px solid #8A8A8A",
-                borderRadius: "6px",
+                background: "transparent",
+                border: "none",
+                borderRadius: 0,
+                outline: "none",
+                boxShadow: "none",
                 cursor: isReadOnly ? "default" : "pointer",
                 textAlign: "left",
+                boxSizing: "border-box",
               }}
             >
               <span
@@ -1360,23 +1314,8 @@ export default function PreviewField({
                   minWidth: 0,
                 }}
               >
-                {/* SELECTED ICON */}
-                {selectedIcon && (
-                  <span
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      width: "24px",
-                      height: "24px",
-                      flexShrink: 0,
-                    }}
-                  >
-                    <Icon source={selectedIcon} />
-                  </span>
-                )}
-
                 {/* COUNTRY FLAG */}
+
                 {normalizedElement.showFlags &&
                   selectedCountryDetails && (
                     <span
@@ -1395,12 +1334,17 @@ export default function PreviewField({
                   )}
 
                 {/* COUNTRY NAME / PLACEHOLDER */}
+
                 <span
                   style={{
                     color: selectedCountryDetails
                       ? "#303030"
                       : "#8C9196",
                     fontSize: "14px",
+                    minWidth: 0,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
                   }}
                 >
                   {selectedCountryDetails?.name ||
@@ -1410,10 +1354,13 @@ export default function PreviewField({
               </span>
 
               {/* DROPDOWN ARROW */}
+
               <span
                 style={{
                   color: "#6D7175",
-                  display: "inline-block",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  flexShrink: 0,
                   transition: "transform 250ms ease",
                   transform: isCountryDropdownOpen
                     ? "rotate(180deg)"
@@ -1424,7 +1371,8 @@ export default function PreviewField({
               </span>
             </button>
 
-            {/* COUNTRY DROPDOWN WITH SMOOTH ANIMATION */}
+            {/* COUNTRY DROPDOWN */}
+
             {!isReadOnly && (
               <div
                 style={{
@@ -1457,6 +1405,7 @@ export default function PreviewField({
                 }}
               >
                 {/* SEARCH INPUT */}
+
                 {normalizedElement.enableSearch && (
                   <div
                     style={{
@@ -1487,6 +1436,7 @@ export default function PreviewField({
                 )}
 
                 {/* COUNTRY LIST */}
+
                 <div
                   style={{
                     maxHeight: "220px",
@@ -1521,6 +1471,7 @@ export default function PreviewField({
                           }}
                         >
                           {/* COUNTRY FLAG */}
+
                           {normalizedElement.showFlags && (
                             <span
                               className={`fi fi-${country.value.toLowerCase()}`}
@@ -1538,6 +1489,7 @@ export default function PreviewField({
                           )}
 
                           {/* COUNTRY NAME */}
+
                           <span
                             style={{
                               flex: 1,
@@ -1550,6 +1502,7 @@ export default function PreviewField({
                           </span>
 
                           {/* SELECTED CHECK ICON */}
+
                           {isSelected && (
                             <Icon source={PolarisIcons.CheckIcon} />
                           )}
@@ -1576,20 +1529,16 @@ export default function PreviewField({
               </div>
             )}
           </div>
-
-          {descriptionText}
-        </BlockStack>
+        </PreviewInputShell>
       );
     }
+
     // -------------------------------------------------------
     // DROPDOWN AND SELECT
     // -------------------------------------------------------
+
     case "dropdown":
     case "select": {
-      // =====================================================
-      // 1. GET SELECTED ICON
-      // =====================================================
-
       const selectedIconName =
         normalizedElement.selectIcon ||
         normalizedElement.settings?.selectIcon ||
@@ -1600,76 +1549,24 @@ export default function PreviewField({
       const selectedIcon = selectedIconName
         ? PolarisIcons[selectedIconName]
         : null;
-
-      // =====================================================
-      // 2. FIELD LABEL WITH PROPER ICON ALIGNMENT
-      // =====================================================
-
-      const dropdownLabelWithIcon = (
-        <div
+      return (
+        <PreviewInputShell
+          label={label}
+          required={required}
+          hideLabel={hideLabel}
+          icon={selectedIcon}
+          description={descriptionText}
           style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "flex-start",
-            gap: "7px",
-            width: "100%",
-            minHeight: "20px",
+            overflow: "visible",
+            position: "relative",
+            zIndex: dropdownOpen ? 10001 : 1,
           }}
         >
-          {selectedIcon && (
-            <span
-              style={{
-                width: "20px",
-                minWidth: "20px",
-                height: "20px",
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
-              }}
-            >
-              <Icon source={selectedIcon} />
-            </span>
-          )}
-
-          <span
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "3px",
-              fontSize: "14px",
-              lineHeight: "20px",
-              color: "#303030",
-            }}
-          >
-            {label}
-
-            {required && (
-              <span
-                style={{
-                  color: "#D72C0D",
-                  lineHeight: "20px",
-                }}
-              >
-                *
-              </span>
-            )}
-          </span>
-        </div>
-      );
-
-      // =====================================================
-      // 3. RENDER DROPDOWN
-      // =====================================================
-
-      return (
-        <BlockStack gap="200">
-          {dropdownLabelWithIcon}
-
           <div
             style={{
               position: "relative",
               width: "100%",
+              height: "40px",
             }}
           >
             {/* DROPDOWN BUTTON */}
@@ -1685,19 +1582,26 @@ export default function PreviewField({
                 alignItems: "center",
                 justifyContent: "space-between",
                 width: "100%",
-                minHeight: "40px",
+                height: "40px",
                 padding: "8px 12px",
-                background: "#FFFFFF",
-                border: "1px solid #8A8A8A",
-                borderRadius: "6px",
+                background: "transparent",
+                border: "none",
+                borderRadius: 0,
+                outline: "none",
+                boxShadow: "none",
                 cursor: isReadOnly ? "default" : "pointer",
                 textAlign: "left",
+                boxSizing: "border-box",
               }}
             >
               <span
                 style={{
                   color: selectedOption ? "#303030" : "#8C9196",
                   fontSize: "14px",
+                  minWidth: 0,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
                 }}
               >
                 {selectedOption?.label ||
@@ -1711,6 +1615,7 @@ export default function PreviewField({
                 style={{
                   display: "inline-flex",
                   alignItems: "center",
+                  flexShrink: 0,
                   color: "#6D7175",
                   transition: "transform 250ms ease",
                   transform: dropdownOpen
@@ -1867,13 +1772,10 @@ export default function PreviewField({
               </div>
             )}
           </div>
-
-          {/* DESCRIPTION */}
-
-          {descriptionText}
-        </BlockStack>
+        </PreviewInputShell>
       );
     }
+
     // -------------------------------------------------------
     // CHECKBOX
     // -------------------------------------------------------
@@ -2129,7 +2031,11 @@ export default function PreviewField({
     // -------------------------------------------------------
     // URL
     // -------------------------------------------------------
-    case "url":
+
+    case "url": {
+      const { maxLength } =
+        getCharacterLimits(normalizedElement);
+
       if (
         normalizedElement.limitCharacters &&
         normalizedElement.minCharacters !== "" &&
@@ -2140,27 +2046,27 @@ export default function PreviewField({
       }
 
       return (
-        <BlockStack gap="200">
-          {fieldLabelWithIcon}
-
-          <TextField
-            {...commonTextFieldProps}
-            label={undefined}
+        <PreviewInputShell
+          label={label}
+          required={required}
+          hideLabel={hideLabel}
+          icon={selectedIcon}
+          description={descriptionText}
+        >
+          <PreviewTextInput
             type="url"
+            value={value || ""}
             placeholder={placeholder || "https://example.com"}
-            value={value}
             onChange={updateValue}
             autoComplete="url"
             readOnly={isReadOnly}
-            maxLength={
-              normalizedElement.limitCharacters &&
-                normalizedElement.maxCharacters
-                ? Number(normalizedElement.maxCharacters)
-                : undefined
-            }
+            disabled={isReadOnly}
+            maxLength={maxLength}
           />
-        </BlockStack>
-      )
+        </PreviewInputShell>
+      );
+    }
+
     // -------------------------------------------------------
     // DATE
     // -------------------------------------------------------
@@ -2228,19 +2134,36 @@ export default function PreviewField({
     // -------------------------------------------------------
     // NUMBER
     // -------------------------------------------------------
+
     case "number": {
+      const { minLength, maxLength } =
+        getCharacterLimits(normalizedElement);
+
       return (
-        <TextField
-          {...commonTextFieldProps}
-          type="text"
-          inputMode="numeric"
-          value={value}
-          onChange={handleNumberChangeWithLimits}
-          readOnly={isReadOnly}
-          error={numberError || undefined}
-        />
+        <PreviewInputShell
+          label={label}
+          required={required}
+          hideLabel={hideLabel}
+          icon={selectedIcon}
+          description={descriptionText}
+        >
+          <PreviewTextInput
+            type="text"
+            // inputMode={inputMode}
+            inputMode="numeric"
+            value={value ?? ""}
+            placeholder={placeholder || ""}
+            onChange={handleNumberChangeWithLimits}
+            readOnly={isReadOnly}
+            disabled={isReadOnly}
+            minLength={minLength}
+            maxLength={maxLength}
+            error={numberError || undefined}
+          />
+        </PreviewInputShell>
       );
     }
+
     // -------------------------------------------------------
     // QUANTITY
     // -------------------------------------------------------
@@ -2933,190 +2856,175 @@ export default function PreviewField({
     // -------------------------------------------------------
     // IMAGE OPTIONS
     // -------------------------------------------------------
-    case "image_options": {
-      const maxImages = Math.max(
-        1,
-        Number(normalizedElement.maxImages) || 5
-      );
-
-      // Use existing field value as the single source of truth.
-      const selectedImages = Array.isArray(value)
-        ? value
-        : value
-          ? [value]
-          : [];
-
-      const remainingImages = Math.max(
-        0,
-        maxImages - selectedImages.length
-      );
+    case "image_dropdown": {
+      const showOptionLabel =
+        normalizedElement.showOptionLabel !== false;
 
       return (
-        <BlockStack gap="200">
-          {!hideLabel && (
-            <Text as="p" variant="bodyMd">
-              {label}
-              {required && (
-                <span style={{ color: "var(--p-color-text-critical)" }}>
-                  {" "}*
-                </span>
-              )}
-            </Text>
-          )}
-
+        <PreviewInputShell
+          label={label}
+          required={required}
+          hideLabel={hideLabel}
+          icon={selectedIcon}
+          description={descriptionText}
+          style={{
+            overflow: "visible",
+            position: "relative",
+            zIndex: imageDropdownOpen ? 10001 : 1,
+          }}
+        >
           <div
             style={{
+              position: "relative",
               width: "100%",
-              minHeight: "150px",
-              background: "#eeeeee",
-              border: "1px dashed #8c9196",
-              borderRadius: "8px",
-              display: "flex",
-              flexDirection: "column",
-              gap: "12px",
-              padding: "16px",
-              boxSizing: "border-box",
+              height: "40px",
             }}
           >
-            {/* IMAGE PREVIEWS */}
-            {selectedImages.length > 0 && (
+            {/* DROPDOWN BUTTON */}
+            <button
+              type="button"
+              disabled={isReadOnly}
+              onClick={() =>
+                setImageDropdownOpen((prev) => !prev)
+              }
+              style={{
+                width: "100%",
+                height: "40px",
+                padding: "8px 12px",
+                border: "none",
+                borderRadius: 0,
+                outline: "none",
+                background: "transparent",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                cursor: isReadOnly ? "default" : "pointer",
+                textAlign: "left",
+                boxSizing: "border-box",
+              }}
+            >
+              <span
+                style={{
+                  minWidth: 0,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {selectedImageOption?.label || "Select an option"}
+              </span>
+
+              <span
+                style={{
+                  flexShrink: 0,
+                  marginLeft: "8px",
+                  transform: imageDropdownOpen
+                    ? "rotate(180deg)"
+                    : "rotate(0)",
+                  transition: "transform 0.2s",
+                }}
+              >
+                ▼
+              </span>
+            </button>
+
+            {/* DROPDOWN OPTIONS */}
+            {imageDropdownOpen && !isReadOnly && (
               <div
                 style={{
+                  position: "absolute",
+                  top: "calc(100% + 5px)",
+                  left: 0,
+                  right: 0,
+                  zIndex: 10000,
+                  background: "#fff",
+                  border: "1px solid #d2d5d8",
+                  borderRadius: "8px",
+                  padding: "12px",
+                  maxHeight: "260px",
+                  overflowY: "auto",
+                  overflowX: "hidden",
                   display: "grid",
                   gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-                  gap: "10px",
+                  gap: "12px",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.12)",
                 }}
               >
-                {selectedImages.map((image, index) => (
-                  <div
-                    key={index}
-                    style={{
-                      position: "relative",
-                      minWidth: 0,
-                    }}
-                  >
-                    <img
-                      src={image}
-                      alt={`Selected image ${index + 1}`}
+                {imageOptions.map((option, index) => {
+                  const optionValue =
+                    option.value || option.label;
+
+                  const isSelected = value === optionValue;
+
+                  return (
+                    <div
+                      key={option.id || optionValue || index}
+                      onClick={() =>
+                        handleImageDropdownSelect(option)
+                      }
                       style={{
-                        width: "100%",
-                        height: "100px",
-                        objectFit: "cover",
-                        borderRadius: "6px",
-                        display: "block",
+                        cursor: "pointer",
+                        padding: "6px",
+                        borderRadius: "7px",
+                        border: isSelected
+                          ? "2px solid #303030"
+                          : "1px solid #e1e3e5",
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        gap: "6px",
+                        background: isSelected ? "#f6f6f7" : "#fff",
+                        minWidth: 0,
                       }}
-                    />
+                    >
+                      <img
+                        src={option.image}
+                        alt={option.label || "Option"}
+                        onError={(event) => {
+                          console.log("IMAGE FAILED:", {
+                            label: option.label,
+                            image: option.image,
+                            option,
+                          });
 
-                    {!isReadOnly && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const updatedImages = selectedImages.filter(
-                            (_, imageIndex) => imageIndex !== index
-                          );
-
-                          updateValue(updatedImages);
+                          event.currentTarget.style.display = "none";
+                        }}
+                        onLoad={() => {
+                          console.log("IMAGE LOADED:", option.image);
                         }}
                         style={{
-                          position: "absolute",
-                          top: "4px",
-                          right: "4px",
-                          width: "23px",
-                          height: "23px",
-                          border: "none",
-                          borderRadius: "50%",
-                          background: "#ffffff",
-                          cursor: "pointer",
-                          fontSize: "15px",
+                          width: "100%",
+                          height: "75px",
+                          objectFit: "cover",
+                          borderRadius: "5px",
+                          display: "block",
                         }}
-                      >
-                        ×
-                      </button>
-                    )}
-                  </div>
-                ))}
+                      />
+
+                      {showOptionLabel && (
+                        <div
+                          style={{
+                            fontSize: "12px",
+                            textAlign: "center",
+                            overflowWrap: "anywhere",
+                          }}
+                        >
+                          {option.label}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+
+                {imageOptions.length === 0 && (
+                  <Text as="p" tone="subdued">
+                    No image options available.
+                  </Text>
+                )}
               </div>
             )}
-
-            {selectedImages.length === 0 && (
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  minHeight: "90px",
-                }}
-              >
-                <Text as="p" variant="bodyMd">
-                  {normalizedElement.placeholder || "Choose images"}
-                </Text>
-              </div>
-            )}
-
-            {/* UPLOAD BUTTON */}
-            {!isReadOnly && remainingImages > 0 && (
-              <label
-                style={{
-                  padding: "9px 14px",
-                  border: "1px solid #8c9196",
-                  borderRadius: "5px",
-                  color: "#303030",
-                  fontSize: "14px",
-                  background: "#ffffff",
-                  cursor: "pointer",
-                  textAlign: "center",
-                }}
-              >
-                {selectedImages.length > 0
-                  ? "Add more images"
-                  : "Browse images"}
-
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  hidden
-                  onChange={(event) => {
-                    const files = Array.from(event.target.files || []);
-
-                    const validFiles = files.filter((file) =>
-                      file.type.startsWith("image/")
-                    );
-
-                    const allowedFiles = validFiles.slice(
-                      0,
-                      remainingImages
-                    );
-
-                    const newImages = allowedFiles.map((file) =>
-                      URL.createObjectURL(file)
-                    );
-
-                    const updatedImages = [
-                      ...selectedImages,
-                      ...newImages,
-                    ];
-
-                    updateValue(updatedImages);
-
-                    event.target.value = "";
-                  }}
-                />
-              </label>
-            )}
-
-            <Text
-              as="p"
-              variant="bodySm"
-              tone="subdued"
-              alignment="center"
-            >
-              {selectedImages.length} / {maxImages} images selected
-            </Text>
           </div>
-
-          {descriptionText}
-        </BlockStack>
+        </PreviewInputShell>
       );
     }
     // -------------------------------------------------------
@@ -4024,15 +3932,22 @@ export default function PreviewField({
       );
     }
     //text
+
     case "text": {
       return (
-        <BlockStack gap="200">
-          {fieldLabelWithIcon}
-
-          <TextField
+        <PreviewInputShell
+          label={label}
+          required={required}
+          hideLabel={hideLabel}
+          icon={selectedIcon}
+          description={descriptionText}
+        >
+          <PreviewTextInput
+            type="text"
             value={value || ""}
             placeholder={placeholder || ""}
             disabled={isReadOnly}
+            readOnly={isReadOnly}
             autoComplete="off"
             maxLength={
               textFieldHasCharacterLimit && textFieldMaxLength > 0
@@ -4041,11 +3956,10 @@ export default function PreviewField({
             }
             onChange={handleTextChange}
           />
-
-          {descriptionText}
-        </BlockStack>
+        </PreviewInputShell>
       );
     }
+
     case "textarea": {
       return (
         <BlockStack gap="200">

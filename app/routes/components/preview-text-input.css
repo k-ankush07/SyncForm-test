@@ -1,39 +1,90 @@
 
-.preview-text-input-wrapper {
-  width: 100%;
-  min-width: 0;
-}
+/* =========================================
+   PREVIEW INPUT SHELL
+========================================= */
 
-.preview-text-input {
+.preview-input-shell-wrapper {
   width: 100%;
   min-width: 0;
-  height: 40px;
-  padding: 8px 12px;
-  border: none;
-  outline: none;
-  background: transparent;
-  font-size: 14px;
+  margin: 0;
+  padding: 0;
   box-sizing: border-box;
 }
 
-.preview-text-input:focus {
-  outline: none;
+/* LABEL */
+
+.preview-input-shell__label {
+  margin: 0 0 8px;
+  padding: 0;
+  line-height: 20px;
 }
 
-.preview-text-input:disabled,
-.preview-text-input[readonly] {
-  cursor: default;
-}
-
-.preview-text-input__error {
+.preview-input-shell__required {
   color: var(--p-color-text-critical);
-  font-size: 12px;
-  margin-top: 4px;
 }
+
+/* MAIN INPUT CONTAINER */
+
+.preview-input-shell {
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+  min-width: 0;
+  height: 40px;
+  background: #F6F6F7;
+  border-radius: 8px;
+  overflow: hidden;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* ICON SECTION */
+
+.preview-input-shell__icon {
+  flex: 0 0 42px;
+  width: 42px;
+  min-width: 42px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #E8E8E9;
+  border-right: 1px solid #D8DADD;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* INPUT CONTENT */
+
+.preview-input-shell__content {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 40px;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* DESCRIPTION */
+
+.preview-input-shell__description {
+  margin: 4px 0 0;
+  padding: 0;
+}
+
+/* =========================================
+   PREVIEW TEXT INPUT
+========================================= */
 
 .preview-text-input-wrapper {
   width: 100%;
   min-width: 0;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
 .preview-text-input__container {
@@ -41,31 +92,159 @@
   align-items: center;
   width: 100%;
   min-width: 0;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
+/* NATIVE INPUT */
+
 .preview-text-input {
-  flex: 1;
+  display: block;
+  flex: 1 1 auto;
   width: 100%;
   min-width: 0;
-  height: 40px;
+  height: 100%;
   padding: 8px 12px;
   border: none;
   outline: none;
   background: transparent;
   font-size: 14px;
+  font-family: inherit;
+  color: inherit;
   box-sizing: border-box;
 }
+.preview-input-shell__required {
+  color: #000000 !important;
+  font-weight: 400;
+  margin-left: 3px;
+}
+
+/* PLACEHOLDER */
+
+.preview-text-input::placeholder {
+  color: #8C9196;
+  opacity: 1;
+}
+
+/* FOCUS */
+
+.preview-text-input:focus {
+  outline: none;
+}
+
+/* DISABLED */
+
+.preview-text-input:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* READ ONLY */
+
+.preview-text-input[readonly] {
+  cursor: default;
+}
+
+/* SUFFIX */
 
 .preview-text-input__suffix {
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
+  height: 100%;
   padding: 0 12px;
+  box-sizing: border-box;
 }
+
+/* ERROR */
 
 .preview-text-input__error {
   color: var(--p-color-text-critical);
   font-size: 12px;
-  margin-top: 4px;
+  line-height: 16px;
+  margin: 4px 0 0;
+  padding: 0;
+}
+/* Remove browser default outline */
+.preview-text-input,
+.preview-text-input:focus,
+.preview-text-input:focus-visible,
+.preview-text-input:active {
+  outline: none !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+/* Remove focus styling from shell */
+.preview-input-shell,
+.preview-input-shell:focus-within {
+  outline: none !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+/* small css foe the phone  */
+.preview-input-shell__leading {
+  flex: 0 0 auto;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  background: transparent;
+  border-right: 1px solid #D8DADD;
+  box-sizing: border-box;
+    border-right: none !important;
+}
+.preview-input-shell__leading .phone-country-selector {
+  height: 40px;
+  border-right: none;
+}
+
+.preview-input-shell__leading {
+  border-right: none;
+}
+.phone-country-selector {
+  position: relative;
+  flex-shrink: 0;
+  height: 40px;
+  background: transparent;
+}
+
+.phone-country-selector__button {
+  height: 40px;
+  min-width: 80px;
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+/* PASSWORD VISIBILITY BUTTON */
+.password-visibility-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  background: #F6F6F7;
+  border: none;
+  border-radius: 6px;
+
+  color: #303030;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.password-visibility-button:disabled {
+  cursor: default;
+  opacity: 0.6;
 }
