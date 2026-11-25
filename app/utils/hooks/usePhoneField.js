@@ -156,13 +156,29 @@ export default function usePhoneField({
     reportPhoneValue(phoneNumber);
   };
 
-  return {
-    phoneCountry,
-    setPhoneCountry,
-    countryDropdownOpen,
-    setCountryDropdownOpen,
-    reportPhoneValue,
-    handlePhoneCountryChange,
-    handlePhoneChange,
-  };
+  const currentPhoneCountry =
+  phoneCountryList.find(
+    (country) =>
+      country.value.toLowerCase() === phoneCountry
+  ) ||
+  phoneCountryList.find(
+    (country) => country.value.toLowerCase() === "in"
+  );
+
+  const showPhoneCountry =
+  normalizedElement.phoneValidation !== false ||
+  normalizedElement.showCountryCode !== false;
+
+ return {
+  phoneCountry,
+  setPhoneCountry,
+  countryDropdownOpen,
+  setCountryDropdownOpen,
+  phoneCountryList,
+  currentPhoneCountry,
+  showPhoneCountry,
+  reportPhoneValue,
+  handlePhoneCountryChange,
+  handlePhoneChange,
+};
 }

@@ -19,12 +19,9 @@ import {
 } from "@shopify/polaris";
 
 import createDOMPurify from "dompurify";
-
 import ColorInput from "../components/RichTextEditor/ColorInput.jsx";
 import { countries } from "../components/elementsettings/utils/countries.js";
 import FormProgressIndicator from "./RichTextEditor/FormProgressIndicator";
-
-
 // imports hooks 
 import useFieldValue from "../../utils/hooks/useFieldValue.js";
 import usePhoneField from "../../utils/hooks/usePhoneField.js";
@@ -34,7 +31,18 @@ import useCountryField from "../../utils/hooks/useCountryField.js";
 import useDateField from "../../utils/hooks/useDateField.js";
 import useFileField from "../../utils/hooks/useFileField.js";
 import useEmailField from "../../utils/hooks/useEmailField.js";
-
+import useRepeaterField from "../../utils/hooks/useRepeaterField.js";
+import useBooleanField from "../../utils/hooks/useBooleanField.js";
+import useRangeField from "../../utils/hooks/useRangeField.js";
+import useRatingField from "../../utils/hooks/useRatingField.js";
+import useColorField from "../../utils/hooks/useColorField.js";
+import useNameField from "../../utils/hooks/useNameField.js";
+import useQuantityField from "../../utils/hooks/useQuantityField.js";
+import useNumberField from "../../utils/hooks/useNumberField.js";
+import useTextField from "../../utils/hooks/useTextField.js";
+import useDropdownField from "../../utils/hooks/useDropdownField";
+import useProductField from "../../utils/hooks/useProductField";
+import useImageDropdownField from "../../utils/hooks/useImageDropdownField";
 // =============================================================
 // 1. SIGNATURE PREVIEW
 // =============================================================
@@ -590,8 +598,6 @@ function PreviewInputShell({
     </BlockStack>
   );
 }
-
-
 // =============================================================
 // 3. MAIN PREVIEW FIELD COMPONENT
 // =============================================================
@@ -609,6 +615,24 @@ const getCharacterLimits = (element) => {
         ? Number(element.maxCharacters)
         : undefined,
   };
+};
+// ===========================================================
+// SHARED FIELD VALIDATION HELPERS
+// ===========================================================
+
+// Check whether the complete value is a valid name.
+const isValidName = (value) => {
+  return /^[\p{L}\p{M}\s'.-]+$/u.test(value);
+};
+
+// Remove invalid name characters.
+const filterNameCharacters = (value) => {
+  return value.replace(/[^\p{L}\p{M}\s'.-]/gu, "");
+};
+
+// Keep numeric characters only.
+const filterNumbersOnly = (value) => {
+  return value.replace(/[^0-9]/g, "");
 };
 
 export default function PreviewField({
@@ -629,16 +653,14 @@ export default function PreviewField({
   onSubmit,
   isFirstCustomerPage = true,
   isLastCustomerPage = false,
-
   // Validation error from parent.
-  error,
+  //error,
 }) {
   // ===========================================================
   // 3.1 NORMALIZE THE CURRENT ELEMENT
   // ===========================================================
 
   const currentElement = element ?? field;
-
   const normalizedElement =
     typeof currentElement === "string"
       ? {
@@ -665,6 +687,9 @@ export default function PreviewField({
   const defaultValue = normalizedElement.defaultValue ?? "";
   const required = Boolean(normalizedElement.required);
 
+  const rawOptions = Array.isArray(normalizedElement.options)
+    ? normalizedElement.options
+    : [];
   // In editor mode fields are read-only.
   // In customer/model preview mode fields can be filled in.
   const isReadOnly = !isModelPreview;
@@ -710,53 +735,110 @@ export default function PreviewField({
     enableSelection: usesSelection,
   });
 
+
+const {
+  // Choice
+  options,
+  selectedValues,
+  optionsPerLine,
+  choiceGridStyle,
+  checkboxGridStyle,
+  otherChecked,
+  isMaxReached,
+
+  handleCheckboxChange,
+  handleRadioChange,
+  handleCheckboxOtherChange,
+  handleRadioOtherChange,
+  handleOtherTextChange,
+
+  // Matrix
+  matrixQuestions,
+  matrixAnswers,
+  matrixAllowMultiple,
+  getAnswerValue,
+  isAnswerSelected,
+  handleMatrixSelection,
+
+  // Feedback
+  feedbackEmojis,
+  feedbackAllowMultiple,
+  handleFeedbackSelection,
+} = useChoiceField({
+  selected,
+  setSelected,
+  otherValue,
+  setOtherValue,
+  reportChange,
+  normalizedElement,
+  maxSelections: Number(normalizedElement.maxSelections) || 0,
+  isReadOnly,
+});
+
+  // show the name error 
   const {
-    handleCheckboxChange,
-    handleRadioChange,
-    handleCheckboxOtherChange,
-    handleRadioOtherChange,
-    handleOtherTextChange,
-  } = useChoiceField({
-    selected,
-    setSelected,
-    otherValue,
-    setOtherValue,
-    reportChange,
-    maxSelections: Number(normalizedElement.maxSelections) || 0,
+    nameError,
+    handleNameChange,
+  } = useNameField({
+    normalizedElement,
+    updateValue,
+    isValidName,
+    filterNumbersOnly,
+  });
+
+  // show the number error get from this 
+  const {
+    numberError,
+    handleNumberChangeWithLimits,
+  } = useNumberField({
+    normalizedElement,
+    updateValue,
   });
 
 
-  const [nameError, setNameError] = useState("");
-  const [numberError, setNumberError] = useState("");
+  // Dropdown and image dropdown 
+  const {
+    dropdownOpen,
+    setDropdownOpen,
+    dropdownSearch,
+    setDropdownSearch,
+    selectedOption,
+    filteredOptions,
+    handleDropdownSelect,
+  } = useDropdownField({
+    normalizedElement,
+    value,
+    updateValue,
+  });
+
+  const {
+    imageOptions,
+    selectedImageOption,
+    imageDropdownOpen,
+    setImageDropdownOpen,
+    handleImageDropdownSelect,
+  } = useImageDropdownField({
+    normalizedElement,
+    rawOptions,
+    value,
+    updateValue,
+    isReadOnly,
+  });
   // ===========================================================
-  // 3.5 CHECKBOX AND CONSENT STATE
+  // 3.5 CONSENT STATE
   // ===========================================================
-
-  const getSavedCheckedValue = () => {
-    if (typeof savedValue === "boolean") {
-      return savedValue;
-    }
-
-    return type === "consent"
-      ? normalizedElement.checkedByDefault ?? true
-      : Boolean(normalizedElement.defaultValue);
-  };
-
-  const [checked, setChecked] = useState(getSavedCheckedValue);
-
-  useEffect(() => {
-    const nextChecked = getSavedCheckedValue();
-
-    setChecked((previous) =>
-      previous === nextChecked ? previous : nextChecked
-    );
-  }, [
-    normalizedElement.id,
-    normalizedElement.defaultValue,
-    normalizedElement.checkedByDefault,
+  const {
+    checked,
+    setChecked,
+    switchValue,
+    setSwitchValue,
+    handleSwitchChange,
+  } = useBooleanField({
     savedValue,
+    normalizedElement,
     type,
-  ]);
+    reportChange,
+  });
 
   // ===========================================================
   // 3.6 PASSWORD AND EMAIL CONFIRMATION STATE
@@ -783,7 +865,7 @@ export default function PreviewField({
     required,
     label,
   });
-
+  //email 
   const {
     confirmEmailValue,
     handleEmailChange,
@@ -804,6 +886,9 @@ export default function PreviewField({
     setPhoneCountry,
     countryDropdownOpen,
     setCountryDropdownOpen,
+    phoneCountryList,
+    currentPhoneCountry,
+    showPhoneCountry,
     reportPhoneValue,
     handlePhoneCountryChange,
     handlePhoneChange,
@@ -816,7 +901,6 @@ export default function PreviewField({
     reportChange,
     phoneCountryList: countries,
   });
-
   // ===========================================================
   // COUNTRY FIELD
   // ===========================================================
@@ -834,6 +918,20 @@ export default function PreviewField({
     updateValue,
   });
 
+  // products 
+  const {
+    selectedProductIds,
+    filteredProducts,
+    showSearch,
+    handleProductSelect,
+  } = useProductField({
+    normalizedElement,
+    products,
+    value,
+    selected,
+    setSelected,
+    reportChange,
+  });
 
   // ===========================================================
   // 3.9 DATE AND TIME STATE
@@ -859,17 +957,17 @@ export default function PreviewField({
   });
 
   // ===========================================================
-  // 3.10 FILE AND IMAGE STATE
+  // 3.10 FILE STATE
   // ===========================================================
 
   const {
     selectedFiles,
-    setSelectedFiles,
     fileInputRef,
     fileError,
     acceptedFileTypes,
     acceptAttribute,
     handleFileSelection,
+    handleFileRemove,
   } = useFileField({
     savedValue,
     normalizedElement,
@@ -879,212 +977,90 @@ export default function PreviewField({
   // ===========================================================
   // 3.11 RATING AND RANGE STATE
   // ===========================================================
-
-  const [rating, setRating] = useState(() =>
-    Number(savedValue ?? normalizedElement.defaultRating ?? 0)
-  );
-
-  const getDefaultRangeValue = () => {
-    const min = Number(normalizedElement.min ?? 0);
-    const max = Number(normalizedElement.max ?? 100);
-
-    const initialValue =
-      savedValue !== undefined && savedValue !== null
-        ? Number(savedValue)
-        : Number(normalizedElement.defaultValue);
-
-    return Number.isFinite(initialValue)
-      ? Math.min(max, Math.max(min, initialValue))
-      : min;
-  };
-
-  const [rangeValue, setRangeValue] = useState(getDefaultRangeValue);
-
-  useEffect(() => {
-    const nextValue = getDefaultRangeValue();
-
-    setRangeValue((previous) =>
-      previous === nextValue ? previous : nextValue
-    );
-  }, [
-    normalizedElement.id,
-    normalizedElement.defaultValue,
-    normalizedElement.min,
-    normalizedElement.max,
-    savedValue,
-  ]);
-
   // ===========================================================
-  // 3.12 SWITCH STATE
+  // 3.11 RATING AND RANGE STATE
   // ===========================================================
-
-  const getSavedSwitchValue = () => {
-    if (typeof savedValue === "boolean") {
-      return savedValue;
-    }
-
-    return Boolean(normalizedElement.defaultChecked);
-  };
-
-  const [switchValue, setSwitchValue] = useState(getSavedSwitchValue);
-
-  useEffect(() => {
-    const nextValue = getSavedSwitchValue();
-
-    setSwitchValue((previous) =>
-      previous === nextValue ? previous : nextValue
-    );
-  }, [
-    normalizedElement.id,
-    normalizedElement.defaultChecked,
+  const {
+    rating,
+    maxLevel,
+    customRatingIcon,
+    ratingColor,
+    handleRatingChange,
+  } = useRatingField({
     savedValue,
-  ]);
+    normalizedElement,
+    reportChange,
+  });
+  //range 
+  const {
+    rangeValue,
+    min: rangeMin,
+    max: rangeMax,
+    step: rangeStep,
+    handleRangeChange,
+  } = useRangeField({
+    savedValue,
+    normalizedElement,
+    reportChange,
+  });
 
   // ===========================================================
   // 3.13 COLOR STATE
   // ===========================================================
+  const {
+    colorValue,
+    handleColorChange,
+  } = useColorField({
+    savedValue,
+    normalizedElement,
+    reportChange,
+  });
 
-  const [colorValue, setColorValue] = useState(
-    normalizedElement.defaultColor || "#563D7C"
-  );
+  //Quantity 
+  const {
+    min: quantityMin,
+    max: quantityMax,
+    safeValue,
+    increaseValue,
+    decreaseValue,
+  } = useQuantityField({
+    value,
+    normalizedElement,
+    updateValue,
+    isReadOnly,
+  });
 
-  useEffect(() => {
-    setColorValue(
-      normalizedElement.defaultColor || "#563D7C"
-    );
-  }, [
-    normalizedElement.id,
-    normalizedElement.defaultColor,
-  ]);
-
-  // ===========================================================
-  // 3.14 OTHER UI STATE
-  // ===========================================================
-
-  const [imageDropdownOpen, setImageDropdownOpen] = useState(false);
-
-  useEffect(() => {
-    setImageDropdownOpen(false);
-  }, [normalizedElement.id]);
-
-
+  // for text and text field both 
+  const {
+    handleTextChange,
+    characterCount,
+    maxLength: textFieldMaxLength,
+    hasCharacterLimit: textFieldHasCharacterLimit,
+  } = useTextField({
+    normalizedElement,
+    value,
+    setValue,
+    reportChange,
+    fieldType: type,
+  });
   // ===========================================================
   // REPEATER STATE
   // ===========================================================
 
-  // Repeater values must always be stored as an array.
-  const getInitialRepeaterItems = () => {
-    if (Array.isArray(savedValue)) {
-      return savedValue;
-    }
-
-    if (
-      savedValue !== undefined &&
-      savedValue !== null &&
-      savedValue !== ""
-    ) {
-      return [String(savedValue)];
-    }
-
-    return [""];
-  };
-
-  const [repeaterItems, setRepeaterItems] = useState(
-    getInitialRepeaterItems
-  );
-
-  // Synchronize when the parent loads or changes saved data.
-  // Do not reset local state if the parent sends back the same array.
-  useEffect(() => {
-    const nextItems = getInitialRepeaterItems();
-
-    setRepeaterItems((previous) =>
-      JSON.stringify(previous) === JSON.stringify(nextItems)
-        ? previous
-        : nextItems
-    );
-  }, [normalizedElement.id, savedValue]);
-
-  // Update Repeater locally AND send the array to LivePreview.
-  const updateRepeaterValue = (nextItems) => {
-    setRepeaterItems(nextItems);
-    reportChange(nextItems);
-  };
-
-
-  // Name validation and optional numbers-only setting.
-  const handleNameChange = (newValue) => {
-    const input = String(newValue ?? "");
-
-    if (normalizedElement.numbersOnly) {
-      updateValue(input.replace(/[^0-9]/g, ""));
-      setNameError("");
-      return;
-    }
-
-    updateValue(input);
-
-    if (normalizedElement.nameValidation !== false && input) {
-      const validName = /^[\p{L}\p{M}\s'.-]+$/u.test(input);
-
-      setNameError(
-        validName ? "" : "Please enter a valid name."
-      );
-
-      return;
-    }
-
-    setNameError("");
-  };
-
-  // ===========================================================
-  // 9. CHOICE AND PHONE HELPERS
-  // ===========================================================
-
-  const rawOptions = normalizedElement.options || [];
-
-  const options = rawOptions.map((option, index) => {
-    if (typeof option === "string") {
-      return {
-        label: option,
-        value: option,
-      };
-    }
-
-    return {
-      label: option.label || option.value || `Option ${index + 1}`,
-      value: option.value || option.label || `option-${index + 1}`,
-    };
+  const {
+    items: repeaterItems,
+    minItems,
+    maxItems,
+    hasMinItemsError,
+    handleAddItem,
+    handleRemoveItem,
+    handleItemChange,
+  } = useRepeaterField({
+    savedValue,
+    normalizedElement,
+    reportChange,
+    isReadOnly,
   });
-
-  // Phone country data.
-  const phoneCountryList = countries;
-
-  const currentPhoneCountry =
-    phoneCountryList.find(
-      (country) => country.value.toLowerCase() === phoneCountry
-    ) ||
-    phoneCountryList.find(
-      (country) => country.value.toLowerCase() === "in"
-    );
-
-  const showPhoneCountry =
-    normalizedElement.phoneValidation !== false ||
-    normalizedElement.showCountryCode !== false;
-
-
-  // Limit radio and checkbox columns to a maximum of five.
-  const optionsPerLine = Math.min(
-    5,
-    Math.max(1, Number(normalizedElement.optionsPerLine) || 1)
-  );
-
-  const choiceGridStyle = {
-    display: "grid",
-    gridTemplateColumns: `repeat(${optionsPerLine}, minmax(0, 1fr))`,
-    gap: "12px",
-    width: "100%",
-  };
 
   // ===========================================================
   // 10. LABEL, ICON AND COMMON FIELD PROPS
@@ -1171,7 +1147,6 @@ export default function PreviewField({
   if (type === "divider" && normalizedElement.hideDivider) {
     return null;
   }
-
   switch (type) {
     // -------------------------------------------------------
     // EMAIL
@@ -1230,8 +1205,6 @@ export default function PreviewField({
         </BlockStack>
       );
     }
-
-
     // -------------------------------------------------------
     // NAME
     // -------------------------------------------------------
@@ -1263,12 +1236,9 @@ export default function PreviewField({
         </PreviewInputShell>
       );
     }
-
-
     // -------------------------------------------------------
     // PHONE
     // -------------------------------------------------------
-
     case "phone":
       return (
         <BlockStack gap="200">
@@ -1526,12 +1496,10 @@ export default function PreviewField({
 
           {descriptionText}
         </BlockStack>
-      );
-
+      )
     // -------------------------------------------------------
     // PASSWORD
     // -------------------------------------------------------
-
     case "password": {
       const { minLength, maxLength } =
         getCharacterLimits(normalizedElement);
@@ -1638,7 +1606,6 @@ export default function PreviewField({
         </BlockStack>
       );
     }
-
     // -------------------------------------------------------
     // COUNTRY
     // -------------------------------------------------------
@@ -1915,38 +1882,10 @@ export default function PreviewField({
     // -------------------------------------------------------
     // DROPDOWN AND SELECT
     // -------------------------------------------------------
-
-
     case "dropdown":
     case "select": {
       // =====================================================
-      // 1. PREPARE DROPDOWN OPTIONS
-      // =====================================================
-
-      const dropdownOptions = (normalizedElement.options || []).map(
-        (option) => ({
-          label:
-            typeof option === "string"
-              ? option
-              : option.label || option.value,
-
-          value:
-            typeof option === "string"
-              ? option
-              : option.value || option.label,
-        })
-      );
-
-      // =====================================================
-      // 2. FIND CURRENTLY SELECTED OPTION
-      // =====================================================
-
-      const selectedOption = dropdownOptions.find(
-        (option) => option.value === value
-      );
-
-      // =====================================================
-      // 3. GET SELECTED ICON
+      // 1. GET SELECTED ICON
       // =====================================================
 
       const selectedIconName =
@@ -1961,27 +1900,7 @@ export default function PreviewField({
         : null;
 
       // =====================================================
-      // 4. FILTER OPTIONS FOR SEARCH
-      // =====================================================
-
-      const filteredOptions = dropdownOptions.filter((option) =>
-        String(option.label || "")
-          .toLowerCase()
-          .includes(dropdownSearch.toLowerCase())
-      );
-
-      // =====================================================
-      // 5. HANDLE OPTION SELECTION
-      // =====================================================
-
-      const handleDropdownSelect = (option) => {
-        updateValue(option.value);
-        setDropdownOpen(false);
-        setDropdownSearch("");
-      };
-
-      // =====================================================
-      // 6. FIELD LABEL WITH PROPER ICON ALIGNMENT
+      // 2. FIELD LABEL WITH PROPER ICON ALIGNMENT
       // =====================================================
 
       const dropdownLabelWithIcon = (
@@ -1995,8 +1914,6 @@ export default function PreviewField({
             minHeight: "20px",
           }}
         >
-          {/* ICON - FIXED WIDTH AND PERFECT CENTER ALIGNMENT */}
-
           {selectedIcon && (
             <span
               style={{
@@ -2012,8 +1929,6 @@ export default function PreviewField({
               <Icon source={selectedIcon} />
             </span>
           )}
-
-          {/* LABEL TEXT */}
 
           <span
             style={{
@@ -2042,14 +1957,11 @@ export default function PreviewField({
       );
 
       // =====================================================
-      // 7. RENDER DROPDOWN
+      // 3. RENDER DROPDOWN
       // =====================================================
 
       return (
         <BlockStack gap="200">
-
-          {/* FIELD LABEL */}
-
           {dropdownLabelWithIcon}
 
           <div
@@ -2058,10 +1970,7 @@ export default function PreviewField({
               width: "100%",
             }}
           >
-
-            {/* =========================================
-            DROPDOWN BUTTON
-        ========================================= */}
+            {/* DROPDOWN BUTTON */}
 
             <button
               type="button"
@@ -2111,9 +2020,7 @@ export default function PreviewField({
               </span>
             </button>
 
-            {/* =========================================
-            DROPDOWN PANEL
-        ========================================= */}
+            {/* DROPDOWN PANEL */}
 
             {!isReadOnly && (
               <div
@@ -2152,10 +2059,7 @@ export default function PreviewField({
                   pointerEvents: dropdownOpen ? "auto" : "none",
                 }}
               >
-
-                {/* =====================================
-                SEARCH BAR
-            ===================================== */}
+                {/* SEARCH BAR */}
 
                 {normalizedElement.selectWithSearch && (
                   <div
@@ -2186,9 +2090,7 @@ export default function PreviewField({
                   </div>
                 )}
 
-                {/* =====================================
-                OPTIONS LIST
-            ===================================== */}
+                {/* OPTIONS LIST */}
 
                 <div
                   style={{
@@ -2198,7 +2100,6 @@ export default function PreviewField({
                   }}
                 >
                   {filteredOptions.length > 0 ? (
-
                     filteredOptions.map((option) => {
                       const isSelected = value === option.value;
 
@@ -2227,9 +2128,6 @@ export default function PreviewField({
                             textAlign: "left",
                           }}
                         >
-
-                          {/* OPTION LABEL */}
-
                           <span
                             style={{
                               flex: 1,
@@ -2241,18 +2139,13 @@ export default function PreviewField({
                             {option.label}
                           </span>
 
-                          {/* SELECTED CHECKMARK */}
-
                           {isSelected && (
                             <Icon source={PolarisIcons.CheckIcon} />
                           )}
-
                         </button>
                       );
                     })
-
                   ) : (
-
                     <div
                       style={{
                         padding: "14px",
@@ -2267,7 +2160,6 @@ export default function PreviewField({
                         No options found.
                       </Text>
                     </div>
-
                   )}
                 </div>
               </div>
@@ -2277,96 +2169,38 @@ export default function PreviewField({
           {/* DESCRIPTION */}
 
           {descriptionText}
-
         </BlockStack>
       );
     }
-
-
     // -------------------------------------------------------
     // CHECKBOX
     // -------------------------------------------------------
-
     case "checkbox":
     case "checkboxes":
     case "checkbox_group": {
-      // 1. CHECK OTHER OPTION
-      const otherChecked = selected.includes("__other__");
+      const otherChecked = selectedValues.includes("__other__");
 
-      // 2. GET SELECTION LIMITS
-      const minSelections = Math.max(
-        0,
-        Number(normalizedElement.minSelections) || 0
-      );
-
-      const maxSelections = Math.max(
-        0,
-        Number(normalizedElement.maxSelections) || 0
-      );
-
-      // 0 means unlimited
-      const isMaxReached =
-        maxSelections > 0 && selected.length >= maxSelections;
-
-      // 3. CHECK COLUMN WIDTH
-      const columnWidth = String(normalizedElement.columnWidth);
-
-      let checkboxColumns = null;
-
-      if (columnWidth === "33") {
-        checkboxColumns = 2;
-      } else if (columnWidth === "50") {
-        checkboxColumns = 3;
-      }
-
-      // 4. FINAL CHECKBOX GRID STYLE
-      const checkboxGridStyle =
-        checkboxColumns !== null
-          ? {
-            ...choiceGridStyle,
-            display: "grid",
-            gridTemplateColumns: `repeat(${checkboxColumns}, minmax(0, 1fr))`,
-          }
-          : choiceGridStyle;
-
-      // 5. RENDER CHECKBOX GROUP
       return (
         <BlockStack gap="200">
           {fieldLabelWithIcon}
 
-          <div style={checkboxGridStyle}>
-            {options.map((option, index) => {
-              const isChecked = selected.includes(option.value);
-
-              return (
-                <Checkbox
-                  key={`${option.value}-${index}`}
-                  label={option.label}
-                  checked={isChecked}
-                  disabled={
-                    isReadOnly || (!isChecked && isMaxReached)
-                  }
-                  onChange={(checked) =>
-                    handleCheckboxChange(option.value, checked)
-                  }
-                />
-              );
-            })}
-
-            {/* OTHER CHECKBOX */}
-            {normalizedElement.otherOption && (
+          <div style={choiceGridStyle}>
+            {options.map((option) => (
               <Checkbox
-                label={normalizedElement.otherLabel || "Other"}
-                checked={otherChecked}
+                key={option.value}
+                label={option.label}
+                checked={selectedValues.includes(option.value)}
                 disabled={
-                  isReadOnly || (!otherChecked && isMaxReached)
+                  isReadOnly ||
+                  (!selectedValues.includes(option.value) && isMaxReached)
                 }
-                onChange={handleCheckboxOtherChange}
+                onChange={(checked) =>
+                  handleCheckboxChange(option.value, checked)
+                }
               />
-            )}
+            ))}
           </div>
 
-          {/* OTHER TEXT FIELD */}
           {normalizedElement.otherOption && otherChecked && (
             <TextField
               placeholder={
@@ -2374,9 +2208,7 @@ export default function PreviewField({
               }
               value={otherValue}
               disabled={isReadOnly}
-              onChange={(newValue) =>
-                handleOtherTextChange(newValue)
-              }
+              onChange={(newValue) => handleOtherTextChange(newValue)}
               autoComplete="off"
             />
           )}
@@ -2385,12 +2217,9 @@ export default function PreviewField({
         </BlockStack>
       );
     }
-
-
     // -------------------------------------------------------
     // RADIO
     // -------------------------------------------------------
-
     case "radio":
     case "radio_button":
     case "radio_group": {
@@ -2469,12 +2298,9 @@ export default function PreviewField({
         </BlockStack>
       );
     }
-
-
     // -------------------------------------------------------
     // CONSENT
     // -------------------------------------------------------
-
     case "consent":
       return (
         <BlockStack gap="200">
@@ -2493,7 +2319,7 @@ export default function PreviewField({
             checked={checked}
             disabled={isReadOnly}
             onChange={(isChecked) => {
-              setChecked(isChecked);//send data to liv e preview
+              setChecked(isChecked);
               reportChange(isChecked);
             }}
           />
@@ -2504,7 +2330,6 @@ export default function PreviewField({
     // -------------------------------------------------------
     // BUTTON
     // -------------------------------------------------------
-
     case "button": {
       const buttonSelected = Array.isArray(selected)
         ? selected
@@ -2603,12 +2428,9 @@ export default function PreviewField({
         </BlockStack>
       );
     }
-
     // -------------------------------------------------------
     // URL
     // -------------------------------------------------------
-
-
     case "url":
       if (
         normalizedElement.limitCharacters &&
@@ -2645,8 +2467,6 @@ export default function PreviewField({
     // -------------------------------------------------------
     // DATE
     // -------------------------------------------------------
-
-
     case "date": {
       return (
         <BlockStack gap="300">
@@ -2708,43 +2528,10 @@ export default function PreviewField({
         </BlockStack>
       );
     }
-
-
     // -------------------------------------------------------
     // NUMBER
     // -------------------------------------------------------
-
     case "number": {
-      const min = normalizedElement.setMinValue
-        ? Number(normalizedElement.minValue)
-        : undefined;
-
-      const max = normalizedElement.setMaxValue
-        ? Number(normalizedElement.maxValue)
-        : undefined;
-
-      const handleNumberChangeWithLimits = (nextValue) => {
-        if (nextValue === "") {
-          updateValue("");
-          setNumberError("");
-          return;
-        }
-
-        const numericValue = Number(nextValue);
-
-        if (!Number.isFinite(numericValue)) return;
-
-        if (min !== undefined && numericValue < min) {
-          updateValue(String(min));
-        } else if (max !== undefined && numericValue > max) {
-          updateValue(String(max));
-        } else {
-          updateValue(nextValue);
-        }
-
-        setNumberError("");
-      };
-
       return (
         <TextField
           {...commonTextFieldProps}
@@ -2757,49 +2544,10 @@ export default function PreviewField({
         />
       );
     }
-
     // -------------------------------------------------------
     // QUANTITY
     // -------------------------------------------------------
-
     case "quantity": {
-      const parsedMin = Number(normalizedElement.minValue);
-      const parsedMax = Number(normalizedElement.maxValue);
-
-      const min =
-        normalizedElement.setMinValue && Number.isFinite(parsedMin)
-          ? parsedMin
-          : 0;
-
-      const max =
-        normalizedElement.setMaxValue &&
-          normalizedElement.maxValue !== "" &&
-          Number.isFinite(parsedMax)
-          ? Math.max(min, parsedMax)
-          : Infinity;
-
-      const parsedValue = Number(value);
-
-      const currentValue =
-        value === "" ||
-          value === null ||
-          value === undefined ||
-          !Number.isFinite(parsedValue)
-          ? min
-          : parsedValue;
-
-      const safeValue = Math.min(max, Math.max(min, currentValue));
-
-      const decreaseValue = () => {
-        if (isReadOnly || safeValue <= min) return;
-        updateValue(String(Math.max(min, safeValue - 1)));
-      };
-
-      const increaseValue = () => {
-        if (isReadOnly || safeValue >= max) return;
-        updateValue(String(Math.min(max, safeValue + 1)));
-      };
-
       const buttonStyle = {
         all: "unset",
         width: "36px",
@@ -2855,13 +2603,13 @@ export default function PreviewField({
             <button
               type="button"
               aria-label="Decrease quantity"
-              disabled={isReadOnly || safeValue <= min}
+              disabled={isReadOnly || safeValue <= quantityMin}
               onClick={decreaseValue}
               style={{
                 ...buttonStyle,
-                color: safeValue <= min ? "#C9CCCF" : "#303030",
+                color: safeValue <= quantityMin ? "#C9CCCF" : "#303030",
                 cursor:
-                  isReadOnly || safeValue <= min
+                  isReadOnly || safeValue <= quantityMin
                     ? "not-allowed"
                     : "pointer",
               }}
@@ -2886,13 +2634,13 @@ export default function PreviewField({
             <button
               type="button"
               aria-label="Increase quantity"
-              disabled={isReadOnly || safeValue >= max}
+              disabled={isReadOnly || safeValue >= quantityMax}
               onClick={increaseValue}
               style={{
                 ...buttonStyle,
-                color: safeValue >= max ? "#C9CCCF" : "#303030",
+                color: safeValue >= quantityMax ? "#C9CCCF" : "#303030",
                 cursor:
-                  isReadOnly || safeValue >= max
+                  isReadOnly || safeValue >= quantityMax
                     ? "not-allowed"
                     : "pointer",
               }}
@@ -2905,107 +2653,25 @@ export default function PreviewField({
         </div>
       );
     }
-
     // -------------------------------------------------------
     // REPEATER
     // -------------------------------------------------------
-
     case "repeater": {
-      // ============================================================
-      // 1. MINIMUM AND MAXIMUM SETTINGS
-      // ============================================================
-
-      const parsedMin = Number(normalizedElement.minItems);
-      const parsedMax = Number(normalizedElement.maxItems);
-
-      const minItems =
-        normalizedElement.minItems !== undefined &&
-          normalizedElement.minItems !== "" &&
-          Number.isFinite(parsedMin)
-          ? Math.max(1, Math.floor(parsedMin))
-          : 1;
-
-      const maxItems =
-        normalizedElement.maxItems !== undefined &&
-          normalizedElement.maxItems !== "" &&
-          Number.isFinite(parsedMax)
-          ? Math.max(minItems, Math.floor(parsedMax))
-          : Math.max(5, minItems);
-
-      // ============================================================
-      // 2. CURRENT REPEATER VALUES
-      // ============================================================
-
-      const items = repeaterItems;
-
-      const filledItemsCount = items.filter(
-        (item) => String(item ?? "").trim() !== ""
-      ).length;
-
-      const hasMinItemsError = filledItemsCount < minItems;
-
       const addButtonText =
         normalizedElement.addButtonText || "Add more";
 
-      // ============================================================
-      // 3. ADD ITEM
-      // ============================================================
-
-      const handleAddItem = () => {
-        if (isReadOnly || items.length >= maxItems) return;
-
-        updateRepeaterValue([
-          ...items,
-          "",
-        ]);
-      };
-
-      // ============================================================
-      // 4. REMOVE ITEM
-      // ============================================================
-
-      const handleRemoveItem = (index) => {
-        if (isReadOnly || items.length <= minItems) return;
-
-        const updatedItems = items.filter(
-          (_, itemIndex) => itemIndex !== index
-        );
-
-        updateRepeaterValue(updatedItems);
-      };
-
-      // ============================================================
-      // 5. UPDATE ITEM
-      // ============================================================
-
-      const handleItemChange = (index, newValue) => {
-        if (isReadOnly) return;
-
-        const updatedItems = [...items];
-
-        updatedItems[index] = newValue;
-
-        updateRepeaterValue(updatedItems);
-      };
-
-      // ============================================================
-      // 6. RENDER
-      // ============================================================
-
       return (
         <BlockStack gap="200">
-
           {fieldLabelWithIcon}
 
           {/* Repeater input rows */}
-          {items.map((item, index) => (
+          {repeaterItems.map((item, index) => (
             <InlineStack
               key={`${normalizedElement.id}-${index}`}
               gap="200"
               blockAlign="center"
               wrap={false}
             >
-
               {/* Editable input */}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <TextField
@@ -3023,7 +2689,7 @@ export default function PreviewField({
               </div>
 
               {/* Remove button */}
-              {items.length > minItems && (
+              {repeaterItems.length > minItems && (
                 <Button
                   icon={PolarisIcons.DeleteIcon}
                   variant="tertiary"
@@ -3032,12 +2698,11 @@ export default function PreviewField({
                   onClick={() => handleRemoveItem(index)}
                 />
               )}
-
             </InlineStack>
           ))}
 
           {/* Add button */}
-          {items.length < maxItems && (
+          {repeaterItems.length < maxItems && (
             <div>
               <Button
                 variant="secondary"
@@ -3051,52 +2716,23 @@ export default function PreviewField({
           )}
 
           {/* Item count */}
-          <Text
-            as="p"
-            variant="bodySm"
-            tone="subdued"
-          >
-            {items.length} / {maxItems} items
+          <Text as="p" variant="bodySm" tone="subdued">
+            {repeaterItems.length} / {maxItems} items
           </Text>
-
-          {/* Minimum validation */}
-          {hasMinItemsError && (
-            <Text
-              as="p"
-              variant="bodySm"
-              tone="critical"
-            >
-              Minimum {minItems} items required.
-              Please enter at least {minItems} values.
-            </Text>
-          )}
 
           {/* Description */}
           {normalizedElement.description && (
-            <Text
-              as="p"
-              variant="bodySm"
-              tone="subdued"
-            >
+            <Text as="p" variant="bodySm" tone="subdued">
               {normalizedElement.description}
             </Text>
           )}
-
         </BlockStack>
       );
     }
-
     // -------------------------------------------------------
     // RATING LEVEL
     // -------------------------------------------------------
-
-
     case "rating_level": {
-      const maxLevel = Math.min(
-        10,
-        Math.max(2, Number(normalizedElement.maxLevel) || 5)
-      );
-
       return (
         <BlockStack gap="200">
           {fieldLabelWithIcon}
@@ -3107,10 +2743,7 @@ export default function PreviewField({
                 key={n}
                 type="button"
                 disabled={isReadOnly}
-                onClick={() => {
-                  setRating(n);
-                  reportChange(n);
-                }}
+                onClick={() => handleRatingChange(n)}
                 style={{
                   width: "36px",
                   height: "36px",
@@ -3140,21 +2773,10 @@ export default function PreviewField({
         </BlockStack>
       );
     }
-
-
     // -------------------------------------------------------
     // STAR RATING
     // -------------------------------------------------------
     case "rating_star": {
-      const customRatingIcon =
-        normalizedElement.useCustomRatingIcon &&
-          normalizedElement.ratingIcon
-          ? PolarisIcons[normalizedElement.ratingIcon]
-          : null;
-
-      const ratingColor =
-        normalizedElement.ratingColor || "#2E4E49";
-
       return (
         <BlockStack gap="200">
           {fieldLabelWithIcon}
@@ -3195,10 +2817,7 @@ export default function PreviewField({
                     type="button"
                     className="rating-star-button"
                     disabled={isReadOnly}
-                    onClick={() => {
-                      setRating(star);
-                      reportChange(star);
-                    }}
+                    onClick={() => handleRatingChange(star)}
                     style={{
                       "--rating-active-color": ratingColor,
                       width: "100%",
@@ -3294,65 +2913,10 @@ export default function PreviewField({
         </BlockStack>
       );
     }
-
-
     // -------------------------------------------------------
     // FEEDBACK
     // -------------------------------------------------------
-
     case "feedback": {
-      const feedbackStyles = {
-        experience: ["😡", "🙁", "😐", "🙂", "😍"],
-        satisfaction: ["😞", "😕", "😐", "😊", "🤩"],
-        agreement: ["👎", "🙅", "🤷", "👍", "💯"],
-        effort: ["😫", "😓", "😐", "😌", "💪"],
-        likelihood: ["🚫", "🙁", "🤔", "🙂", "🚀"],
-      };
-
-      const emojis =
-        feedbackStyles[normalizedElement.feedbackStyle] ||
-        feedbackStyles.experience;
-
-      const allowMultiple = Boolean(normalizedElement.allowMultiple);
-
-      const maxSelections = Number(normalizedElement.maxSelections);
-
-      const selectedValues = Array.isArray(selected)
-        ? selected
-        : selected
-          ? [selected]
-          : [];
-
-      const handleFeedbackSelection = (emoji) => {
-        if (isReadOnly) return;
-
-        const alreadySelected = selectedValues.includes(emoji);
-
-        let updatedValues;
-
-        if (allowMultiple) {
-          if (alreadySelected) {
-            updatedValues = selectedValues.filter(
-              (item) => item !== emoji
-            );
-          } else {
-            if (
-              maxSelections > 0 &&
-              selectedValues.length >= maxSelections
-            ) {
-              return;
-            }
-
-            updatedValues = [...selectedValues, emoji];
-          }
-        } else {
-          updatedValues = [emoji];
-        }
-
-        setSelected(updatedValues);
-        reportChange(updatedValues);
-      };
-
       return (
         <BlockStack gap="200">
           {fieldLabelWithIcon}
@@ -3383,7 +2947,13 @@ export default function PreviewField({
                 minWidth: 0,
               }}
             >
-              {emojis.map((emoji, index) => {
+              {feedbackEmojis.map((emoji, index) => {
+                const selectedValues = Array.isArray(selected)
+                  ? selected
+                  : selected
+                    ? [selected]
+                    : [];
+
                 const isSelected = selectedValues.includes(emoji);
 
                 return (
@@ -3435,12 +3005,10 @@ export default function PreviewField({
         </BlockStack>
       );
     }
-
     // -------------------------------------------------------
     // SIGNATURE
     // The hooks are now inside SignaturePreview.
     // -------------------------------------------------------
-
     case "signature":
       return (
         <SignaturePreview
@@ -3453,11 +3021,9 @@ export default function PreviewField({
           onChange={reportChange}
         />
       );
-
     // -------------------------------------------------------
     // HEADING
     // -------------------------------------------------------
-
     case "heading": {
       const headingConfig = {
         h1: { tag: "h1", variant: "heading2xl" },
@@ -3486,11 +3052,9 @@ export default function PreviewField({
         </BlockStack>
       );
     }
-
     // -------------------------------------------------------
     // PARAGRAPH
     // -------------------------------------------------------
-
     case "paragraph":
       return (
         <BlockStack gap="200">
@@ -3506,11 +3070,9 @@ export default function PreviewField({
           {descriptionText}
         </BlockStack>
       );
-
     // -------------------------------------------------------
     // CUSTOM HTML
     // -------------------------------------------------------
-
     case "html":
       return (
         <BlockStack gap="200">
@@ -3541,11 +3103,9 @@ export default function PreviewField({
           {descriptionText}
         </BlockStack>
       );
-
     // -------------------------------------------------------
     // DIVIDER
     // -------------------------------------------------------
-
     case "divider":
       return (
         <hr
@@ -3562,7 +3122,6 @@ export default function PreviewField({
     // -------------------------------------------------------
     // FILE UPLOAD
     // -------------------------------------------------------
-
     case "file_upload": {
       const buttonText =
         normalizedElement.buttonText || "Browse file";
@@ -3665,14 +3224,7 @@ export default function PreviewField({
                     <Button
                       variant="plain"
                       tone="critical"
-                      onClick={() => {
-                        const updatedFiles = selectedFiles.filter(
-                          (_, fileIndex) => fileIndex !== index
-                        );
-
-                        setSelectedFiles(updatedFiles);
-                        reportChange(updatedFiles);
-                      }}
+                      onClick={() => handleFileRemove(index)}
                     >
                       Remove
                     </Button>
@@ -3686,7 +3238,6 @@ export default function PreviewField({
         </BlockStack>
       );
     }
-
     // -------------------------------------------------------
     // IMAGE OPTIONS
     // -------------------------------------------------------
@@ -3696,10 +3247,11 @@ export default function PreviewField({
         Number(normalizedElement.maxImages) || 5
       );
 
-      const selectedImages = Array.isArray(imagePreview)
-        ? imagePreview
-        : imagePreview
-          ? [imagePreview]
+      // Use existing field value as the single source of truth.
+      const selectedImages = Array.isArray(value)
+        ? value
+        : value
+          ? [value]
           : [];
 
       const remainingImages = Math.max(
@@ -3771,8 +3323,7 @@ export default function PreviewField({
                             (_, imageIndex) => imageIndex !== index
                           );
 
-                          setImagePreview(updatedImages);
-                          reportChange(updatedImages);
+                          updateValue(updatedImages);
                         }}
                         style={{
                           position: "absolute",
@@ -3854,8 +3405,7 @@ export default function PreviewField({
                       ...newImages,
                     ];
 
-                    setImagePreview(updatedImages);
-                    reportChange(updatedImages);
+                    updateValue(updatedImages);
 
                     event.target.value = "";
                   }}
@@ -3877,12 +3427,9 @@ export default function PreviewField({
         </BlockStack>
       );
     }
-
-
     // -------------------------------------------------------
     // COLOR SWATCH
     // -------------------------------------------------------
-
     case "color_swatch": {
       const colors = Array.isArray(normalizedElement.colors)
         ? normalizedElement.colors
@@ -3899,10 +3446,7 @@ export default function PreviewField({
                 type="button"
                 aria-label={`Select ${color}`}
                 disabled={isReadOnly}
-                onClick={() => {
-                  setColorValue(color);
-                  reportChange(color);
-                }}
+                onClick={() => handleColorChange(color)}
                 style={{
                   width: "32px",
                   height: "32px",
@@ -3922,11 +3466,9 @@ export default function PreviewField({
         </BlockStack>
       );
     }
-
     // -------------------------------------------------------
     // COLOR PICKER
     // -------------------------------------------------------
-
     case "color_picker":
       return (
         <BlockStack gap="200">
@@ -3939,10 +3481,7 @@ export default function PreviewField({
             <ColorInput
               label={hideLabel ? "" : label}
               value={colorValue}
-              onChange={(newColor) => {
-                setColorValue(newColor);
-                reportChange(newColor);
-              }}
+              onChange={handleColorChange}
             />
           </div>
 
@@ -3952,7 +3491,6 @@ export default function PreviewField({
     // -------------------------------------------------------
     // FORM HEADER
     // -------------------------------------------------------
-
     case "form_header": {
       const headingConfig = {
         h1: { tag: "h1", fontSize: 36 },
@@ -4019,12 +3557,9 @@ export default function PreviewField({
         </div>
       );
     }
-
     // -------------------------------------------------------
     // FORM FOOTER
     // -------------------------------------------------------
-
-
     case "form_footer":
       console.log("footer nav", {
         isReadOnly,
@@ -4229,7 +3764,6 @@ export default function PreviewField({
     // -------------------------------------------------------
     // HIDDEN FIELD
     // -------------------------------------------------------
-
     case "hidden":
       return (
         <div
@@ -4266,46 +3800,30 @@ export default function PreviewField({
           </Text>
         </div>
       );
-
     // -------------------------------------------------------
     // RANGE SLIDER
     // -------------------------------------------------------
     case "range_slider": {
-      const min = Number(normalizedElement.min ?? 0);
-      const max = Number(normalizedElement.max ?? 100);
-      const step = Math.max(
-        0.000001,
-        Number(normalizedElement.step) || 1
-      );
-
-      const currentRangeValue = Math.min(
-        max,
-        Math.max(min, rangeValue)
-      );
-
       return (
         <BlockStack gap="200">
           {fieldLabelWithIcon}
 
           <input
             type="range"
-            min={min}
-            max={max}
-            step={step}
-            value={currentRangeValue}
+            min={rangeMin}
+            max={rangeMax}
+            step={rangeStep}
+            value={rangeValue}
             disabled={isReadOnly}
             onChange={(event) => {
-              const newValue = Number(event.target.value);
-
-              setRangeValue(newValue);
-              reportChange(newValue);
+              handleRangeChange(event.target.value);
             }}
             style={{ width: "100%" }}
           />
 
           {normalizedElement.showRangeValue !== false && (
             <Text as="p" variant="bodySm">
-              {currentRangeValue}
+              {rangeValue}
             </Text>
           )}
 
@@ -4316,93 +3834,7 @@ export default function PreviewField({
     // -------------------------------------------------------
     // MATRIX
     // -------------------------------------------------------
-
     case "matrix": {
-      const normalizeMatrixItems = (list, fallback, prefix) => {
-        const source = Array.isArray(list) && list.length
-          ? list
-          : fallback;
-
-        return source.map((item, index) => {
-          if (typeof item === "string") {
-            return {
-              label: item,
-              value: item,
-            };
-          }
-
-          return {
-            label: item?.label ?? `${prefix} ${index + 1}`,
-            value: item?.value ?? item?.label ?? `${prefix} ${index + 1}`,
-          };
-        });
-      };
-
-      // New settings names with backward compatibility
-      const matrixQuestions = normalizeMatrixItems(
-        normalizedElement.questions ?? normalizedElement.rows,
-        [
-          "How likely are you to watch movies?",
-          "How likely are you to listen to music?",
-        ],
-        "Question"
-      );
-
-      const matrixAnswers = normalizeMatrixItems(
-        normalizedElement.answers ?? normalizedElement.columns,
-        ["Rarely", "Seldom", "Often", "Always"],
-        "Answer"
-      );
-
-      const allowMultiple = Boolean(normalizedElement.allowMultiple);
-
-      const selectedValues = Array.isArray(selected)
-        ? selected
-        : selected
-          ? [selected]
-          : [];
-
-      const getQuestionPrefix = (question) =>
-        `${question.value}::`;
-
-      const getAnswerValue = (question, answer) =>
-        `${question.value}::${answer.value}`;
-
-      const isAnswerSelected = (question, answer) =>
-        selectedValues.includes(getAnswerValue(question, answer));
-
-      const handleMatrixSelection = (question, answer) => {
-        if (isReadOnly) return;
-
-        const questionPrefix = getQuestionPrefix(question);
-        const answerValue = getAnswerValue(question, answer);
-
-        let updatedValues;
-
-        const alreadySelected = selectedValues.includes(answerValue);
-
-        if (allowMultiple) {
-          if (alreadySelected) {
-            updatedValues = selectedValues.filter(
-              (item) => item !== answerValue
-            );
-          } else {
-            updatedValues = [...selectedValues, answerValue];
-          }
-        } else {
-          updatedValues = [
-            ...selectedValues.filter(
-              (item) =>
-                !String(item).startsWith(questionPrefix)
-            ),
-            answerValue,
-          ];
-        }
-
-        setSelected(updatedValues);
-        reportChange(updatedValues);
-      };
-
       return (
         <BlockStack gap="200">
           {fieldLabelWithIcon}
@@ -4476,9 +3908,7 @@ export default function PreviewField({
                           ? "1px solid #E1E3E5"
                           : "none",
                       background:
-                        questionIndex % 2 === 0
-                          ? "#FFFFFF"
-                          : "#FAFAFA",
+                        questionIndex % 2 === 0 ? "#FFFFFF" : "#FAFAFA",
                     }}
                   >
                     <th
@@ -4495,10 +3925,7 @@ export default function PreviewField({
                     </th>
 
                     {matrixAnswers.map((answer, answerIndex) => {
-                      const checked = isAnswerSelected(
-                        question,
-                        answer
-                      );
+                      const checked = isAnswerSelected(question, answer);
 
                       return (
                         <td
@@ -4510,15 +3937,13 @@ export default function PreviewField({
                           }}
                         >
                           <input
-                            type={allowMultiple ? "checkbox" : "radio"}
-                            name={
-                              `matrix-${normalizedElement.id || "field"}-${questionIndex}`
-                            }
+                            type={matrixAllowMultiple ? "checkbox" : "radio"}
+                            name={`matrix-${normalizedElement.id || "field"}-${questionIndex}`}
                             value={answer.value}
                             checked={checked}
                             disabled={isReadOnly}
                             required={
-                              !allowMultiple &&
+                              !matrixAllowMultiple &&
                               Boolean(required) &&
                               matrixAnswers.length > 0
                             }
@@ -4531,9 +3956,7 @@ export default function PreviewField({
                               height: "17px",
                               margin: 0,
                               accentColor: "#303030",
-                              cursor: isReadOnly
-                                ? "default"
-                                : "pointer",
+                              cursor: isReadOnly ? "default" : "pointer",
                               verticalAlign: "middle",
                             }}
                           />
@@ -4553,7 +3976,6 @@ export default function PreviewField({
     // -------------------------------------------------------
     // SWITCH
     // -------------------------------------------------------
-
     case "switch":
       return (
         <BlockStack gap="200">
@@ -4565,15 +3987,8 @@ export default function PreviewField({
               role="switch"
               aria-checked={switchValue}
               disabled={isReadOnly}
-              onClick={() => {
-                setSwitchValue((previous) => {
-                  const nextValue = !previous;
-                  reportChange(nextValue);
-                  return nextValue;
-                });
-              }}
-              className={`preview-switch ${switchValue ? "is-on" : "is-off"
-                }`}
+              onClick={handleSwitchChange}
+              className={`preview-switch ${switchValue ? "is-on" : "is-off"}`}
             >
               <span className="preview-switch__thumb" />
             </button>
@@ -4589,23 +4004,11 @@ export default function PreviewField({
         </BlockStack>
       );
 
-    // -------------------------------------------------------
     // IMAGE DROPDOWN
     // -------------------------------------------------------
-
     case "image_dropdown": {
-      const imageOptions = rawOptions.filter(
-        (option) =>
-          typeof option === "object" && option?.image
-      );
-
       const showOptionLabel =
         normalizedElement.showOptionLabel !== false;
-
-      const selectedImageOption = imageOptions.find(
-        (option) =>
-          (option.value || option.label) === value
-      );
 
       return (
         <BlockStack gap="200">
@@ -4627,6 +4030,7 @@ export default function PreviewField({
             }}
           >
             {/* DROPDOWN BUTTON */}
+
             <button
               type="button"
               disabled={isReadOnly}
@@ -4664,6 +4068,7 @@ export default function PreviewField({
             </button>
 
             {/* DROPDOWN OPTIONS */}
+
             {imageDropdownOpen && (
               <div
                 style={{
@@ -4694,12 +4099,9 @@ export default function PreviewField({
                   return (
                     <div
                       key={option.id || optionValue || index}
-                      onClick={() => {
-                        if (!isReadOnly) {
-                          updateValue(optionValue);
-                          setImageDropdownOpen(false);
-                        }
-                      }}
+                      onClick={() =>
+                        handleImageDropdownSelect(option)
+                      }
                       style={{
                         cursor: isReadOnly ? "default" : "pointer",
                         padding: "6px",
@@ -4717,7 +4119,19 @@ export default function PreviewField({
                     >
                       <img
                         src={option.image}
-                        alt={option.label || ""}
+                        alt={option.label || "Option"}
+                        onError={(event) => {
+                          console.log("IMAGE FAILED:", {
+                            label: option.label,
+                            image: option.image,
+                            option,
+                          });
+
+                          event.currentTarget.style.display = "none";
+                        }}
+                        onLoad={() => {
+                          console.log("IMAGE LOADED:", option.image);
+                        }}
                         style={{
                           width: "100%",
                           height: "75px",
@@ -4750,36 +4164,16 @@ export default function PreviewField({
               </div>
             )}
           </div>
+
+          {descriptionText}
         </BlockStack>
       );
     }
-
     // -------------------------------------------------------
     // PRODUCT
     // -------------------------------------------------------
-
-
     case "product": {
-      const selectedProductIds = Array.isArray(
-        normalizedElement.selectedProductIds
-      )
-        ? normalizedElement.selectedProductIds
-        : [];
-
-      const selectedProducts = products.filter((product) =>
-        selectedProductIds.includes(product.id)
-      );
-
       const isList = normalizedElement.productLayout === "list";
-      const showSearch = normalizedElement.showSearchBar !== false;
-
-      const filteredProducts = showSearch
-        ? selectedProducts.filter((product) =>
-          (product.title || "")
-            .toLowerCase()
-            .includes(String(value || "").toLowerCase())
-        )
-        : selectedProducts;
 
       return (
         <BlockStack gap="300">
@@ -4834,23 +4228,7 @@ export default function PreviewField({
                         key={product.id}
                         onClick={() => {
                           if (isReadOnly) return;
-
-                          let nextSelected;
-
-                          if (normalizedElement.allowMultiple) {
-                            nextSelected = isSelected
-                              ? selected.filter(
-                                (id) => id !== product.id
-                              )
-                              : [...selected, product.id];
-                          } else {
-                            nextSelected = isSelected
-                              ? []
-                              : [product.id];
-                          }
-
-                          setSelected(nextSelected);
-                          reportChange(nextSelected);
+                          handleProductSelect(product);
                         }}
                         style={{
                           display: isList ? "flex" : "block",
@@ -4916,7 +4294,11 @@ export default function PreviewField({
                           </Text>
 
                           {product.description && (
-                            <Text as="p" variant="bodySm" tone="subdued">
+                            <Text
+                              as="p"
+                              variant="bodySm"
+                              tone="subdued"
+                            >
                               {product.description
                                 .trim()
                                 .split(/\s+/)
@@ -4953,14 +4335,6 @@ export default function PreviewField({
     }
     //text
     case "text": {
-      const maxLength = Number(normalizedElement.maxLength ?? 100);
-
-      const hasCharacterLimit =
-        normalizedElement.enableCharacterLimit === true;
-
-      const numbersOnly = normalizedElement.numbersOnly === true;
-      const nameValidation = normalizedElement.nameValidation === true;
-
       return (
         <BlockStack gap="200">
           {fieldLabelWithIcon}
@@ -4971,63 +4345,18 @@ export default function PreviewField({
             disabled={isReadOnly}
             autoComplete="off"
             maxLength={
-              hasCharacterLimit && maxLength > 0
-                ? maxLength
+              textFieldHasCharacterLimit && textFieldMaxLength > 0
+                ? textFieldMaxLength
                 : undefined
             }
-
-
-            onChange={(newValue) => {
-              let updatedValue = newValue;
-
-              // Numbers only
-              if (numbersOnly) {
-                updatedValue = updatedValue.replace(/[^0-9]/g, "");
-              }
-
-              // Name validation
-              if (nameValidation) {
-                updatedValue = updatedValue.replace(
-                  /[^a-zA-Z\s'-]/g,
-                  ""
-                );
-              }
-
-              // Maximum character limit
-              if (hasCharacterLimit && maxLength > 0) {
-                updatedValue = updatedValue.slice(0, maxLength);
-              }
-
-              setValue(updatedValue);
-              reportChange(updatedValue);
-            }}
+            onChange={handleTextChange}
           />
 
           {descriptionText}
         </BlockStack>
       );
     }
-    //textaera 
     case "textarea": {
-      const minCharacters = Number(
-        normalizedElement.minCharacters || 0
-      );
-
-      const maxCharacters = Number(
-        normalizedElement.maxCharacters || 0
-      );
-
-      const hasCharacterLimit =
-        normalizedElement.limitCharacters === true;
-
-      const characterCount = (value || "").length;
-
-      // const minError =
-      //   hasCharacterLimit &&
-      //   minCharacters > 0 &&
-      //   characterCount > 0 &&
-      //   characterCount < minCharacters;
-
       return (
         <BlockStack gap="200">
           {fieldLabelWithIcon}
@@ -5039,41 +4368,18 @@ export default function PreviewField({
             disabled={isReadOnly}
             autoComplete="off"
             maxLength={
-              hasCharacterLimit && maxCharacters > 0
-                ? maxCharacters
+              textFieldHasCharacterLimit && textFieldMaxLength > 0
+                ? textFieldMaxLength
                 : undefined
             }
-
-            // error={
-            //   minError
-            //     ? `Please enter at least ${minCharacters} characters.`
-            //     : undefined
-            // }
-
-            onChange={(newValue) => {
-              let updatedValue = newValue;
-
-              // Maximum character limit
-              if (
-                hasCharacterLimit &&
-                maxCharacters > 0
-              ) {
-                updatedValue = updatedValue.slice(
-                  0,
-                  maxCharacters
-                );
-              }
-
-              setValue(updatedValue);
-              reportChange(updatedValue);
-            }}
+            onChange={handleTextChange}
           />
 
-          {hasCharacterLimit && (
+          {textFieldHasCharacterLimit && (
             <Text as="p" variant="bodySm" tone="subdued">
               {characterCount}
-              {maxCharacters > 0
-                ? ` / ${maxCharacters}`
+              {textFieldMaxLength > 0
+                ? ` / ${textFieldMaxLength}`
                 : " characters"}
             </Text>
           )}
@@ -5082,12 +4388,9 @@ export default function PreviewField({
         </BlockStack>
       );
     }
-
-
     // -------------------------------------------------------
     // DEFAULT FIELD
     // -------------------------------------------------------
-
     default:
       return (
         <TextField

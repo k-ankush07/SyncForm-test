@@ -4,7 +4,8 @@ import { useState, useRef, useCallback, useEffect } from "react";
 export default function useFileField({
   savedValue,
   normalizedElement = {},
-  reportChange 
+  reportChange ,
+  
 }) {
   const fieldId = normalizedElement.id;
 
