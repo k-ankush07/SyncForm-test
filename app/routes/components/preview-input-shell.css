@@ -1,8 +1,7 @@
 
 /* =========================================
-   PREVIEW INPUT SHELL
+   PREVIEW INPUT SHELL => outer componet for all the fild elemnst text name email password url and number and dropdown and country phone 
 ========================================= */
-
 .preview-input-shell-wrapper {
   width: 100%;
   min-width: 0;
@@ -144,7 +143,7 @@
 /* READ ONLY */
 
 .preview-text-input[readonly] {
-  cursor: default;
+  cursor: pointer;
 }
 
 /* SUFFIX */

@@ -1,7 +1,5 @@
 
 import React from "react";
-import "./preview-text-input.css";
-
 function PreviewTextInput({
   value = "",
   onChange,

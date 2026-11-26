@@ -15,7 +15,7 @@ import {
   Button,
   BlockStack,
 } from "@shopify/polaris";
-
+import "./preview-input-shell.css";
 import createDOMPurify from "dompurify";
 import ColorInput from "../components/RichTextEditor/ColorInput.jsx";
 import { countries } from "../components/elementsettings/utils/countries.js";
@@ -276,8 +276,6 @@ function PreviewInputShell({
     </div>
   );
 }
-
-
 
 // =============================================================
 // 3. MAIN PREVIEW FIELD COMPONENT
