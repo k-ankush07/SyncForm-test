@@ -16,6 +16,7 @@ import {
   BlockStack,
 } from "@shopify/polaris";
 import "./preview-input-shell.css";
+import "./preview-choice-shell.css";
 import createDOMPurify from "dompurify";
 import ColorInput from "../components/RichTextEditor/ColorInput.jsx";
 import { countries } from "../components/elementsettings/utils/countries.js";
@@ -276,6 +277,54 @@ function PreviewInputShell({
     </div>
   );
 }
+// one common for the checkbox and radio 
+function PreviewChoiceShell({
+  label,
+  required,
+  hideLabel = false,
+  description,
+  children,
+  className = "",
+  style = {},
+  optionsStyle = {},
+  labelStyle = {},
+  labelVariant = "bodyMd",
+}) {
+  return (
+    <div
+      className={`preview-choice-shell-wrapper ${className}`}
+      style={style}
+    >
+      {!hideLabel && label && (
+        <div className="preview-choice-shell__label">
+          <Text as="label" variant={labelVariant}>
+            <span style={labelStyle}>{label}</span>
+          </Text>
+
+          {required && (
+            <span className="preview-choice-shell__required">
+              *
+            </span>
+          )}
+        </div>
+      )}
+
+      <div
+        className="preview-choice-shell__options"
+        style={optionsStyle}
+      >
+        {/* // we can easily customise the style later */}
+        {children}
+      </div>
+
+      {description && (
+        <div className="preview-choice-shell__description">
+          {description}
+        </div>
+      )}
+    </div>
+  );
+}
 
 // =============================================================
 // 3. MAIN PREVIEW FIELD COMPONENT
@@ -414,9 +463,7 @@ export default function PreviewField({
     enableSelection: usesSelection,
   });
 
-
   const {
-    // Choice
     options,
     selectedValues,
     optionsPerLine,
@@ -430,8 +477,8 @@ export default function PreviewField({
     handleCheckboxOtherChange,
     handleRadioOtherChange,
     handleOtherTextChange,
+    handleButtonChange,
 
-    // Matrix
     matrixQuestions,
     matrixAnswers,
     matrixAllowMultiple,
@@ -439,7 +486,6 @@ export default function PreviewField({
     isAnswerSelected,
     handleMatrixSelection,
 
-    // Feedback
     feedbackEmojis,
     feedbackAllowMultiple,
     handleFeedbackSelection,
@@ -866,6 +912,7 @@ export default function PreviewField({
               label={normalizedElement.confirmEmailLabel || "Confirm email"}
               required={required}
               icon={selectedIcon}
+              hideLabel={hideLabel}
               description={
                 normalizedElement.confirmEmailDescription || undefined
               }
@@ -1781,27 +1828,62 @@ export default function PreviewField({
     case "checkboxes":
     case "checkbox_group": {
       return (
-        <BlockStack gap="200">
-          {fieldLabelWithIcon}
+        <PreviewChoiceShell
+          label={label}
+          required={required}
+          hideLabel={hideLabel}
+          description={descriptionText}
+          optionsStyle={checkboxGridStyle}
+        >
+          {/* NORMAL CHECKBOX OPTIONS */}
+          {options.map((option) => {
+            const isChecked = selectedValues.includes(option.value);
 
-          <div style={checkboxGridStyle}>
-            {options.map((option) => {
-              const isChecked = selectedValues.includes(option.value);
-
-              return (
-                <Checkbox
-                  key={option.value}
-                  label={option.label}
+            return (
+              <label
+                key={option.value}
+                className="preview-choice-checkbox"
+              >
+                <input
+                  type="checkbox"
+                  value={option.value}
                   checked={isChecked}
-                  disabled={isReadOnly || (!isChecked && isMaxReached)}
-                  onChange={(checked) =>
-                    handleCheckboxChange(option.value, checked)
+                  disabled={
+                    isReadOnly || (!isChecked && isMaxReached)
+                  }
+                  onChange={(event) =>
+                    handleCheckboxChange(
+                      option.value,
+                      event.target.checked
+                    )
                   }
                 />
-              );
-            })}
-          </div>
 
+                <span>{option.label}</span>
+              </label>
+            );
+          })}
+
+          {/* OTHER CHECKBOX */}
+          {normalizedElement.otherOption && (
+            <label className="preview-choice-checkbox">
+              <input
+                type="checkbox"
+                value="__other__"
+                checked={otherChecked}
+                disabled={
+                  isReadOnly || (!otherChecked && isMaxReached)
+                }
+                onChange={(event) =>
+                  handleCheckboxOtherChange(event.target.checked)
+                }
+              />
+
+              <span>{normalizedElement.otherLabel || "Other"}</span>
+            </label>
+          )}
+
+          {/* OTHER TEXT FIELD */}
           {normalizedElement.otherOption && otherChecked && (
             <TextField
               placeholder={
@@ -1809,13 +1891,13 @@ export default function PreviewField({
               }
               value={otherValue}
               disabled={isReadOnly}
-              onChange={(newValue) => handleOtherTextChange(newValue)}
+              onChange={(newValue) =>
+                handleOtherTextChange(newValue)
+              }
               autoComplete="off"
             />
           )}
-
-          {descriptionText}
-        </BlockStack>
+        </PreviewChoiceShell>
       );
     }
     // RADIO
@@ -1824,58 +1906,58 @@ export default function PreviewField({
     case "radio_button":
     case "radio_group": {
       return (
-        <BlockStack gap="200">
-          {fieldLabelWithIcon}
+        <PreviewChoiceShell
+          label={label}
+          required={required}
+          hideLabel={hideLabel}
+          description={descriptionText}
+          optionsStyle={choiceGridStyle}
+        >
+          {options.map((option) => (
+            <label
+              key={option.value}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                cursor: isReadOnly ? "default" : "pointer",
+              }}
+            >
+              <input
+                type="radio"
+                name={`radio-${normalizedElement.id}`}
+                value={option.value}
+                checked={selectedValues[0] === option.value}
+                disabled={isReadOnly}
+                onChange={() => handleRadioChange(option.value)}
+              />
 
-          <div style={choiceGridStyle}>
-            {options.map((option) => (
-              <label
-                key={option.value}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  cursor: isReadOnly ? "default" : "pointer",
-                }}
-              >
-                <input
-                  type="radio"
-                  name={`radio-${normalizedElement.id}`}
-                  value={option.value}
-                  checked={selectedValues[0] === option.value}
-                  disabled={isReadOnly}
-                  onChange={() => handleRadioChange(option.value)}
-                />
+              <span>{option.label}</span>
+            </label>
+          ))}
 
-                <span>{option.label}</span>
-              </label>
-            ))}
+          {/* OTHER RADIO */}
+          {normalizedElement.otherOption && (
+            <label
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                cursor: isReadOnly ? "default" : "pointer",
+              }}
+            >
+              <input
+                type="radio"
+                name={`radio-${normalizedElement.id}`}
+                value="__other__"
+                checked={otherChecked}
+                disabled={isReadOnly}
+                onChange={handleRadioOtherChange}
+              />
 
-            {/* OTHER RADIO */}
-            {normalizedElement.otherOption && (
-              <label
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  cursor: isReadOnly ? "default" : "pointer",
-                }}
-              >
-                <input
-                  type="radio"
-                  name={`radio-${normalizedElement.id}`}
-                  value="__other__"
-                  checked={otherChecked}
-                  disabled={isReadOnly}
-                  onChange={handleRadioOtherChange}
-                />
-
-                <span>
-                  {normalizedElement.otherLabel || "Other"}
-                </span>
-              </label>
-            )}
-          </div>
+              <span>{normalizedElement.otherLabel || "Other"}</span>
+            </label>
+          )}
 
           {/* OTHER TEXT FIELD */}
           {normalizedElement.otherOption && otherChecked && (
@@ -1891,9 +1973,7 @@ export default function PreviewField({
               autoComplete="off"
             />
           )}
-
-          {descriptionText}
-        </BlockStack>
+        </PreviewChoiceShell>
       );
     }
     // -------------------------------------------------------
@@ -1929,64 +2009,15 @@ export default function PreviewField({
     // BUTTON
     // -------------------------------------------------------
     case "button": {
-      const buttonSelected = Array.isArray(selected)
-        ? selected
-        : selected
-          ? [selected]
-          : [];
-
-      const otherChecked = buttonSelected.includes("__other__");
-
-      const max = Number(normalizedElement.maxSelections ?? 10);
-
-      const limitEnabled =
-        normalizedElement.multipleOptions &&
-        normalizedElement.limitSelections;
-
-      const handleButtonClick = (optionValue) => {
-        let updated;
-
-        if (normalizedElement.multipleOptions) {
-          if (buttonSelected.includes(optionValue)) {
-            updated = buttonSelected.filter(
-              (item) => item !== optionValue
-            );
-          } else {
-            if (limitEnabled && buttonSelected.length >= max) {
-              return;
-            }
-
-            updated = [...buttonSelected, optionValue];
-          }
-        } else {
-          updated = [optionValue];
-        }
-
-        setSelected(updated);
-
-        if (updated.includes("__other__")) {
-          reportChange({
-            value: updated,
-            otherValue: otherValue,
-          });
-        } else {
-          reportChange(updated);
-        }
-
-        if (!updated.includes("__other__")) {
-          setOtherValue("");
-        }
-      };
-
       return (
         <BlockStack gap="200">
           <InlineStack gap="200" align="center">
             {(normalizedElement.options || []).map((option, index) => (
               <Button
                 key={option.id || index}
-                pressed={buttonSelected.includes(option.value)}
+                pressed={selectedValues.includes(option.value)}
                 disabled={isReadOnly}
-                onClick={() => handleButtonClick(option.value)}
+                onClick={() => handleButtonChange(option.value)}
               >
                 {option.label}
               </Button>
@@ -1996,7 +2027,7 @@ export default function PreviewField({
               <Button
                 pressed={otherChecked}
                 disabled={isReadOnly}
-                onClick={() => handleButtonClick("__other__")}
+                onClick={() => handleButtonChange("__other__")}
               >
                 {normalizedElement.otherLabel || "Other"}
               </Button>
@@ -2010,14 +2041,7 @@ export default function PreviewField({
               }
               value={otherValue}
               disabled={isReadOnly}
-              onChange={(newValue) => {
-                setOtherValue(newValue);
-
-                reportChange({
-                  value: buttonSelected,
-                  otherValue: newValue,
-                });
-              }}
+              onChange={handleOtherTextChange}
               autoComplete="off"
             />
           )}
@@ -2029,7 +2053,6 @@ export default function PreviewField({
     // -------------------------------------------------------
     // URL
     // -------------------------------------------------------
-
     case "url": {
       const { maxLength } =
         getCharacterLimits(normalizedElement);
@@ -2064,7 +2087,6 @@ export default function PreviewField({
         </PreviewInputShell>
       );
     }
-
     // -------------------------------------------------------
     // DATE
     // -------------------------------------------------------
@@ -2131,8 +2153,7 @@ export default function PreviewField({
     }
     // -------------------------------------------------------
     // NUMBER
-    // -------------------------------------------------------
-
+    // ------------------------------------------------------
     case "number": {
       const { minLength, maxLength } =
         getCharacterLimits(normalizedElement);
@@ -2161,7 +2182,6 @@ export default function PreviewField({
         </PreviewInputShell>
       );
     }
-
     // -------------------------------------------------------
     // QUANTITY
     // -------------------------------------------------------

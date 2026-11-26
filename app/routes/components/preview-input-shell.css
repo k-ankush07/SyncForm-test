@@ -1,7 +1,10 @@
 
 /* =========================================
-   PREVIEW INPUT SHELL => outer componet for all the fild elemnst text name email password url and number and dropdown and country phone 
+   PREVIEW INPUT SHELL
+   Shared outer design for all field types 
+   phone email password url name and text and number
 ========================================= */
+
 .preview-input-shell-wrapper {
   width: 100%;
   min-width: 0;
@@ -13,16 +16,18 @@
 /* LABEL */
 
 .preview-input-shell__label {
-  margin: 0 0 8px;
+  margin: 0 0 4px;
   padding: 0;
   line-height: 20px;
 }
 
 .preview-input-shell__required {
-  color: var(--p-color-text-critical);
+  color: #000000;
+  font-weight: 400;
+  margin-left: 3px;
 }
 
-/* MAIN INPUT CONTAINER */
+/* MAIN FIELD CONTAINER */
 
 .preview-input-shell {
   display: flex;
@@ -30,32 +35,56 @@
   width: 100%;
   min-width: 0;
   height: 40px;
+  margin: 0;
+  padding: 0;
   background: #F6F6F7;
+  border: none;
   border-radius: 8px;
   overflow: hidden;
   box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+}
+
+.preview-input-shell:hover{
+   cursor: grabbing !important;
+}
+
+.preview-input-shell,
+.preview-input-shell:focus-within {
+  outline: none;
+  box-shadow: none;
 }
 
 /* ICON SECTION */
 
 .preview-input-shell__icon {
+  display: flex;
   flex: 0 0 42px;
+  align-items: center;
+  justify-content: center;
   width: 42px;
   min-width: 42px;
   height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #E8E8E9;
-  border-right: 1px solid #D8DADD;
-  box-sizing: border-box;
   margin: 0;
   padding: 0;
+    color: #B6B6B6;
+  background: #F1F1F1;
+  border-right: 1px solid #D8DADD;
+  box-sizing: border-box;
 }
 
-/* INPUT CONTENT */
+/* LEADING CONTENT - PHONE COUNTRY SELECTOR */
+
+.preview-input-shell__leading {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  height: 40px;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: none;
+  box-sizing: border-box;
+}
 
 .preview-input-shell__content {
   flex: 1 1 auto;
@@ -105,19 +134,16 @@
   width: 100%;
   min-width: 0;
   height: 100%;
+  margin: 0;
   padding: 8px 12px;
-  border: none;
-  outline: none;
-  background: transparent;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  background: #F1F1F1;
   font-size: 14px;
   font-family: inherit;
   color: inherit;
   box-sizing: border-box;
-}
-.preview-input-shell__required {
-  color: #000000 !important;
-  font-weight: 400;
-  margin-left: 3px;
 }
 
 /* PLACEHOLDER */
@@ -127,20 +153,19 @@
   opacity: 1;
 }
 
-/* FOCUS */
+/* INPUT STATES */
 
-.preview-text-input:focus {
-  outline: none;
+.preview-text-input:focus,
+.preview-text-input:focus-visible,
+.preview-text-input:active {
+  outline: none !important;
+  box-shadow: none !important;
 }
-
-/* DISABLED */
 
 .preview-text-input:disabled {
   cursor: not-allowed;
   opacity: 0.6;
 }
-
-/* READ ONLY */
 
 .preview-text-input[readonly] {
   cursor: pointer;
@@ -149,11 +174,13 @@
 /* SUFFIX */
 
 .preview-text-input__suffix {
-  flex-shrink: 0;
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
+  background-color: #f1f1f1;
   height: 100%;
+  margin: 0;
   padding: 0 12px;
   box-sizing: border-box;
 }
@@ -161,48 +188,17 @@
 /* ERROR */
 
 .preview-text-input__error {
+  margin: 4px 0 0;
+  padding: 0;
   color: var(--p-color-text-critical);
   font-size: 12px;
   line-height: 16px;
-  margin: 4px 0 0;
-  padding: 0;
-}
-/* Remove browser default outline */
-.preview-text-input,
-.preview-text-input:focus,
-.preview-text-input:focus-visible,
-.preview-text-input:active {
-  outline: none !important;
-  box-shadow: none !important;
-  border: none !important;
 }
 
-/* Remove focus styling from shell */
-.preview-input-shell,
-.preview-input-shell:focus-within {
-  outline: none !important;
-  box-shadow: none !important;
-  border: none !important;
-}
-/* small css foe the phone  */
-.preview-input-shell__leading {
-  flex: 0 0 auto;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  background: transparent;
-  border-right: 1px solid #D8DADD;
-  box-sizing: border-box;
-    border-right: none !important;
-}
-.preview-input-shell__leading .phone-country-selector {
-  height: 40px;
-  border-right: none;
-}
+/* =========================================
+   PHONE COUNTRY SELECTOR
+========================================= */
 
-.preview-input-shell__leading {
-  border-right: none;
-}
 .phone-country-selector {
   position: relative;
   flex-shrink: 0;
@@ -211,36 +207,51 @@
 }
 
 .phone-country-selector__button {
-  height: 40px;
-  min-width: 80px;
-  padding: 0 10px;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
+  height: 40px;
+  min-width: 80px;
+  margin: 0;
+  padding: 0 10px;
   background: transparent;
   border: none;
+  border-right: none;
   border-radius: 0;
   cursor: pointer;
   box-sizing: border-box;
 }
+.preview-input-shell__leading {
+  border-right: none !important;
+}
+.phone-country-selector__button {
+  border-right: none !important;
+}
 
-/* PASSWORD VISIBILITY BUTTON */
+/* =========================================
+   PASSWORD VISIBILITY BUTTON
+========================================= */
+
 .password-visibility-button {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
   width: 40px;
   height: 40px;
+  margin: 0;
   padding: 0;
-  background: #F6F6F7;
+  background: #f1f1f1;
   border: none;
   border-radius: 6px;
-
   color: #303030;
   cursor: pointer;
   box-sizing: border-box;
+}
+
+.password-visibility-button:hover {
+  background: #f1f1f1;
 }
 
 .password-visibility-button:disabled {

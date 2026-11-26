@@ -1335,7 +1335,7 @@ export default function LivePreview({
                     ========================================= */}
 
                     <PreviewRootDropArea pageId={page.id}>
-                      <BlockStack gap="">
+                      <BlockStack >
 
                         {/* =========================================
                             ROWS
@@ -1419,7 +1419,7 @@ export default function LivePreview({
                             a row position. They remain full width.
                         ========================================= */}
 
-                        <BlockStack gap="300">
+                        <BlockStack gap="100">
                           {(page.rootElements ?? [])
                             .filter((element) => {
                               if (!shouldRenderElement(element)) {

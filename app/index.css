@@ -652,7 +652,7 @@
 .preview-root-drop-area>.Polaris-BlockStack>.preview-element {
   width: 100%;
   min-width: 0;
-  
+
 }
 
 /* Small screens: keep elements in one row */
@@ -2393,6 +2393,9 @@
 .live-drag-preview {
   display: flex;
   align-items: center;
+  width: 250px;
+  max-width: 100%;
+  box-sizing: border-box;
   gap: 10px;
   min-width: 170px;
   padding: 12px 14px;
@@ -2422,4 +2425,3 @@
 }
 
 /* //end */
-

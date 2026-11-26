@@ -406,6 +406,64 @@ const otherChecked = selectedValues.includes("__other__");
       reportChange,
     ]
   );
+  // ===========================================================
+// 7.5 BUTTON FIELD HANDLER
+// ===========================================================
+
+const handleButtonChange = useCallback(
+  (optionValue) => {
+    if (isReadOnly) return;
+
+    let updated;
+
+    if (normalizedElement.multipleOptions) {
+      if (selectedValues.includes(optionValue)) {
+        updated = selectedValues.filter(
+          (item) => item !== optionValue
+        );
+      } else {
+        const limitEnabled =
+          normalizedElement.multipleOptions &&
+          normalizedElement.limitSelections;
+
+        const max = Number(
+          normalizedElement.maxSelections ?? 10
+        );
+
+        if (limitEnabled && selectedValues.length >= max) {
+          return;
+        }
+
+        updated = [...selectedValues, optionValue];
+      }
+    } else {
+      updated = [optionValue];
+    }
+
+    setSelected(updated);
+
+    if (updated.includes("__other__")) {
+      reportChange({
+        value: updated,
+        otherValue,
+      });
+    } else {
+      reportChange(updated);
+      setOtherValue("");
+    }
+  },
+  [
+    isReadOnly,
+    normalizedElement.multipleOptions,
+    normalizedElement.limitSelections,
+    normalizedElement.maxSelections,
+    selectedValues,
+    setSelected,
+    reportChange,
+    otherValue,
+    setOtherValue,
+  ]
+);
 
   // ===========================================================
   // 10. RETURN
@@ -413,36 +471,24 @@ const otherChecked = selectedValues.includes("__other__");
 
  return {
   // Choice
-  options,
-  selectedValues,
-  otherChecked,
+options,
+selectedValues,
+otherChecked,
 
-  minSelections,
-  isMaxReached,
-  hasMinimumSelections,
+minSelections,
+isMaxReached,
+hasMinimumSelections,
 
-  optionsPerLine,
-  checkboxColumns,
-  choiceGridStyle,
-  checkboxGridStyle,
+optionsPerLine,
+checkboxColumns,
+choiceGridStyle,
+checkboxGridStyle,
 
-  handleCheckboxChange,
-  handleRadioChange,
-  handleCheckboxOtherChange,
-  handleRadioOtherChange,
-  handleOtherTextChange,
-
-  // Matrix
-  matrixQuestions,
-  matrixAnswers,
-  matrixAllowMultiple,
-  getAnswerValue,
-  isAnswerSelected,
-  handleMatrixSelection,
-
-  // Feedback
-  feedbackEmojis,
-  feedbackAllowMultiple,
-  handleFeedbackSelection,
+handleCheckboxChange,
+handleRadioChange,
+handleCheckboxOtherChange,
+handleRadioOtherChange,
+handleOtherTextChange,
+handleButtonChange, // ADD THIS
 };
 }
