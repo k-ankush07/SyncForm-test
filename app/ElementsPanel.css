@@ -1,6 +1,6 @@
 
 /* ======================================================
-   MAIN PANEL
+   1. MAIN PANEL
 ====================================================== */
 
 .elements-panel {
@@ -24,16 +24,16 @@
 }
 
 /* ======================================================
-   HEADER
+   2. HEADER AND FOOTER
 ====================================================== */
 
 .elements-panel__header {
   display: flex;
   align-items: center;
   gap: 10px;
+  width: 100%;
   height: 43px;
   min-height: 43px;
-  width: 100%;
   padding: 0 32px;
   flex-shrink: 0;
   border: none;
@@ -50,9 +50,9 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex: 0 0 14px;
   width: 14px;
   height: 14px;
-  flex: 0 0 14px;
 }
 
 .elements-panel__section-icon > svg {
@@ -60,8 +60,6 @@
   width: 14px;
   height: 14px;
 }
-
-/* Footer */
 
 .elements-panel__footer {
   flex: 0 0 auto;
@@ -78,7 +76,7 @@
 }
 
 /* ======================================================
-   ELEMENTS SECTION TITLE
+   3. ELEMENTS SECTION TITLE
 ====================================================== */
 
 .elements-panel__section-title {
@@ -98,11 +96,12 @@
 }
 
 /* ======================================================
-   SCROLLABLE ELEMENT TREE
+   4. SCROLLABLE ELEMENT TREE
 ====================================================== */
 
 .element-tree {
   flex: 1 1 auto;
+  min-width: 0;
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
@@ -121,7 +120,6 @@
 /* Shared button reset */
 
 .element-tree__page,
-.element-tree__row-heading,
 .element-tree__add,
 .element-tree__page-toggle,
 .element-tree__chevron {
@@ -131,12 +129,10 @@
 }
 
 /* ======================================================
-   SHARED ICON STYLES
+   5. SHARED ICON STYLES
 ====================================================== */
 
 .element-tree__chevron,
-.element-tree__node-icon,
-.element-tree__row-icon,
 .element-tree__add > svg {
   display: inline-flex;
   align-items: center;
@@ -148,19 +144,15 @@
   padding: 0;
 }
 
-.element-tree__chevron > svg,
-.element-tree__node-icon > svg,
-.element-tree__row-icon > svg {
+.element-tree__chevron > svg {
   display: block;
   width: 14px;
   height: 14px;
-  max-width: 14px;
-  max-height: 14px;
   margin: 0;
 }
 
 /* ======================================================
-   PAGE HEADER
+   6. PAGE HEADER
 ====================================================== */
 
 .element-tree__page {
@@ -170,12 +162,13 @@
   width: 100%;
   height: 36px;
   min-height: 36px;
+  min-width: 0;
   padding: 0 5px;
   border-radius: 6px;
   background: transparent;
   color: #303030;
   text-align: left;
-  transition: background-color 220ms ease-in-out;
+  transition: background-color 180ms ease;
 }
 
 /* Expand / collapse arrow */
@@ -200,8 +193,9 @@
 .element-tree__page-toggle {
   display: inline-flex;
   align-items: center;
-  flex: 1;
+  flex: 1 1 auto;
   min-width: 0;
+  overflow: hidden;
   padding: 0;
   background: transparent;
   color: #303030;
@@ -209,28 +203,21 @@
   line-height: 18px;
   font-weight: 600;
   text-align: left;
-  cursor: pointer;
-}
-
-/* Page label */
-
-.element-tree__node-label {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-/* Active page */
-
-.element-tree__page--active {
-  background: #f6f6f7;
+  text-overflow: ellipsis;
+  cursor: pointer;
 }
 
 /* Page hover */
 
 .element-tree__page:hover {
   background: #f1f2f3;
+}
+
+/* Active page */
+
+.element-tree__page--active {
+  background: #f6f6f7;
 }
 
 /* Page drag handle */
@@ -245,7 +232,7 @@
 }
 
 /* ======================================================
-   PAGE CONTENT AND INDENTATION
+   7. PAGE CONTENT AND INDENTATION
 ====================================================== */
 
 .element-tree__page-content {
@@ -256,8 +243,27 @@
   border-left: 1px dashed #d6d6d6;
 }
 
+/* Standalone element wrapper */
+
+.element-tree__page-content > .element-tree__item-wrapper {
+  width: calc(100% - 20px);
+  max-width: calc(100% - 20px);
+  min-width: 0;
+  margin-left: 20px;
+}
+
+/* Standalone element inside wrapper */
+
+.element-tree__page-content
+  > .element-tree__item-wrapper
+  > .element-tree__field {
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+}
+
 /* ======================================================
-   ROW
+   8. ROW
 ====================================================== */
 
 .element-tree__row {
@@ -265,6 +271,7 @@
   min-width: 0;
   margin: 0;
   padding: 0;
+  background: transparent;
 }
 
 /* Row heading */
@@ -273,11 +280,12 @@
   display: flex;
   align-items: center;
   gap: 9px;
-  width: 100%;
+  width: calc(100% - 5px);
   height: 32px;
   min-height: 32px;
-  margin: 0;
-  padding: 0 5px 0 25px;
+  min-width: 0;
+  margin: 0 0 0 6px;
+  padding: 0 5px 0 1px;
   border-radius: 6px;
   background: transparent;
   color: #303030;
@@ -287,18 +295,42 @@
   text-align: left;
   cursor: grab;
   touch-action: none;
-  transition: background-color 220ms ease-in-out;
-}
-
-.element-tree__row-heading:active {
-  cursor: grabbing;
+  transition: background-color 180ms ease;
 }
 
 .element-tree__row-heading:hover {
   background: #f1f2f3;
 }
 
-/* Row drag handle */
+.element-tree__row-heading:active {
+  cursor: grabbing;
+}
+
+/* Row label */
+
+.element-tree__row-label {
+  display: block;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  color: #303030;
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+/* Row label text */
+
+.element-tree__row-label .Polaris-Text--root {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Row drag icon */
 
 .element-tree__row-drag-icon {
   cursor: grab;
@@ -313,7 +345,7 @@
   margin-left: 30px;
   padding-left: 16px;
   border-left: 1px dashed #d6d6d6;
-  transition: background-color 0.2s ease;
+  transition: background-color 180ms ease;
 }
 
 /* Row drag-over highlight */
@@ -325,7 +357,7 @@
 }
 
 /* ======================================================
-   FIELDS AND CREATED ELEMENTS
+   9. FIELDS AND CREATED ELEMENTS
 ====================================================== */
 
 .element-tree__field {
@@ -343,10 +375,10 @@
   color: #303030;
   font-size: 13px;
   line-height: 18px;
-  transition: background-color 220ms ease-in-out;
+  transition: background-color 180ms ease;
 }
 
-/* Existing fields and created elements */
+/* Draggable fields */
 
 .element-tree__field--draggable {
   cursor: grab;
@@ -362,7 +394,7 @@
   cursor: inherit;
 }
 
-/* Smooth hover background */
+/* Field hover */
 
 .element-tree__field--draggable:hover {
   background: #f1f2f3;
@@ -371,7 +403,8 @@
 /* Field label */
 
 .element-tree__field-label {
-  flex: 1;
+  display: block;
+  flex: 1 1 0%;
   min-width: 0;
   overflow: hidden;
   color: #303030;
@@ -382,22 +415,9 @@
   white-space: nowrap;
 }
 
-/* Keep action buttons aligned */
-
-.element-tree__field .Polaris-InlineStack {
-  flex-shrink: 0;
-}
-
-.element-tree__field button {
-  padding: 3px;
-}
-
 /* ======================================================
-   ICON REPLACEMENT ON HOVER
-   Original icon and drag icon share the same grid cell
+   10. ICON REPLACEMENT ON HOVER
 ====================================================== */
-
-/* Common icon container */
 
 .element-tree__field-icon {
   position: relative;
@@ -414,7 +434,7 @@
   color: #505050;
 }
 
-/* Both icons occupy exactly the same position */
+/* Both icons share the same position */
 
 .element-tree__default-icon,
 .element-tree__drag-icon {
@@ -424,10 +444,10 @@
   justify-content: center;
   width: 100%;
   height: 100%;
-  transition: opacity 220ms ease-in-out;
+  transition: opacity 180ms ease;
 }
 
-/* Original icon */
+/* Default icon */
 
 .element-tree__default-icon {
   opacity: 1;
@@ -441,7 +461,7 @@
   color: #616161;
 }
 
-/* Normal element icon size */
+/* Normal icon size */
 
 .element-tree__default-icon svg {
   display: block;
@@ -451,7 +471,7 @@
   max-width: none !important;
 }
 
-/* Bigger drag icon */
+/* Drag icon size */
 
 .element-tree__drag-icon svg {
   display: block;
@@ -461,7 +481,7 @@
   max-width: none !important;
 }
 
-/* Page icon */
+/* Page icon size */
 
 .element-tree__page-icon .element-tree__default-icon svg {
   width: 24px !important;
@@ -469,7 +489,7 @@
   min-width: 24px !important;
 }
 
-/* Row icon */
+/* Row icon size */
 
 .element-tree__row-drag-icon .element-tree__default-icon svg {
   width: 23px !important;
@@ -477,13 +497,15 @@
   min-width: 23px !important;
 }
 
-/* Icon swap on hover */
+/* Hide original icons on hover */
 
 .element-tree__page:hover .element-tree__default-icon,
 .element-tree__row-heading:hover .element-tree__default-icon,
 .element-tree__field--draggable:hover .element-tree__default-icon {
   opacity: 0;
 }
+
+/* Show drag icons on hover */
 
 .element-tree__page:hover .element-tree__drag-icon,
 .element-tree__row-heading:hover .element-tree__drag-icon,
@@ -492,7 +514,119 @@
 }
 
 /* ======================================================
-   ADD ELEMENT BUTTONS
+   11. ACTION BUTTONS - HOVER ONLY
+====================================================== */
+
+/* Fixed action area.
+   Keeping its width reserved prevents label movement. */
+
+.element-tree__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex: 0 0 88px;
+  width: 88px;
+  min-width: 88px;
+  gap: 2px;
+  margin-left: auto;
+
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+
+  transition:
+    opacity 150ms ease,
+    visibility 150ms ease;
+}
+
+/* Show actions only when the field or row heading is hovered */
+
+.element-tree__field:hover > .element-tree__actions,
+.element-tree__row-heading:hover > .element-tree__actions {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+/* Individual action buttons */
+
+.element-tree__actions > .element-tree__action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 28px;
+  width: 28px;
+  min-width: 28px;
+  height: 28px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: #616161;
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+/* Action icon */
+
+.element-tree__action-btn svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+}
+
+/* Action hover */
+
+.element-tree__action-btn:hover {
+  background: #f1f2f3;
+  color: #202223;
+}
+
+/* Delete action */
+
+.element-tree__action-btn--delete {
+  color: #d72c0d;
+}
+
+.element-tree__action-btn--delete:hover {
+  background: #fff0ee;
+  color: #bf0711;
+}
+
+/* ======================================================
+   12. PAGE DUPLICATE BUTTON
+====================================================== */
+
+.element-tree__page > .element-tree__action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  margin-left: auto;
+  padding: 0;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: #616161;
+  cursor: pointer;
+}
+
+.element-tree__page > .element-tree__action-btn:hover {
+  background: #f1f2f3;
+}
+
+.element-tree__page > .element-tree__action-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* ======================================================
+   13. ADD ELEMENT BUTTONS
 ====================================================== */
 
 .element-tree__add {
@@ -500,6 +634,7 @@
   align-items: center;
   justify-content: flex-start;
   gap: 5px;
+  min-width: 0;
   min-height: 32px;
   margin: 0;
   padding: 0 4px;
@@ -533,11 +668,11 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex: 0 0 16px;
   width: 16px;
   height: 16px;
   margin: 0;
   padding: 0;
-  flex-shrink: 0;
 }
 
 .element-tree__add .Polaris-Icon__Svg {
@@ -545,30 +680,24 @@
   height: 14px;
 }
 
-/* Add element inside a row */
+/* Add element inside row */
 
 .element-tree__row > .element-tree__add {
   margin-left: 50px;
 }
 
-/* Root elements outside rows */
-
-.element-tree__page-content > .element-tree__field {
-  width: calc(100% - 25px);
-  margin-left: 25px;
-}
-
 /* Add element outside rows */
 
 .element-tree__page-content > .element-tree__add--root {
-  width: calc(100% - 25px);
+  display: inline-flex;
+  width: calc(100% - 20px);
   min-height: 32px;
-  margin-left: 25px;
+  margin-left: 20px;
   padding: 0 4px;
 }
 
 /* ======================================================
-   ADD PAGE BUTTON
+   14. ADD PAGE BUTTON
 ====================================================== */
 
 .element-tree__add--page {
@@ -581,56 +710,203 @@
 }
 
 /* ======================================================
-   ACTION BUTTONS
+   15. INSERTION BETWEEN ROWS
 ====================================================== */
 
-.element-tree__actions {
+.element-tree__section-insert {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  margin-left: auto;
-  flex-shrink: 0;
-}
-
-.element-tree__action-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 100%;
+  height: 4px;
+  min-height: 4px;
+  margin: 0;
   padding: 0;
-  border: none;
-  border-radius: 5px;
-  background: transparent;
-  color: #616161;
-  cursor: pointer;
+  z-index: 10;
+}
+
+/* Horizontal line */
+
+.element-tree__section-insert-line {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 100%;
+  height: 1px;
+  background: #2c6ecb;
+  opacity: 0;
+  transform: translateY(-50%) scaleX(0);
+  transform-origin: center;
   transition:
-    background-color 150ms ease,
-    color 150ms ease;
+    transform 350ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 200ms ease;
 }
 
-.element-tree__action-btn svg {
-  width: 16px;
-  height: 16px;
+/* Plus button */
+
+.element-tree__section-insert-button {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 1px solid #2c6ecb;
+  border-radius: 50%;
+  background: #ffffff;
+  color: #2c6ecb;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -50%) scale(0.65);
+  transition:
+    opacity 200ms ease,
+    transform 300ms cubic-bezier(0.22, 1, 0.36, 1),
+    background 200ms ease,
+    color 200ms ease;
 }
 
-.element-tree__action-btn:hover {
-  background: #f1f2f3;
-  color: #202223;
+/* Show line on hover */
+
+.element-tree__section-insert:hover
+.element-tree__section-insert-line,
+.element-tree__section-insert:focus-within
+.element-tree__section-insert-line {
+  opacity: 1;
+  transform: translateY(-50%) scaleX(1);
 }
 
-.element-tree__action-btn--delete {
-  color: #d72c0d;
+/* Show plus on hover */
+
+.element-tree__section-insert:hover
+.element-tree__section-insert-button,
+.element-tree__section-insert:focus-within
+.element-tree__section-insert-button {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(-50%, -50%) scale(1);
 }
 
-.element-tree__action-btn--delete:hover {
-  background: #fff0ee;
-  color: #bf0711;
+.element-tree__section-insert-button:hover {
+  background: #2c6ecb;
+  color: #ffffff;
 }
 
 /* ======================================================
-   DRAG OVERLAY CARD
+   16. INSERTION BETWEEN ELEMENTS
+====================================================== */
+
+.element-tree__item-wrapper {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+
+/* Insertion control */
+
+.element-tree__item-insert {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 8px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  z-index: 30;
+}
+
+/* Above element */
+
+.element-tree__item-insert--before {
+  top: 0;
+  transform: translateY(-50%);
+}
+
+/* Below element */
+
+.element-tree__item-insert--after {
+  bottom: 0;
+  transform: translateY(50%);
+}
+
+/* Insertion line */
+
+.element-tree__item-insert::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 100%;
+  height: 1px;
+  background: #2c6ecb;
+  opacity: 0;
+  transform: translateY(-50%) scaleX(0);
+  transform-origin: center;
+  transition:
+    transform 350ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 200ms ease;
+  pointer-events: none;
+}
+
+/* Insertion plus */
+
+.element-tree__item-insert::after {
+  content: "+";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: 1px solid #2c6ecb;
+  border-radius: 50%;
+  background: #ffffff;
+  color: #2c6ecb;
+  font-size: 16px;
+  line-height: 1;
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.65);
+  transition:
+    opacity 200ms ease,
+    transform 300ms cubic-bezier(0.22, 1, 0.36, 1),
+    background 200ms ease,
+    color 200ms ease;
+  pointer-events: none;
+}
+
+/* Show insertion line */
+
+.element-tree__item-insert:hover::before,
+.element-tree__item-insert:focus-visible::before {
+  opacity: 1;
+  transform: translateY(-50%) scaleX(1);
+}
+
+/* Show insertion plus */
+
+.element-tree__item-insert:hover::after,
+.element-tree__item-insert:focus-visible::after {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.element-tree__item-insert:hover::after {
+  background: #2c6ecb;
+  color: #ffffff;
+}
+
+/* ======================================================
+   17. DRAG OVERLAY
 ====================================================== */
 
 .element-tree__drag-overlay {
@@ -647,12 +923,10 @@
     0 8px 20px rgba(0, 0, 0, 0.12),
     0 2px 5px rgba(0, 0, 0, 0.06);
   cursor: grabbing;
-  box-sizing: border-box;
 }
 
 .element-tree__drag-overlay .element-tree__field-icon {
   display: inline-grid;
-  align-items: center;
 }
 
 .element-tree__drag-overlay .element-tree__field-label {
@@ -662,7 +936,7 @@
 }
 
 /* ======================================================
-   HIDDEN ELEMENTS AND ROWS
+   18. HIDDEN ELEMENTS AND ROWS
 ====================================================== */
 
 .element-tree__field--hidden {
@@ -670,7 +944,7 @@
   background-color: #f4f4f4;
   transition:
     opacity 200ms ease,
-    background-color 220ms ease-in-out;
+    background-color 180ms ease;
 }
 
 .element-tree__field--hidden:hover {
@@ -680,13 +954,11 @@
 .element-tree__row--hidden {
   opacity: 0.45;
   background-color: #f4f4f4;
-  transition:
-    opacity 200ms ease,
-    background-color 220ms ease-in-out;
+  transition: opacity 200ms ease;
 }
 
 /* ======================================================
-   KEYBOARD ACCESSIBILITY
+   19. KEYBOARD ACCESSIBILITY
 ====================================================== */
 
 .element-tree button:focus-visible {
@@ -695,7 +967,7 @@
 }
 
 /* ======================================================
-   RESPONSIVE LAYOUT
+   20. RESPONSIVE LAYOUT
 ====================================================== */
 
 @media (max-width: 600px) {
@@ -710,263 +982,61 @@
   .element-tree {
     padding-inline: 6px;
   }
+
+  .element-tree__actions {
+    flex-basis: 88px;
+    width: 88px;
+    min-width: 88px;
+  }
 }
+
 /* =========================================
-   ROW HEADER - HOVER ONLY
+   HOVER BACKGROUND — ROWS AND ELEMENTS
 ========================================= */
 
-/* Keep the complete row container transparent */
+/* Individual element */
+.element-tree__field--draggable:hover {
+  background-color: #F1F1F1 !important;
+}
+
+/* Row heading */
+.element-tree__row-heading:hover {
+  background-color: #F1F1F1;
+}
+
+/* Row container */
+.element-tree__row:hover {
+  background-color: #F1F1F1;
+}
+
+/* Keep action buttons visible on hover */
+.element-tree__field:hover > .element-tree__actions,
+.element-tree__row-heading:hover > .element-tree__actions {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+
+/* =========================================
+   ROW FIELDS — REDUCE RIGHT INDENTATION
+========================================= */
+
+.element-tree__row-fields {
+  margin-left: 22px;  /* previously 30px */
+  padding-left: 12px; /* previously 16px */
+}
+/* Extend the row's dotted connector downward */
 .element-tree__row {
-  background: transparent !important;
+  position: relative;
 }
 
-/* Only highlight the row title/header */
-.element-tree__row-header {
-  background: transparent;
-  border-radius: 6px;
-  transition: background-color 180ms ease;
-}
-
-/* Hover only the icon + row name area */
-.element-tree__row-header:hover {
-  background-color: #f1f2f3 !important;
-}
-
-/* =========================================
-   ELEMENT TREE - HOVER BACKGROUND FIX
-========================================= */
-
-.element-tree__page:hover,
-
-.element-tree__field--draggable:hover,
-.element-tree__element:hover {
-  background-color: #f1f2f3 !important;
-  transition: background-color 180ms ease;
-}
-
-/* Keep the hover background on the full clickable/draggable item */
-.element-tree__page,
-.element-tree__row,
-.element-tree__field--draggable,
-.element-tree__element {
-  transition: background-color 180ms ease;
-}
-
-/* //add line */
-/* Divider between rows and root elements */
-
-
-/* =========================================
-   COMPACT INSERTION BETWEEN ELEMENTS
-========================================= */
-
-/* =========================================
-   ROW INSERTION LINE
-========================================= */
-
-.element-tree__section-insert {
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    height: 4px;
-    min-height: 4px;
-    margin: 0;
-    padding: 0;
-    z-index: 10;
-}
-
-/* Horizontal line: grows from center */
-.element-tree__section-insert-line {
-    position: absolute;
-    left: 0;
-    top: 50%;
-    width: 100%;
-    height: 1px;
-    background: #2c6ecb;
-
-    opacity: 0;
-    transform: translateY(-50%) scaleX(0);
-    transform-origin: center;
-
-    transition:
-        transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
-        opacity 0.2s ease;
-}
-
-/* Circular plus button */
-.element-tree__section-insert-button {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    width: 20px;
-    height: 20px;
-    padding: 0;
-
-    border: 1px solid #2c6ecb;
-    border-radius: 50%;
-
-    background: #fff;
-    color: #2c6ecb;
-
-    font-size: 16px;
-    line-height: 1;
-    cursor: pointer;
-
-    opacity: 0;
-    pointer-events: none;
-
-    transform: translate(-50%, -50%) scale(0.65);
-
-    transition:
-        opacity 0.2s ease,
-        transform 0.3s cubic-bezier(0.22, 1, 0.36, 1),
-        background 0.2s ease,
-        color 0.2s ease;
-}
-
-/* Show and grow line */
-.element-tree__section-insert:hover
-.element-tree__section-insert-line {
-    opacity: 1;
-    transform: translateY(-50%) scaleX(1);
-}
-
-/* Show and pop plus button */
-.element-tree__section-insert:hover
-.element-tree__section-insert-button {
-    opacity: 1;
-    pointer-events: auto;
-    transform: translate(-50%, -50%) scale(1);
-}
-
-/* Plus hover */
-.element-tree__section-insert-button:hover {
-    background: #2c6ecb;
-    color: #fff;
-}
-
-/* Keyboard focus */
-.element-tree__section-insert:focus-within
-.element-tree__section-insert-line {
-    opacity: 1;
-    transform: translateY(-50%) scaleX(1);
-}
-
-/* =========================================
-   INSERTION BETWEEN ELEMENTS
-========================================= */
-
-/* Element wrapper */
-.element-tree__item-wrapper {
-    position: relative;
-    width: 100%;
-    min-width: 0;
-}
-
-/* Insertion control */
-.element-tree__item-insert {
-    position: absolute;
-    left: 0;
-    width: 100%;
-    height: 8px;
-    margin: 0;
-    padding: 0;
-    border: none;
-    background: transparent;
-    cursor: pointer;
-    z-index: 30;
-}
-
-/* Above element */
-.element-tree__item-insert--before {
-    top: 0;
-    transform: translateY(-50%);
-}
-
-/* Below element */
-.element-tree__item-insert--after {
-    bottom: 0;
-    transform: translateY(50%);
-}
-
-/* Horizontal line: grows from center */
-.element-tree__item-insert::before {
-    content: "";
-    position: absolute;
-    left: 0;
-    top: 50%;
-    width: 100%;
-    height: 1px;
-    background: #2c6ecb;
-
-    opacity: 0;
-    transform: translateY(-50%) scaleX(0);
-    transform-origin: center;
-
-    transition:
-        transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
-        opacity 0.2s ease;
-
-    pointer-events: none;
-}
-
-/* Circular plus */
-.element-tree__item-insert::after {
-    content: "+";
-    position: absolute;
-    left: 50%;
-    top: 50%;
-
-    width: 20px;
-    height: 20px;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    border: 1px solid #2c6ecb;
-    border-radius: 50%;
-
-    background: #fff;
-    color: #2c6ecb;
-
-    font-size: 16px;
-    line-height: 1;
-
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(0.65);
-
-    transition:
-        opacity 0.2s ease,
-        transform 0.3s cubic-bezier(0.22, 1, 0.36, 1),
-        background 0.2s ease,
-        color 0.2s ease;
-
-    pointer-events: none;
-}
-
-/* Show only the hovered insertion position */
-.element-tree__item-insert:hover::before,
-.element-tree__item-insert:focus-visible::before {
-    opacity: 1;
-    transform: translateY(-50%) scaleX(1);
-}
-
-.element-tree__item-insert:hover::after,
-.element-tree__item-insert:focus-visible::after {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
-}
-
-/* Plus hover */
-.element-tree__item-insert:hover::after {
-    background: #2c6ecb;
-    color: #fff;
+.element-tree__row::after {
+  content: "";
+  position: absolute;
+  left: 30px;
+  top: 100%;
+  height: 16px;
+  border-left: 1px dashed #D1D5DB;
+  pointer-events: none;
 }

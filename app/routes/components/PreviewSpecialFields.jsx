@@ -1,9 +1,6 @@
 // sharaed styles for the consent Quantioy and button 
-
-import React from "react";
 import "./PreviewSpecialFields.css";
-
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 export function PreviewQuantity({
   label,
@@ -20,58 +17,68 @@ export function PreviewQuantity({
 }) {
   const [inputValue, setInputValue] = useState(String(value ?? min));
 
-  // Keep the input synchronized when the parent value changes
-  const [previousValue, setPreviousValue] = useState(value);
-
-  if (previousValue !== value) {
-    setPreviousValue(value);
+  // Sync input whenever the parent value changes
+  useEffect(() => {
     setInputValue(String(value ?? min));
-  }
+  }, [value, min]);
 
   const safeMin = Number.isFinite(Number(min)) ? Number(min) : 0;
   const safeMax = Number.isFinite(Number(max))
     ? Number(max)
-    : 999;
+    : Infinity;
 
   const numericValue = Number(value ?? safeMin);
 
   const isMin = numericValue <= safeMin;
   const isMax = numericValue >= safeMax;
 
-  const handleInputChange = (event) => {
-    const nextValue = event.target.value;
+  // -------------------------------------------------------
+  // HANDLE MANUAL INPUT
+  // -------------------------------------------------------
 
-    // Allow the user to temporarily clear the input
-    setInputValue(nextValue);
+const handleInputChange = (event) => {
+  const nextValue = event.target.value;
 
-    if (nextValue === "") return;
+  if (nextValue === "") {
+    setInputValue("");
+    return;
+  }
 
-    const nextNumber = Number(nextValue);
+  const nextNumber = Number(nextValue);
 
-    if (!Number.isFinite(nextNumber)) return;
+  if (!Number.isFinite(nextNumber)) return;
 
-    // Update the parent only when the entered value is within range
-    if (nextNumber >= safeMin && nextNumber <= safeMax) {
-      onChange?.(nextNumber);
-    }
-  };
+  // Clamp immediately using the actual min/max
+  const clampedValue = Math.min(
+    safeMax,
+    Math.max(safeMin, nextNumber)
+  );
 
-  const handleInputBlur = () => {
-    let nextNumber = Number(inputValue);
+  setInputValue(String(clampedValue));
 
-    if (inputValue.trim() === "" || !Number.isFinite(nextNumber)) {
-      nextNumber = numericValue;
-    }
+  // Send the already-clamped value to the hook
+  onChange?.(String(clampedValue));
+};
 
-    // Keep the final value inside min/max
-    nextNumber = Math.min(
-      safeMax,
-      Math.max(safeMin, nextNumber)
-    );
+  // -------------------------------------------------------
+  // RESTORE VALUE WHEN INPUT IS EMPTY
+  // -------------------------------------------------------
+const handleInputBlur = () => {
+  if (inputValue.trim() === "") {
+    setInputValue(String(value ?? safeMin));
+    return;
+  }
 
-    setInputValue(String(nextNumber));
-    onChange?.(nextNumber);
-  };
+  const numericValue = Number(inputValue);
+
+  const clampedValue = Math.min(
+    safeMax,
+    Math.max(safeMin, numericValue)
+  );
+
+  setInputValue(String(clampedValue));
+  onChange?.(String(clampedValue));
+};
 
   return (
     <div className="preview-input-shell-wrapper">
@@ -101,10 +108,9 @@ export function PreviewQuantity({
           className="preview-quantity-value"
           value={inputValue}
           min={safeMin}
-          max={safeMax}
+          max={Number.isFinite(safeMax) ? safeMax : undefined}
           step="1"
           disabled={isReadOnly}
-          readOnly={false}
           aria-label={label || "Quantity"}
           onChange={handleInputChange}
           onBlur={handleInputBlur}

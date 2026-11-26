@@ -758,6 +758,7 @@ export default function PreviewField({
     safeValue,
     increaseValue,
     decreaseValue,
+    handleQuantityChange
   } = useQuantityField({
     value,
     normalizedElement,
@@ -2159,21 +2160,19 @@ export default function PreviewField({
     // -------------------------------------------------------
    case "quantity":
   return (
-    <PreviewQuantity
-      label={label}
-      required={required}
-      hideLabel={hideLabel}
-      description={descriptionText}
-      value={safeValue}
-      min={quantityMin}
-      max={quantityMax}
-      isReadOnly={isReadOnly}
-      onDecrease={decreaseValue}
-      onIncrease={increaseValue}
-      onChange={(nextValue) => {
-        reportChange(nextValue);
-      }}
-    />
+   <PreviewQuantity
+  label={label}
+  required={required}
+  hideLabel={hideLabel}
+  description={descriptionText}
+  value={safeValue}
+  min={quantityMin}
+  max={quantityMax}
+  isReadOnly={isReadOnly}
+  onDecrease={decreaseValue}
+  onIncrease={increaseValue}
+  onChange={handleQuantityChange}
+/>
   );
     // -------------------------------------------------------
     // REPEATER

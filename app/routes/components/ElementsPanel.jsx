@@ -1482,23 +1482,23 @@ function SortablePage({
 
     // Apply drag styling to the page.
     const pageStyle = {
-    // transform: CSS.Transform.toString(transform),
-    transition,
+        // transform: CSS.Transform.toString(transform),
+        transition,
 
-    // background: isDragging ? "#FFFFFF" : "transparent",
+        // background: isDragging ? "#FFFFFF" : "transparent",
 
-    // boxShadow: isDragging
-    //     ? "0 8px 24px rgba(0, 0, 0, 0.15)"
-    //     : "none",
+        // boxShadow: isDragging
+        //     ? "0 8px 24px rgba(0, 0, 0, 0.15)"
+        //     : "none",
 
-    // border: isDragging
-    //     ? "1px solid #E5E7EB"
-    //     : "1px solid transparent",
+        // border: isDragging
+        //     ? "1px solid #E5E7EB"
+        //     : "1px solid transparent",
 
-    borderRadius: "10px",
-    position: "relative",
-    // zIndex: isDragging ? 10 : "auto",
-};
+        borderRadius: "10px",
+        position: "relative",
+        // zIndex: isDragging ? 10 : "auto",
+    };
 
     // Create insertion buttons above or below root elements.
     const renderRootInsertButton = (element, placement) => (
@@ -1703,15 +1703,14 @@ function SortablePage({
             {page.open && (
                 <div
                     ref={setPageRootDropRef}
+                    className="element-tree__page-content"
                     style={{
                         minHeight: "80px",
-                        width: "100%",
+                        width: "calc(100% - 28px)",
+                        minWidth: 0,
                         position: "relative",
+                        boxSizing: "border-box",
                     }}
-                    className={`element-tree__page-content ${isPageRootOver
-                        ? "element-tree__page-content--over"
-                        : ""
-                        }`}
                 >
                     <SortableContext
                         items={sortableItems}
@@ -2027,8 +2026,10 @@ function SortableRow({
                 </span>
 
                 {/* ROW LABEL */}
+                {/* ROW LABEL */}
 
                 <span
+                    className="element-tree__row-label"
                     onClick={(event) => {
                         event.stopPropagation();
                         onSelectRow?.(pageId, row);
@@ -2053,20 +2054,12 @@ function SortableRow({
 
                 {/* ROW TOOLBOX */}
 
-                {isHovered && (
-                    <ElementActions
-                        element={row}
-                        onToggleElementVisibility={() =>
-                            onToggleRowVisibility(pageId, row.id)
-                        }
-                        onDuplicateElement={() =>
-                            onDuplicateRow(pageId, row.id)
-                        }
-                        onDeleteElement={() =>
-                            onDeleteRow(pageId, row.id)
-                        }
-                    />
-                )}
+                <ElementActions
+                    element={row}
+                    onToggleElementVisibility={onToggleRowVisibility}
+                    onDuplicateElement={onDuplicateRow}
+                    onDeleteElement={onDeleteRow}
+                />
             </div>
 
             {/* ROW FIELDS AND CREATED ELEMENTS */}
@@ -2324,14 +2317,12 @@ function SortableSidebarField({
 
             {/* TOOLBOX: Only fields with IDs support these actions. */}
 
-            {isHovered && fieldId != null && (
-                <ElementActions
-                    element={field}
-                    onToggleElementVisibility={onToggleElementVisibility}
-                    onDuplicateElement={onDuplicateElement}
-                    onDeleteElement={onDeleteElement}
-                />
-            )}
+            <ElementActions
+                element={field}
+                onToggleElementVisibility={onToggleElementVisibility}
+                onDuplicateElement={onDuplicateElement}
+                onDeleteElement={onDeleteElement}
+            />
         </div>
     );
 }
@@ -2442,14 +2433,12 @@ function SortableCreatedElement({
 
             {/* ELEMENT TOOLBOX */}
 
-            {isHovered && element?.id != null && (
-                <ElementActions
-                    element={element}
-                    onToggleElementVisibility={onToggleElementVisibility}
-                    onDuplicateElement={onDuplicateElement}
-                    onDeleteElement={onDeleteElement}
-                />
-            )}
+            <ElementActions
+                element={element}
+                onToggleElementVisibility={onToggleElementVisibility}
+                onDuplicateElement={onDuplicateElement}
+                onDeleteElement={onDeleteElement}
+            />
         </div>
     );
 }

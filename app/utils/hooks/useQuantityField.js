@@ -1,4 +1,6 @@
+
 import { useCallback } from "react";
+
 
 export default function useQuantityField({
   value,
@@ -14,7 +16,9 @@ export default function useQuantityField({
   const parsedMax = Number(normalizedElement.maxValue);
 
   const min =
-    normalizedElement.setMinValue && Number.isFinite(parsedMin)
+    normalizedElement.setMinValue &&
+    normalizedElement.minValue !== "" &&
+    Number.isFinite(parsedMin)
       ? parsedMin
       : 0;
 
@@ -39,27 +43,61 @@ export default function useQuantityField({
       ? min
       : parsedValue;
 
-  const safeValue = Math.min(max, Math.max(min, currentValue));
+  const safeValue = Math.min(
+    max,
+    Math.max(min, currentValue)
+  );
 
   // -------------------------------------------------------
-  // 3. INCREASE QUANTITY
+  // 3. SHARED VALUE CLAMPING
+  // -------------------------------------------------------
+
+  const clampValue = useCallback(
+    (number) => {
+      return Math.min(max, Math.max(min, number));
+    },
+    [min, max]
+  );
+
+  // -------------------------------------------------------
+  // 4. INCREASE QUANTITY
   // -------------------------------------------------------
 
   const increaseValue = useCallback(() => {
     if (isReadOnly || safeValue >= max) return;
 
-    updateValue(String(Math.min(max, safeValue + 1)));
-  }, [isReadOnly, safeValue, max, updateValue]);
+    updateValue(String(clampValue(safeValue + 1)));
+  }, [isReadOnly, safeValue, max, clampValue, updateValue]);
 
   // -------------------------------------------------------
-  // 4. DECREASE QUANTITY
+  // 5. DECREASE QUANTITY
   // -------------------------------------------------------
 
   const decreaseValue = useCallback(() => {
     if (isReadOnly || safeValue <= min) return;
 
-    updateValue(String(Math.max(min, safeValue - 1)));
-  }, [isReadOnly, safeValue, min, updateValue]);
+    updateValue(String(clampValue(safeValue - 1)));
+  }, [isReadOnly, safeValue, min, clampValue, updateValue]);
+
+  // -------------------------------------------------------
+  // 6. HANDLE MANUAL INPUT
+  // -------------------------------------------------------
+
+  const handleQuantityChange = useCallback(
+    (nextValue) => {
+      if (isReadOnly || nextValue === "") return;
+
+      const numericValue = Number(nextValue);
+
+      if (!Number.isFinite(numericValue)) return;
+
+      // Automatically enforce min and max
+      const clampedValue = clampValue(numericValue);
+
+      updateValue(String(clampedValue));
+    },
+    [isReadOnly, clampValue, updateValue]
+  );
 
   return {
     min,
@@ -67,5 +105,6 @@ export default function useQuantityField({
     safeValue,
     increaseValue,
     decreaseValue,
+    handleQuantityChange,
   };
 }

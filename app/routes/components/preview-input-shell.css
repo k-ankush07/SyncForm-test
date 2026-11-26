@@ -504,7 +504,7 @@
   background: var(--preview-field-bg);
   color: var(--preview-field-text);
 
-  border: 2px solid #8c9196;
+  border: 2px solid var(--preview-field-border);
   border-radius: var(--preview-field-radius);
 
   outline: none;
@@ -525,7 +525,7 @@
 
 .preview-native-textarea:focus,
 .preview-native-textarea:focus-visible {
-  border: 2px solid #2E4E49;
+  border-color: var(--preview-field-focus-border);
   outline: none;
   box-shadow: none;
 }

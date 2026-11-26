@@ -165,21 +165,21 @@
 /* Hover */
 
 .preview-special-button:not(:disabled):hover {
-  background: #D72C0D;
+  background: #2E4E49;
   color: #FFFFFF;
 }
 
 /* Selected */
 
 .preview-special-button.is-selected {
-  background: #D72C0D;
+  background: #2E4E49;
   color: #FFFFFF;
 }
 
 /* Selected hover */
 
 .preview-special-button.is-selected:not(:disabled):hover {
-  background: #B92308;
+  background: #2E4E49;
   color: #FFFFFF;
 }
 
