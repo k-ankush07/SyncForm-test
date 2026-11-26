@@ -1,0 +1,394 @@
+
+/* =========================================
+   PREVIEW SPECIAL FIELDS
+   QUANTITY | BUTTON | CONSENT
+========================================= */
+
+
+/* =========================================
+   1. QUANTITY FIELD
+========================================= */
+
+.preview-quantity-shell {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+
+  width: 100%;
+  min-width: 0;
+  height: var(--preview-field-height);
+  min-height: var(--preview-field-height);
+
+  gap: 8px;
+  padding: 0 8px;
+
+  background: var(--preview-field-bg);
+  border: var(--preview-field-border-width) solid var(--preview-icon-border);
+  border-radius: var(--preview-field-radius);
+
+  box-sizing: border-box;
+}
+
+/* Quantity increment/decrement buttons */
+
+.preview-quantity-shell button {
+  all: unset;
+
+  display: flex;
+  flex: 0 0 36px;
+  align-items: center;
+  justify-content: center;
+
+  width: 36px;
+  height: 36px;
+
+  color: var(--preview-field-text);
+  font-size: 22px;
+  font-weight: 400;
+  text-align: center;
+
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.preview-quantity-shell button:disabled {
+  color: #C9CCCF !important;
+  cursor: not-allowed;
+}
+
+/* Quantity value */
+
+
+.preview-quantity-value {
+  display: block;
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 0;
+  height: 36px;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  box-shadow: none;
+  text-align: center;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--preview-field-text);
+  font-variant-numeric: tabular-nums;
+  box-sizing: border-box;
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.preview-quantity-value::-webkit-inner-spin-button,
+.preview-quantity-value::-webkit-outer-spin-button {
+  margin: 0;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.preview-quantity-value:focus,
+.preview-quantity-value:focus-visible {
+  border: none;
+  outline: none;
+  box-shadow: none;
+}
+
+.preview-quantity-value:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+
+
+/* =========================================
+   2. BUTTON OPTIONS
+========================================= */
+
+.preview-special-button-wrapper {
+  display: flex;
+  flex-direction: column;
+
+  width: 100%;
+  min-width: 0;
+  gap: 8px;
+}
+
+/* Button options container */
+
+.preview-special-button-options {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+
+  width: 100%;
+  min-width: 0;
+  gap: 8px;
+}
+
+/* Normal button */
+
+.preview-special-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-width: 0;
+  min-height: 36px;
+  margin: 0;
+  padding: 8px 14px;
+
+  background: #F1F1F1;
+  color: #303030;
+
+  border: 1px solid transparent;
+  border-radius: 8px;
+
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 20px;
+
+  cursor: pointer;
+  box-sizing: border-box;
+
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+/* Hover */
+
+.preview-special-button:not(:disabled):hover {
+  background: #D72C0D;
+  color: #FFFFFF;
+}
+
+/* Selected */
+
+.preview-special-button.is-selected {
+  background: #D72C0D;
+  color: #FFFFFF;
+}
+
+/* Selected hover */
+
+.preview-special-button.is-selected:not(:disabled):hover {
+  background: #B92308;
+  color: #FFFFFF;
+}
+
+/* Disabled */
+
+.preview-special-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Other option input */
+
+.preview-special-button-other-input {
+  display: block;
+
+  width: 100%;
+  min-width: 0;
+  min-height: var(--preview-field-height);
+  margin: 0;
+  padding: 8px 12px;
+
+  background: var(--preview-field-bg);
+  color: var(--preview-field-text);
+
+  border: var(--preview-field-border-width) solid var(--preview-icon-border);
+  border-radius: var(--preview-field-radius);
+
+  outline: none;
+  box-shadow: none;
+
+  font-family: inherit;
+  font-size: 14px;
+
+  box-sizing: border-box;
+}
+
+/* Other input placeholder */
+
+.preview-special-button-other-input::placeholder {
+  color: var(--preview-field-placeholder);
+  opacity: 1;
+}
+
+/* Other input focus */
+
+.preview-special-button-other-input:focus,
+.preview-special-button-other-input:focus-visible {
+  border-color: var(--preview-field-focus-border);
+  outline: none;
+  box-shadow: none;
+}
+
+/* Other input disabled */
+
+.preview-special-button-other-input:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+
+/* =========================================
+   3. CUSTOM CONSENT CHECKBOX
+========================================= */
+
+.preview-consent-wrapper {
+  display: block;
+
+  width: 100%;
+  min-width: 0;
+
+  margin: 0;
+  padding: 0;
+
+  box-sizing: border-box;
+}
+
+/* Consent row */
+
+.preview-consent {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+
+  width: 100%;
+  min-width: 0;
+
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+/* Hide native checkbox visually */
+
+.preview-consent__input {
+  position: absolute;
+
+  width: 1px;
+  height: 1px;
+
+  margin: -1px;
+  padding: 0;
+
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+
+  border: 0;
+}
+
+/* Custom checkbox */
+
+.preview-consent__checkbox {
+  display: flex;
+  flex: 0 0 18px;
+
+  align-items: center;
+  justify-content: center;
+
+  width: 18px;
+  min-width: 18px;
+  height: 18px;
+
+  margin-top: 2px;
+  padding: 0;
+
+  background: #FFFFFF;
+  color: #FFFFFF;
+
+  border: 1.5px solid #8C9196;
+  border-radius: 4px;
+
+  box-sizing: border-box;
+
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+/* Checked checkbox */
+
+.preview-consent__input:checked + .preview-consent__checkbox {
+  background: #2E4E49;
+  border-color: #2E4E49;
+}
+
+/* Keyboard focus */
+
+.preview-consent__input:focus-visible + .preview-consent__checkbox {
+  outline: 2px solid #2E4E49;
+  outline-offset: 2px;
+}
+
+/* Disabled checkbox */
+
+.preview-consent__input:disabled + .preview-consent__checkbox {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Consent label */
+
+.preview-consent__label {
+  display: block;
+  flex: 1 1 auto;
+
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+
+  color: var(--preview-field-text);
+
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.5;
+
+  overflow-wrap: anywhere;
+}
+
+/* Rich text paragraph */
+
+.preview-consent__label p {
+  margin: 0;
+  padding: 0;
+}
+
+/* Rich text links */
+
+.preview-consent__label a {
+  color: var(--preview-field-focus-border);
+  text-decoration: underline;
+}
+
+/* Disabled label */
+
+.preview-consent__input:disabled ~ .preview-consent__label {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+
+/* =========================================
+   4. SHARED DESCRIPTION
+========================================= */
+
+.preview-special-button-wrapper .preview-input-shell__description,
+.preview-consent-wrapper .preview-input-shell__description {
+  margin-top: 4px;
+  color: var(--preview-description-color);
+}

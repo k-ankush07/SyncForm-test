@@ -355,6 +355,7 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
     const isQuantity = type === "quantity";
     //TEXT
     const isText = type === "text";
+    const isColor = type === "color_picker";
 
     // DATE AND TIME
     const isDateTime = [
@@ -379,7 +380,7 @@ function CommonSettings({ element, onChange, onOpenSelectIcon }) {
     const showCharacterLimit = isContactInput;
 
     const showSelectIcon =
-        isContactInput || isDropdown || isCountry || isUrl || isNumber || isText;
+        isContactInput || isDropdown || isCountry || isUrl || isNumber || isText || isColor || isDateTime;
 
     const showRequiredNote =
         isContactInput || isChoiceInput || isStarRating;

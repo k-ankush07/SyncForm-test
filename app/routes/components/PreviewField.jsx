@@ -4,6 +4,11 @@ import "flatpickr/dist/flatpickr.min.css";
 import "flatpickr/dist/plugins/monthSelect/style.css";
 import "flag-icons/css/flag-icons.min.css";
 import PreviewTextInput from "./PreviewTextInput";
+import {
+  PreviewQuantity,
+  PreviewButton,
+  PreviewConsent
+} from "./PreviewSpecialFields";
 import * as PolarisIcons from "@shopify/polaris-icons";
 import {
   Icon,
@@ -196,7 +201,7 @@ function FlatpickrField({
       type="text"
       readOnly
       placeholder={placeholder}
-      className={className}
+      className={`preview-date-input ${className}`}
       onClick={openPicker}
     />
   );
@@ -212,10 +217,12 @@ function PreviewInputShell({
   required,
   hideLabel = false,
   icon,
-  leadingContent, // fo r a diff fioeld phone to show flag insted of icon defult 
+  leadingContent,
   description,
   children,
   className = "",
+  shellClassName = "",
+  contentClassName = "",
   style = {},
   inputStyle = {},
   iconStyle = {},
@@ -240,7 +247,7 @@ function PreviewInputShell({
       )}
 
       <div
-        className="preview-input-shell"
+        className={`preview-input-shell ${shellClassName}`}
         style={{
           ...style,
           ...(leadingContent ? { overflow: "visible" } : {}),
@@ -262,7 +269,7 @@ function PreviewInputShell({
         )}
 
         <div
-          className="preview-input-shell__content"
+          className={`preview-input-shell__content ${contentClassName}`}
           style={inputStyle}
         >
           {children}
@@ -1981,75 +1988,37 @@ export default function PreviewField({
     // -------------------------------------------------------
     case "consent":
       return (
-        <BlockStack gap="200">
-          <Checkbox
-            label={
-              <div
-                className="rich-text-preview"
-                dangerouslySetInnerHTML={{
-                  __html: sanitizeHTML(
-                    normalizedElement.label ||
-                    "<p>I agree to terms and conditions.</p>"
-                  ),
-                }}
-              />
-            }
-            checked={checked}
-            disabled={isReadOnly}
-            onChange={(isChecked) => {
-              setChecked(isChecked);
-              reportChange(isChecked);
-            }}
-          />
-
-          {descriptionText}
-        </BlockStack>
+        <PreviewConsent
+          label={normalizedElement.label}
+          checked={checked}
+          isReadOnly={isReadOnly}
+          sanitizeHTML={sanitizeHTML}
+          description={descriptionText}
+          onChange={(isChecked) => {
+            setChecked(isChecked);
+            reportChange(isChecked);
+          }}
+        />
       );
     // -------------------------------------------------------
     // BUTTON
     // -------------------------------------------------------
-    case "button": {
+    case "button":
       return (
-        <BlockStack gap="200">
-          <InlineStack gap="200" align="center">
-            {(normalizedElement.options || []).map((option, index) => (
-              <Button
-                key={option.id || index}
-                pressed={selectedValues.includes(option.value)}
-                disabled={isReadOnly}
-                onClick={() => handleButtonChange(option.value)}
-              >
-                {option.label}
-              </Button>
-            ))}
-
-            {normalizedElement.otherOption && (
-              <Button
-                pressed={otherChecked}
-                disabled={isReadOnly}
-                onClick={() => handleButtonChange("__other__")}
-              >
-                {normalizedElement.otherLabel || "Other"}
-              </Button>
-            )}
-          </InlineStack>
-
-          {normalizedElement.otherOption && otherChecked && (
-            <TextField
-              placeholder={
-                normalizedElement.otherPlaceholder || "Please specify"
-              }
-              value={otherValue}
-              disabled={isReadOnly}
-              onChange={handleOtherTextChange}
-              autoComplete="off"
-            />
-          )}
-
-          {descriptionText}
-        </BlockStack>
+        <PreviewButton
+          options={normalizedElement.options || []}
+          selectedValues={selectedValues}
+          otherOption={normalizedElement.otherOption}
+          otherChecked={otherChecked}
+          otherLabel={normalizedElement.otherLabel}
+          otherPlaceholder={normalizedElement.otherPlaceholder}
+          otherValue={otherValue}
+          isReadOnly={isReadOnly}
+          onChange={handleButtonChange}
+          onOtherTextChange={handleOtherTextChange}
+          description={descriptionText}
+        />
       );
-    }
     // -------------------------------------------------------
     // URL
     // -------------------------------------------------------
@@ -2092,9 +2061,14 @@ export default function PreviewField({
     // -------------------------------------------------------
     case "date": {
       return (
-        <BlockStack gap="300">
-          {!hideLabel && fieldLabelWithIcon}
-
+        <PreviewInputShell
+          label={label}
+          required={required}
+          icon={selectedIcon}
+          hideLabel={hideLabel}
+          description={descriptionText}
+          shellClassName="preview-date-picker-shell"
+        >
           {/* DATE + TIME */}
           {format === "date_time" && (
             <FlatpickrField
@@ -2146,9 +2120,7 @@ export default function PreviewField({
               onChange={updateDateValue}
             />
           )}
-
-          {descriptionText}
-        </BlockStack>
+        </PreviewInputShell>
       );
     }
     // -------------------------------------------------------
@@ -2185,112 +2157,24 @@ export default function PreviewField({
     // -------------------------------------------------------
     // QUANTITY
     // -------------------------------------------------------
-    case "quantity": {
-      const buttonStyle = {
-        all: "unset",
-        width: "36px",
-        height: "36px",
-        flexShrink: 0,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        fontSize: "22px",
-        fontWeight: 400,
-        color: "#303030",
-        cursor: "pointer",
-        textAlign: "center",
-        boxSizing: "border-box",
-      };
-
-      return (
-        <div style={{ width: "100%", minWidth: 0 }}>
-          {!hideLabel && (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "4px",
-                marginBottom: "6px",
-                fontSize: "14px",
-                fontWeight: 500,
-                color: "#303030",
-              }}
-            >
-              {label}
-              {required && (
-                <span style={{ color: "#D72C0D" }}>*</span>
-              )}
-            </div>
-          )}
-
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              width: "100%",
-              minHeight: "48px",
-              padding: "0 8px",
-              background: "#F6F6F7",
-              border: "1px solid #D8DADD",
-              borderRadius: "8px",
-              boxSizing: "border-box",
-              gap: "8px",
-            }}
-          >
-            <button
-              type="button"
-              aria-label="Decrease quantity"
-              disabled={isReadOnly || safeValue <= quantityMin}
-              onClick={decreaseValue}
-              style={{
-                ...buttonStyle,
-                color: safeValue <= quantityMin ? "#C9CCCF" : "#303030",
-                cursor:
-                  isReadOnly || safeValue <= quantityMin
-                    ? "not-allowed"
-                    : "pointer",
-              }}
-            >
-              −
-            </button>
-
-            <span
-              style={{
-                flex: 1,
-                minWidth: 0,
-                textAlign: "center",
-                fontSize: "14px",
-                fontWeight: 500,
-                color: "#303030",
-                fontVariantNumeric: "tabular-nums",
-              }}
-            >
-              {safeValue}
-            </span>
-
-            <button
-              type="button"
-              aria-label="Increase quantity"
-              disabled={isReadOnly || safeValue >= quantityMax}
-              onClick={increaseValue}
-              style={{
-                ...buttonStyle,
-                color: safeValue >= quantityMax ? "#C9CCCF" : "#303030",
-                cursor:
-                  isReadOnly || safeValue >= quantityMax
-                    ? "not-allowed"
-                    : "pointer",
-              }}
-            >
-              +
-            </button>
-          </div>
-
-          {descriptionText}
-        </div>
-      );
-    }
+   case "quantity":
+  return (
+    <PreviewQuantity
+      label={label}
+      required={required}
+      hideLabel={hideLabel}
+      description={descriptionText}
+      value={safeValue}
+      min={quantityMin}
+      max={quantityMax}
+      isReadOnly={isReadOnly}
+      onDecrease={decreaseValue}
+      onIncrease={increaseValue}
+      onChange={(nextValue) => {
+        reportChange(nextValue);
+      }}
+    />
+  );
     // -------------------------------------------------------
     // REPEATER
     // -------------------------------------------------------
@@ -3087,9 +2971,32 @@ export default function PreviewField({
     // -------------------------------------------------------
     // COLOR PICKER
     // -------------------------------------------------------
-    case "color_picker":
+    case "color_picker": {
       return (
-        <BlockStack gap="200">
+        <PreviewInputShell
+          label={label}
+          required={required}
+          hideLabel={hideLabel}
+          icon={selectedIcon}
+          iconStyle={{
+            alignSelf: "stretch",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+          description={descriptionText}
+          shellClassName="preview-color-picker-shell"
+          contentClassName="preview-color-picker-content"
+          style={{
+            height: "40px",
+            minHeight: "40px",
+            overflow: "visible",
+          }}
+          inputStyle={{
+            height: "100%",
+            minHeight: "0",
+          }}
+        >
           <div
             style={{
               pointerEvents: isReadOnly ? "none" : "auto",
@@ -3097,15 +3004,14 @@ export default function PreviewField({
             }}
           >
             <ColorInput
-              label={hideLabel ? "" : label}
+              label=""
               value={colorValue}
               onChange={handleColorChange}
             />
           </div>
-
-          {descriptionText}
-        </BlockStack>
+        </PreviewInputShell>
       );
+    }
     // -------------------------------------------------------
     // FORM HEADER
     // -------------------------------------------------------
@@ -3981,21 +3887,28 @@ export default function PreviewField({
     case "textarea": {
       return (
         <BlockStack gap="200">
-          {fieldLabelWithIcon}
-
-          <TextField
-            value={value || ""}
-            placeholder={placeholder || ""}
-            multiline={4}
-            disabled={isReadOnly}
-            autoComplete="off"
-            maxLength={
-              textFieldHasCharacterLimit && textFieldMaxLength > 0
-                ? textFieldMaxLength
-                : undefined
-            }
-            onChange={handleTextChange}
-          />
+          <PreviewInputShell
+            label={label}
+            required={required}
+            hideLabel={hideLabel}
+            description={descriptionText}
+            shellClassName="preview-textarea-shell"
+          >
+            <textarea
+              className="preview-native-textarea"
+              value={value || ""}
+              placeholder={placeholder || ""}
+              disabled={isReadOnly}
+              autoComplete="off"
+              maxLength={
+                textFieldHasCharacterLimit && textFieldMaxLength > 0
+                  ? textFieldMaxLength
+                  : undefined
+              }
+              onChange={(event) => handleTextChange(event.target.value)}
+              rows={4}
+            />
+          </PreviewInputShell>
 
           {textFieldHasCharacterLimit && (
             <Text as="p" variant="bodySm" tone="subdued">
@@ -4005,11 +3918,10 @@ export default function PreviewField({
                 : " characters"}
             </Text>
           )}
-
-          {descriptionText}
         </BlockStack>
       );
     }
+
     // -------------------------------------------------------
     // DEFAULT FIELD
     // -------------------------------------------------------

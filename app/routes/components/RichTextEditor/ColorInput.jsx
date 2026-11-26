@@ -59,7 +59,7 @@ function hsbToHex({ hue, saturation, brightness }) {
   else if (hue < 180) [r, g, b] = [0, c, x];
   else if (hue < 240) [r, g, b] = [0, x, c];
   else if (hue < 300) [r, g, b] = [x, 0, c];
-  else [r, g, b] = [c, 0, x];
+  else[r, g, b] = [c, 0, x];
 
   const toHex = (v) =>
     Math.round((v + m) * 255)
@@ -162,29 +162,40 @@ export default function ColorInput({ label, value, onChange }) {
         ref={activatorRef}
         className="color-input-activator"
         // Prevent dnd-kit from starting a drag from this field.
-       // onPointerDown={stop}
+        // onPointerDown={stop}
         //onMouseDown={stop}
         onClick={toggle}
         style={{ width: "100%", cursor: "pointer" }}
       >
-        <TextField
-          label={label}
-          value={safeValue}
-          autoComplete="off"
-          readOnly
-          suffix={
-            <div
-              className="color-suffix-box"
-              style={{
-                backgroundColor: safeValue,
-                width: "24px",
-                height: "24px",
-                borderRadius: "4px",
-                border: "1px solid #8c9196",
-              }}
+        <div
+          ref={activatorRef}
+          className="color-input-activator preview-text-input-wrapper"
+          onClick={toggle}
+          style={{
+            width: "100%",
+            height: "100%",
+            cursor: "pointer",
+          }}
+        >
+          <div className="preview-text-input__container">
+            <input
+              type="text"
+              className="preview-text-input"
+              value={safeValue}
+              autoComplete="off"
+              readOnly
+              aria-label={label || "Selected color"}
+              style={{ cursor: "pointer" }}
             />
-          }
-        />
+
+            <div className="preview-text-input__suffix color-input-suffix">
+              <div
+                className="color-suffix-box"
+                style={{ backgroundColor: safeValue }}
+              />
+            </div>
+          </div>
+        </div>
       </div>
 
       {active &&

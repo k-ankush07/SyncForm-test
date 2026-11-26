@@ -1,8 +1,46 @@
 
 /* =========================================
-   PREVIEW INPUT SHELL
-   Shared outer design for all field types 
-   phone email password url name and text and number
+   1. PREVIEW FIELD DESIGN TOKENS
+========================================= */
+
+:root {
+  /* Main field */
+  --preview-field-bg: #F6F6F7;
+  --preview-field-border: transparent;
+  --preview-field-border-width: 1px;
+  --preview-field-radius: 8px;
+  --preview-field-height: 40px;
+  --preview-field-border-width: 2px;
+
+
+  /* Field text */
+  --preview-field-text: #303030;
+  --preview-field-placeholder: #8C9196;
+
+  /* Field focus */
+  --preview-field-focus-border: #2E4E49;
+  --preview-field-focus-shadow: none;
+
+  /* Icon */
+  --preview-icon-bg: #F1F1F1;
+  --preview-icon-color: #B6B6B6;
+  --preview-icon-border: #D8DADD;
+
+  /* Label */
+  --preview-label-color: #303030;
+  --preview-label-size: 14px;
+  --preview-required-color: #000000;
+
+  /* Description */
+  --preview-description-color: #6D7175;
+
+  /* Suffix */
+  --preview-suffix-bg: var(--preview-field-bg);
+  --preview-suffix-color: var(--preview-field-text);
+}
+
+/* =========================================
+   2. SHARED INPUT SHELL
 ========================================= */
 
 .preview-input-shell-wrapper {
@@ -13,48 +51,48 @@
   box-sizing: border-box;
 }
 
-/* LABEL */
+/* Label */
 
 .preview-input-shell__label {
   margin: 0 0 4px;
   padding: 0;
   line-height: 20px;
+  color: var(--preview-label-color);
+  font-size: var(--preview-label-size);
 }
 
 .preview-input-shell__required {
-  color: #000000;
+  color: var(--preview-required-color);
   font-weight: 400;
   margin-left: 3px;
 }
 
-/* MAIN FIELD CONTAINER */
+/* Outer field */
 
 .preview-input-shell {
   display: flex;
+  flex-direction: row;
   align-items: stretch;
   width: 100%;
   min-width: 0;
-  height: 40px;
+  height: var(--preview-field-height);
   margin: 0;
   padding: 0;
-  background: #F6F6F7;
-  border: none;
-  border-radius: 8px;
-  overflow: hidden;
+  background: var(--preview-field-bg);
+  border: var(--preview-field-border-width) solid var(--preview-field-border);
+  border-radius: var(--preview-field-radius);
   box-sizing: border-box;
 }
 
-.preview-input-shell:hover{
-   cursor: grabbing !important;
-}
+/* Focus */
 
-.preview-input-shell,
 .preview-input-shell:focus-within {
   outline: none;
-  box-shadow: none;
+  border-color: var(--preview-field-focus-border);
+  box-shadow: var(--preview-field-focus-shadow);
 }
 
-/* ICON SECTION */
+/* Icon */
 
 .preview-input-shell__icon {
   display: flex;
@@ -63,22 +101,23 @@
   justify-content: center;
   width: 42px;
   min-width: 42px;
-  height: 40px;
+  height: 100%;
   margin: 0;
   padding: 0;
-    color: #B6B6B6;
-  background: #F1F1F1;
-  border-right: 1px solid #D8DADD;
+  color: var(--preview-icon-color);
+  background: var(--preview-icon-bg);
+  border-right: 1px solid var(--preview-icon-border);
   box-sizing: border-box;
 }
 
-/* LEADING CONTENT - PHONE COUNTRY SELECTOR */
+/* Leading content */
 
 .preview-input-shell__leading {
   display: flex;
   flex: 0 0 auto;
   align-items: center;
-  height: 40px;
+  min-width: 0;
+  height: 100%;
   margin: 0;
   padding: 0;
   background: transparent;
@@ -86,24 +125,29 @@
   box-sizing: border-box;
 }
 
+/* Field content */
+
 .preview-input-shell__content {
+  display: block;
   flex: 1 1 auto;
   min-width: 0;
-  height: 40px;
+  height: 100%;
   margin: 0;
   padding: 0;
+  background: transparent;
   box-sizing: border-box;
 }
 
-/* DESCRIPTION */
+/* Description */
 
 .preview-input-shell__description {
   margin: 4px 0 0;
   padding: 0;
+  color: var(--preview-description-color);
 }
 
 /* =========================================
-   PREVIEW TEXT INPUT
+   3. SHARED TEXT INPUT
 ========================================= */
 
 .preview-text-input-wrapper {
@@ -123,10 +167,9 @@
   height: 100%;
   margin: 0;
   padding: 0;
+  background: transparent;
   box-sizing: border-box;
 }
-
-/* NATIVE INPUT */
 
 .preview-text-input {
   display: block;
@@ -136,24 +179,20 @@
   height: 100%;
   margin: 0;
   padding: 8px 12px;
+  background: transparent;
+  color: var(--preview-field-text);
   border: none !important;
   outline: none !important;
   box-shadow: none !important;
-  background: #F1F1F1;
   font-size: 14px;
   font-family: inherit;
-  color: inherit;
   box-sizing: border-box;
 }
 
-/* PLACEHOLDER */
-
 .preview-text-input::placeholder {
-  color: #8C9196;
+  color: var(--preview-field-placeholder);
   opacity: 1;
 }
-
-/* INPUT STATES */
 
 .preview-text-input:focus,
 .preview-text-input:focus-visible,
@@ -171,21 +210,22 @@
   cursor: pointer;
 }
 
-/* SUFFIX */
+/* Suffix */
 
 .preview-text-input__suffix {
   display: flex;
-  flex-shrink: 0;
+  flex: 0 0 auto;
   align-items: center;
   justify-content: center;
-  background-color: #f1f1f1;
   height: 100%;
   margin: 0;
   padding: 0 12px;
+  background: var(--preview-suffix-bg);
+  color: var(--preview-suffix-color);
   box-sizing: border-box;
 }
 
-/* ERROR */
+/* Error */
 
 .preview-text-input__error {
   margin: 4px 0 0;
@@ -196,14 +236,17 @@
 }
 
 /* =========================================
-   PHONE COUNTRY SELECTOR
+   4. PHONE COUNTRY SELECTOR
 ========================================= */
 
 .phone-country-selector {
   position: relative;
-  flex-shrink: 0;
-  height: 40px;
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  height: 100%;
   background: transparent;
+  box-sizing: border-box;
 }
 
 .phone-country-selector__button {
@@ -211,50 +254,283 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  height: 40px;
+  height: 100%;
   min-width: 80px;
   margin: 0;
   padding: 0 10px;
   background: transparent;
   border: none;
-  border-right: none;
   border-radius: 0;
   cursor: pointer;
   box-sizing: border-box;
 }
-.preview-input-shell__leading {
-  border-right: none !important;
+
+/* Keep phone input aligned with shared shell */
+
+.preview-input-shell .preview-text-input-wrapper {
+  height: 100%;
+  min-width: 0;
 }
-.phone-country-selector__button {
-  border-right: none !important;
+
+.preview-input-shell .preview-text-input__container {
+  height: 100%;
 }
 
 /* =========================================
-   PASSWORD VISIBILITY BUTTON
+   5. PASSWORD VISIBILITY BUTTON
 ========================================= */
 
 .password-visibility-button {
   display: flex;
-  flex-shrink: 0;
+  flex: 0 0 auto;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: var(--preview-field-height);
+  height: 100%;
   margin: 0;
   padding: 0;
-  background: #f1f1f1;
+  background: var(--preview-suffix-bg);
   border: none;
-  border-radius: 6px;
-  color: #303030;
+  border-radius: 0;
+  color: var(--preview-suffix-color);
   cursor: pointer;
   box-sizing: border-box;
 }
 
 .password-visibility-button:hover {
-  background: #f1f1f1;
+  background: var(--preview-suffix-bg);
 }
 
 .password-visibility-button:disabled {
   cursor: default;
+  opacity: 0.6;
+}
+
+/* =========================================
+   6. COLOR PICKER
+========================================= */
+
+.preview-color-picker-shell {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  width: 100%;
+  height: var(--preview-field-height);
+  min-height: var(--preview-field-height);
+  overflow: visible;
+}
+
+/* Keep the icon fixed on the left */
+
+.preview-color-picker-shell .preview-input-shell__icon {
+  display: flex;
+  flex: 0 0 42px;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  min-width: 42px;
+  height: 100%;
+}
+
+/* Color picker content */
+
+.preview-color-picker-content {
+  display: flex;
+  flex: 1 1 0;
+  width: 0;
+  min-width: 0;
+  height: 100%;
+  min-height: 0;
+  padding: 0;
+  background: transparent;
+}
+
+/* Color picker activator */
+
+.preview-color-picker-content > div,
+.color-input-activator {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.color-input-activator {
+  flex-direction: row;
+  align-items: stretch;
+  background: transparent;
+}
+
+/* Color picker input container */
+
+.color-input-activator .preview-text-input__container {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  background: transparent;
+}
+
+/* Color picker suffix */
+
+.color-input-suffix {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  margin: 0;
+  padding: 0 12px;
+  background: transparent;
+  color: var(--preview-suffix-color);
+  box-sizing: border-box;
+}
+
+.color-suffix-box {
+  display: block;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  border: 1px solid var(--preview-icon-border);
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+/* =========================================
+   7. DATE AND TIME PICKER
+========================================= */
+
+.preview-date-picker-shell {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  height: var(--preview-field-height);
+  min-height: var(--preview-field-height);
+}
+
+.preview-date-picker-content {
+  display: flex;
+  flex: 1 1 auto;
+  width: 0;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  background: transparent;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.preview-date-input {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  margin: 0;
+  padding: 8px 12px;
+  background: transparent;
+  color: var(--preview-field-text);
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  font-family: inherit;
+  font-size: 14px;
+  box-sizing: border-box;
+  cursor: pointer;
+}
+
+.preview-date-input::placeholder {
+  color: var(--preview-field-placeholder);
+  opacity: 1;
+}
+
+.preview-date-input:focus,
+.preview-date-input:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Remove inner date/time borders */
+
+.preview-date-picker-shell .preview-date-picker-content,
+.preview-date-picker-shell .preview-date-input,
+.preview-date-picker-shell .date-time-flatpickr-input,
+.preview-date-picker-shell .preview-input-shell__content {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+.preview-date-picker-shell .preview-date-input,
+.preview-date-picker-shell .date-time-flatpickr-input {
+  border-radius: 0 !important;
+}
+
+/* =========================================
+   8. TEXTAREA - KEEP POLARIS BORDER
+========================================= */
+
+/* =========================================
+   NATIVE TEXTAREA
+========================================= */
+
+.preview-textarea-shell {
+  height: auto !important;
+  min-height: 0 !important;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  overflow: visible !important;
+}
+
+.preview-textarea-shell .preview-input-shell__content {
+  width: 100%;
+  height: auto !important;
+  min-width: 0;
+  padding: 0;
+}
+
+.preview-native-textarea {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 110px;
+  margin: 0;
+  padding: 12px;
+
+  background: var(--preview-field-bg);
+  color: var(--preview-field-text);
+
+  border: 2px solid #8c9196;
+  border-radius: var(--preview-field-radius);
+
+  outline: none;
+  box-shadow: none;
+
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+
+  resize: none;
+  box-sizing: border-box;
+}
+
+.preview-native-textarea::placeholder {
+  color: var(--preview-field-placeholder);
+  opacity: 1;
+}
+
+.preview-native-textarea:focus,
+.preview-native-textarea:focus-visible {
+  border: 2px solid #2E4E49;
+  outline: none;
+  box-shadow: none;
+}
+
+.preview-native-textarea:disabled {
+  cursor: not-allowed;
   opacity: 0.6;
 }
