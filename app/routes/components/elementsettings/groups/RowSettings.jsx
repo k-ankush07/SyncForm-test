@@ -41,6 +41,7 @@ export default function RowSettings({
     page,
     onChange,
     onClose,
+    onDelete,
 }) {
     // Controls which settings screen is visible.
     const [activeSection, setActiveSection] = useState("main");
@@ -221,6 +222,23 @@ export default function RowSettings({
                     </BlockStack>
 
                 </BlockStack>
+            </div>
+
+            {/* =====================================================
+    FIXED BOTTOM REMOVE ROW BUTTON
+===================================================== */}
+
+            <div className="element-settings__footer">
+                <Button
+                    variant="plain"
+                    tone="critical"
+                    icon={PolarisIcons.DeleteIcon}
+                    onClick={onDelete}
+                    className="remove-element-btn"
+                    accessibilityLabel="Remove row"
+                >
+                    Remove row
+                </Button>
             </div>
 
         </div>

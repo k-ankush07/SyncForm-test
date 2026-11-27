@@ -67,6 +67,7 @@ export default function PageSettings({
     page,
     onChange,
     onClose,
+    onDelete,
 }) {
 
     // ================================================================
@@ -401,7 +402,7 @@ export default function PageSettings({
                         {page.useCustomFooter && (
 
                             <Box
-                                
+
                             >
 
                                 <BlockStack gap="300">
@@ -473,6 +474,23 @@ export default function PageSettings({
 
                 </BlockStack>
 
+            </div>
+
+            {/* =====================================================
+    FIXED BOTTOM REMOVE PAGE BUTTON
+===================================================== */}
+
+            <div className="element-settings__footer">
+                <Button
+                    variant="plain"
+                    tone="critical"
+                    icon={PolarisIcons.DeleteIcon}
+                    onClick={onDelete}
+                    className="remove-element-btn"
+                    accessibilityLabel="Remove page"
+                >
+                    Remove page
+                </Button>
             </div>
 
         </div>

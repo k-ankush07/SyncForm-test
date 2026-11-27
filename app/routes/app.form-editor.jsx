@@ -601,9 +601,49 @@ export default function FormEditor() {
   );
 
   // ======================================================
-  // UPDATE SELECTED PAGE
+  // DELETE SELECTED PAGE AND OPEN PREVIOUS PAGE
   // ======================================================
 
+  const handleDeletePage = () => {
+    const pageId = selectedTarget?.pageId;
+
+    if (!pageId) return;
+
+    setPages((previousPages) => {
+      const selectedIndex = previousPages.findIndex(
+        (page) => String(page.id) === String(pageId)
+      );
+
+      if (selectedIndex === -1) return previousPages;
+
+      // Never delete the last remaining page.
+      if (previousPages.length <= 1) return previousPages;
+
+      // Remove selected page.
+      const updatedPages = previousPages.filter(
+        (page) => String(page.id) !== String(pageId)
+      );
+
+      // Find previous page (or next page if first page was deleted).
+      const nextSelectedIndex = Math.max(0, selectedIndex - 1);
+
+      const nextPage = updatedPages[nextSelectedIndex];
+
+      // Close all pages and open the previous page.
+      const finalPages = updatedPages.map((page) => ({
+        ...page,
+        open: String(page.id) === String(nextPage.id),
+      }));
+
+      // Update selected page settings target.
+      setSelectedTarget({
+        type: "page",
+        pageId: nextPage.id,
+      });
+
+      return finalPages;
+    });
+  };
   const updateSelectedPage = (updates) => {
     setPages((previousPages) =>
       previousPages.map((page) => {
@@ -616,7 +656,6 @@ export default function FormEditor() {
           ...page,
           ...updates,
         };
-
         // ---------------------------------------------------
         // CASE 1: Enable custom header for this page.
         // Create an independent copy of the shared header.
@@ -1755,6 +1794,12 @@ export default function FormEditor() {
         ? null
         : previousElement
     );
+    // Return to the same page's settings.
+    setSelectedTarget({
+      type: "page",
+      pageId,
+    });
+    setSelectedTarget(null);
   };
   // DUPLICATE PAGE (page + all its rows and elements)
 
@@ -3167,6 +3212,7 @@ export default function FormEditor() {
               <PageSettings
                 page={selectedPage}
                 onChange={updateSelectedPage}
+                onDelete={handleDeletePage}
                 onClose={() => setSelectedTarget(null)}
               />
             ) : selectedTarget?.type === "row" && selectedRow ? (
@@ -3174,6 +3220,12 @@ export default function FormEditor() {
                 row={selectedRow}
                 page={selectedPage}
                 onChange={updateSelectedRow}
+                onDelete={() =>
+                  handleDeleteRow(
+                    selectedTarget.pageId,
+                    selectedTarget.rowId
+                  )
+                }
                 onClose={() => setSelectedTarget(null)}
               />
             ) : (
