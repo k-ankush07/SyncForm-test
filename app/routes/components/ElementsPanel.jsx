@@ -176,561 +176,633 @@ export default function ElementsPanel({
     // 5.1. MOVE ELEMENTS BETWEEN ROWS AND PAGES
     // ======================================================
 
-    const handlePageContentDragEnd = (event) => {
-        const { active, over } = event;
+ 
+const handlePageContentDragEnd = (event) => {
+    const { active, over } = event;
 
-        if (!over || String(active.id) === String(over.id)) return;
+    if (!over || String(active.id) === String(over.id)) return;
 
-        const activeData = active.data.current;
-        const overData = over.data.current;
+    const activeData = active.data.current;
+    const overData = over.data.current;
 
-        if (!activeData || !overData) return;
+    if (!activeData || !overData) return;
 
-        // Page and row dragging are handled separately.
-        if (
-            activeData.type === "page" ||
-            activeData.type === "row"
-        ) {
-            return;
+    // Page and row dragging are handled separately.
+    if (
+        activeData.type === "page" ||
+        activeData.type === "row"
+    ) {
+        return;
+    }
+
+    // Only these item types can be moved by this handler.
+    const sourceCollection = getSourceCollection(activeData.type);
+
+    if (!sourceCollection) return;
+
+    const sourcePageId = activeData.pageId;
+    const targetPageId = overData.pageId;
+
+    if (
+        sourcePageId == null ||
+        targetPageId == null
+    ) {
+        return;
+    }
+
+    // Only allow supported content drop targets.
+    const supportedTargets = [
+        "field",
+        "element",
+        "rootElement",
+        "rowDrop",
+        "row",
+        "pageRoot",
+    ];
+
+    if (!supportedTargets.includes(overData.type)) {
+        return;
+    }
+
+    // ======================================================
+    // STEP 1: GET DRAGGED ELEMENT POSITION.
+    // ======================================================
+
+    const activeRect = active.rect.current.translated;
+    const overRect = over.rect;
+
+    const draggedCenterY = activeRect
+        ? activeRect.top + activeRect.height / 2
+        : null;
+
+    // Determine whether the dragged item should be inserted
+    // before or after the item underneath it.
+    let placement = "after";
+
+    if (activeRect && overRect) {
+        const activeCenter =
+            activeRect.top + activeRect.height / 2;
+
+        const overCenter =
+            overRect.top + overRect.height / 2;
+
+        placement =
+            activeCenter < overCenter
+                ? "before"
+                : "after";
+    }
+
+    // ======================================================
+    // STEP 2: CHECK THE ACTUAL TARGET ROW BOUNDARY.
+    //
+    // A rowDrop container may be larger than the visible row.
+    // Never insert into a row when the dragged element is
+    // actually positioned outside its rendered boundaries.
+    // ======================================================
+
+    const targetRowId = overData.rowId ?? null;
+
+    const rowRelatedTargets = [
+        "rowDrop",
+        "row",
+        "field",
+        "element",
+    ];
+
+    let isOutsideTargetRow = false;
+
+    if (
+        rowRelatedTargets.includes(overData.type) &&
+        targetRowId != null &&
+        draggedCenterY !== null
+    ) {
+        const rowElements = Array.from(
+            document.querySelectorAll(
+                `[data-element-tree-row="true"][data-page-id="${String(targetPageId)}"]`
+            )
+        );
+
+        const targetRowElement = rowElements.find(
+            (rowElement) =>
+                String(rowElement.dataset.rowId) ===
+                String(targetRowId)
+        );
+
+        if (targetRowElement) {
+            const rowRect =
+                targetRowElement.getBoundingClientRect();
+
+            isOutsideTargetRow =
+                draggedCenterY < rowRect.top ||
+                draggedCenterY > rowRect.bottom;
+        }
+    }
+
+    console.log("CONTENT DROP DEBUG", {
+        activeId: active.id,
+        activeType: activeData.type,
+        overId: over.id,
+        overType: overData.type,
+        targetRowId,
+        draggedCenterY,
+        isOutsideTargetRow,
+        placement,
+    });
+
+    // If the dragged item is outside the actual row,
+    // handle the drop as a standalone element.
+    const shouldDropAsStandalone =
+        isOutsideTargetRow;
+
+    setPages((previousPages) => {
+
+        // ======================================================
+        // STEP 3: CREATE SAFE COPIES OF THE PAGE DATA.
+        // ======================================================
+
+        const updatedPages = previousPages.map((page) => ({
+            ...page,
+            rows: (page.rows ?? []).map((row) => ({
+                ...row,
+                fields: [...(row.fields ?? [])],
+                elements: [...(row.elements ?? [])],
+            })),
+            rootElements: [...(page.rootElements ?? [])],
+        }));
+
+        const sourcePage = updatedPages.find(
+            (page) =>
+                String(page.id) === String(sourcePageId)
+        );
+
+        const targetPage = updatedPages.find(
+            (page) =>
+                String(page.id) === String(targetPageId)
+        );
+
+        if (!sourcePage || !targetPage) {
+            return previousPages;
         }
 
-        // Only these item types can be moved by this handler.
-        const sourceCollection = getSourceCollection(activeData.type);
+        // ======================================================
+        // STEP 4: FIND THE SOURCE ROW.
+        // ======================================================
 
-        if (!sourceCollection) return;
-
-        const sourcePageId = activeData.pageId;
-        const targetPageId = overData.pageId;
-
-        if (
-            sourcePageId == null ||
-            targetPageId == null
-        ) {
-            return;
-        }
-
-        // Only allow supported content drop targets.
-        const supportedTargets = [
-            "field",
-            "element",
-            "rootElement",
-            "rowDrop",
-            "row",
-            "pageRoot",
-        ];
-
-        if (!supportedTargets.includes(overData.type)) {
-            return;
-        }
-
-        // Determine whether the dragged item should be inserted
-        // before or after the item underneath it.
-        const activeRect = active.rect.current.translated;
-        const overRect = over.rect;
-
-        let placement = "after";
-
-        if (activeRect && overRect) {
-            const activeCenter =
-                activeRect.top + activeRect.height / 2;
-
-            const overCenter =
-                overRect.top + overRect.height / 2;
-
-            placement =
-                activeCenter < overCenter
-                    ? "before"
-                    : "after";
-        }
-
-        setPages((previousPages) => {
-
-            // ======================================================
-            // STEP 1: CREATE SAFE COPIES OF THE PAGE DATA.
-            // ======================================================
-
-            const updatedPages = previousPages.map((page) => ({
-                ...page,
-                rows: (page.rows ?? []).map((row) => ({
-                    ...row,
-                    fields: [...(row.fields ?? [])],
-                    elements: [...(row.elements ?? [])],
-                })),
-                rootElements: [...(page.rootElements ?? [])],
-            }));
-
-            const sourcePage = updatedPages.find(
-                (page) =>
-                    String(page.id) === String(sourcePageId)
-            );
-
-            const targetPage = updatedPages.find(
-                (page) =>
-                    String(page.id) === String(targetPageId)
-            );
-
-            if (!sourcePage || !targetPage) {
-                return previousPages;
-            }
-
-            // ======================================================
-            // STEP 2: FIND THE SOURCE ROW.
-            // ======================================================
-
-            const sourceRow =
-                activeData.rowId != null
-                    ? sourcePage.rows.find(
-                        (row) =>
-                            String(row.id) ===
-                            String(activeData.rowId)
-                    )
-                    : null;
-
-            // ======================================================
-            // STEP 3: FIND THE TARGET ROW.
-            // ======================================================
-
-            const targetRowId = overData.rowId ?? null;
-
-            const targetRow =
-                targetRowId != null
-                    ? targetPage.rows.find(
-                        (row) =>
-                            String(row.id) ===
-                            String(targetRowId)
-                    )
-                    : null;
-
-            if (
-                targetRowId != null &&
-                !targetRow
-            ) {
-                return previousPages;
-            }
-
-            // ======================================================
-            // STEP 4: VALIDATE SOURCE AND TARGET COLLECTIONS.
-            // ======================================================
-
-            if (
-                (activeData.type === "field" ||
-                    activeData.type === "element") &&
-                !sourceRow
-            ) {
-                return previousPages;
-            }
-
-            if (
-                targetRow &&
-                !Array.isArray(targetRow.fields)
-            ) {
-                targetRow.fields = [];
-            }
-
-            if (
-                targetRow &&
-                !Array.isArray(targetRow.elements)
-            ) {
-                targetRow.elements = [];
-            }
-
-            // ======================================================
-            // STEP 5: VALIDATE THE TARGET ELEMENT.
-            // ======================================================
-
-            if (overData.type === "rootElement") {
-                const targetExists =
-                    targetPage.rootElements.some(
-                        (item) =>
-                            `element-${item.id}` ===
-                            String(over.id)
-                    );
-
-                if (!targetExists) {
-                    return previousPages;
-                }
-            }
-
-            if (
-                targetRow &&
-                (
-                    overData.type === "field" ||
-                    overData.type === "element"
+        const sourceRow =
+            activeData.rowId != null
+                ? sourcePage.rows.find(
+                    (row) =>
+                        String(row.id) ===
+                        String(activeData.rowId)
                 )
-            ) {
-                const targetCollection =
-                    overData.type === "field"
-                        ? "fields"
-                        : "elements";
+                : null;
 
-                const targetItems =
-                    targetRow[targetCollection] ?? [];
+        // ======================================================
+        // STEP 5: FIND THE TARGET ROW.
+        // ======================================================
 
-                const targetExists =
-                    targetItems.some((item, index) => {
-                        const itemId =
-                            targetCollection === "fields"
-                                ? getDragItemId(item, index)
-                                : `element-${item.id}`;
+        const targetRow =
+            targetRowId != null
+                ? targetPage.rows.find(
+                    (row) =>
+                        String(row.id) ===
+                        String(targetRowId)
+                )
+                : null;
 
-                        return String(itemId) === String(over.id);
-                    });
+        if (
+            targetRowId != null &&
+            !targetRow
+        ) {
+            return previousPages;
+        }
 
-                if (!targetExists) {
-                    return previousPages;
-                }
-            }
+        // ======================================================
+        // STEP 6: VALIDATE SOURCE AND TARGET COLLECTIONS.
+        // ======================================================
 
-            // ======================================================
-            // STEP 6: FIND THE DRAGGED ITEM.
-            // ======================================================
+        if (
+            (activeData.type === "field" ||
+                activeData.type === "element") &&
+            !sourceRow
+        ) {
+            return previousPages;
+        }
 
-            let draggedItem = null;
-            let sourceIndex = -1;
+        if (
+            targetRow &&
+            !Array.isArray(targetRow.fields)
+        ) {
+            targetRow.fields = [];
+        }
 
-            if (activeData.type === "field") {
-                sourceIndex = sourceRow.fields.findIndex(
-                    (item, index) =>
-                        String(getDragItemId(item, index)) ===
-                        String(active.id)
-                );
+        if (
+            targetRow &&
+            !Array.isArray(targetRow.elements)
+        ) {
+            targetRow.elements = [];
+        }
 
-                if (sourceIndex !== -1) {
-                    draggedItem = sourceRow.fields[sourceIndex];
-                }
-            }
+        // ======================================================
+        // STEP 7: VALIDATE THE TARGET ELEMENT.
+        // ======================================================
 
-            else if (activeData.type === "element") {
-                sourceIndex = sourceRow.elements.findIndex(
+        if (overData.type === "rootElement") {
+            const targetExists =
+                targetPage.rootElements.some(
                     (item) =>
-                        `element-${item.id}` === String(active.id)
+                        `element-${item.id}` ===
+                        String(over.id)
                 );
 
-                if (sourceIndex !== -1) {
-                    draggedItem = sourceRow.elements[sourceIndex];
-                }
-            }
-
-            else if (activeData.type === "rootElement") {
-                sourceIndex = sourcePage.rootElements.findIndex(
-                    (item) =>
-                        `element-${item.id}` === String(active.id)
-                );
-
-                if (sourceIndex !== -1) {
-                    draggedItem = sourcePage.rootElements[sourceIndex];
-                }
-            }
-
-            if (!draggedItem || sourceIndex === -1) {
+            if (!targetExists) {
                 return previousPages;
             }
+        }
 
+        if (
+            targetRow &&
+            (
+                overData.type === "field" ||
+                overData.type === "element"
+            )
+        ) {
+            const targetCollection =
+                overData.type === "field"
+                    ? "fields"
+                    : "elements";
 
+            const targetItems =
+                targetRow[targetCollection] ?? [];
 
+            const targetExists =
+                targetItems.some((item, index) => {
+                    const itemId =
+                        targetCollection === "fields"
+                            ? getDragItemId(item, index)
+                            : `element-${item.id}`;
 
-            // ======================================================
-            // STEP 7: REORDER ITEMS INSIDE THE SAME ROW.
-            // Save the mixed order in sourceRow.itemOrder.
-            // ======================================================
-
-            if (
-                sourcePage === targetPage &&
-                sourceRow &&
-                targetRow &&
-                String(sourceRow.id) === String(targetRow.id) &&
-                (
-                    overData.type === "field" ||
-                    overData.type === "element"
-                )
-            ) {
-                const combinedItems = [
-                    ...(sourceRow.fields || []).map((field, index) => ({
-                        item: field,
-                        collection: "fields",
-                        dragId: getDragItemId(field, index),
-                    })),
-
-                    ...(sourceRow.elements || []).map((element) => ({
-                        item: element,
-                        collection: "elements",
-                        dragId: `element-${element.id}`,
-                    })),
-                ];
-
-                // Restore the previously saved mixed order.
-                const savedOrder = sourceRow.itemOrder || [];
-
-                combinedItems.sort((a, b) => {
-                    const indexA = savedOrder.indexOf(a.dragId);
-                    const indexB = savedOrder.indexOf(b.dragId);
-
-                    if (indexA === -1 && indexB === -1) return 0;
-                    if (indexA === -1) return 1;
-                    if (indexB === -1) return -1;
-
-                    return indexA - indexB;
+                    return String(itemId) === String(over.id);
                 });
 
-                const oldIndex = combinedItems.findIndex(
-                    (entry) =>
-                        String(entry.dragId) === String(active.id)
-                );
+            if (!targetExists) {
+                return previousPages;
+            }
+        }
 
-                const newIndex = combinedItems.findIndex(
-                    (entry) =>
-                        String(entry.dragId) === String(over.id)
-                );
+        // ======================================================
+        // STEP 8: FIND THE DRAGGED ITEM.
+        // ======================================================
 
-                if (oldIndex === -1 || newIndex === -1) {
-                    return previousPages;
-                }
+        let draggedItem = null;
+        let sourceIndex = -1;
 
-                const reorderedItems = arrayMove(
-                    combinedItems,
-                    oldIndex,
-                    newIndex
-                );
+        if (activeData.type === "field") {
+            sourceIndex = sourceRow.fields.findIndex(
+                (item, index) =>
+                    String(getDragItemId(item, index)) ===
+                    String(active.id)
+            );
 
-                // Keep the original collections separate.
-                sourceRow.fields = reorderedItems
-                    .filter((entry) => entry.collection === "fields")
-                    .map((entry) => entry.item);
+            if (sourceIndex !== -1) {
+                draggedItem = sourceRow.fields[sourceIndex];
+            }
+        }
 
-                sourceRow.elements = reorderedItems
-                    .filter((entry) => entry.collection === "elements")
-                    .map((entry) => entry.item);
+        else if (activeData.type === "element") {
+            sourceIndex = sourceRow.elements.findIndex(
+                (item) =>
+                    `element-${item.id}` === String(active.id)
+            );
 
-                // Save the actual visual order.
-                sourceRow.itemOrder = reorderedItems.map(
-                    (entry) => entry.dragId
-                );
+            if (sourceIndex !== -1) {
+                draggedItem = sourceRow.elements[sourceIndex];
+            }
+        }
 
-                return normalizeRows
-                    ? normalizeRows(updatedPages)
-                    : updatedPages;
+        else if (activeData.type === "rootElement") {
+            sourceIndex = sourcePage.rootElements.findIndex(
+                (item) =>
+                    `element-${item.id}` === String(active.id)
+            );
+
+            if (sourceIndex !== -1) {
+                draggedItem = sourcePage.rootElements[sourceIndex];
+            }
+        }
+
+        if (!draggedItem || sourceIndex === -1) {
+            return previousPages;
+        }
+
+        // ======================================================
+        // STEP 9: REORDER ITEMS INSIDE THE SAME ROW.
+        // Save the mixed order in sourceRow.itemOrder.
+        // ======================================================
+
+        if (
+            !shouldDropAsStandalone &&
+            sourcePage === targetPage &&
+            sourceRow &&
+            targetRow &&
+            String(sourceRow.id) === String(targetRow.id) &&
+            (
+                overData.type === "field" ||
+                overData.type === "element"
+            )
+        ) {
+            const combinedItems = [
+                ...(sourceRow.fields || []).map((field, index) => ({
+                    item: field,
+                    collection: "fields",
+                    dragId: getDragItemId(field, index),
+                })),
+
+                ...(sourceRow.elements || []).map((element) => ({
+                    item: element,
+                    collection: "elements",
+                    dragId: `element-${element.id}`,
+                })),
+            ];
+
+            // Restore the previously saved mixed order.
+            const savedOrder = sourceRow.itemOrder || [];
+
+            combinedItems.sort((a, b) => {
+                const indexA = savedOrder.indexOf(a.dragId);
+                const indexB = savedOrder.indexOf(b.dragId);
+
+                if (indexA === -1 && indexB === -1) return 0;
+                if (indexA === -1) return 1;
+                if (indexB === -1) return -1;
+
+                return indexA - indexB;
+            });
+
+            const oldIndex = combinedItems.findIndex(
+                (entry) =>
+                    String(entry.dragId) === String(active.id)
+            );
+
+            const newIndex = combinedItems.findIndex(
+                (entry) =>
+                    String(entry.dragId) === String(over.id)
+            );
+
+            if (oldIndex === -1 || newIndex === -1) {
+                return previousPages;
             }
 
+            const reorderedItems = arrayMove(
+                combinedItems,
+                oldIndex,
+                newIndex
+            );
 
-            // ======================================================
-            // STEP 8: REMOVE THE DRAGGED ITEM FROM ITS SOURCE.
-            // ======================================================
+            // Keep the original collections separate.
+            sourceRow.fields = reorderedItems
+                .filter((entry) => entry.collection === "fields")
+                .map((entry) => entry.item);
 
-            if (activeData.type === "field") {
-                sourceRow.fields.splice(sourceIndex, 1);
-            }
+            sourceRow.elements = reorderedItems
+                .filter((entry) => entry.collection === "elements")
+                .map((entry) => entry.item);
 
-            else if (activeData.type === "element") {
-                sourceRow.elements.splice(sourceIndex, 1);
-            }
+            // Save the actual visual order.
+            sourceRow.itemOrder = reorderedItems.map(
+                (entry) => entry.dragId
+            );
 
-            else if (activeData.type === "rootElement") {
-                sourcePage.rootElements.splice(sourceIndex, 1);
-            }
+            return normalizeRows
+                ? normalizeRows(updatedPages)
+                : updatedPages;
+        }
 
-            // ======================================================
-            // STEP 9: CLEAR OLD ROOT POSITION ANCHORS.
-            // The destination decides the new position.
-            // ======================================================
+        // ======================================================
+        // STEP 10: REMOVE THE DRAGGED ITEM FROM ITS SOURCE.
+        // ======================================================
 
-            const {
-                insertBeforeRowId,
-                insertAfterRowId,
-                ...cleanDraggedItem
-            } = draggedItem;
+        if (activeData.type === "field") {
+            sourceRow.fields.splice(sourceIndex, 1);
+        }
 
-            draggedItem = cleanDraggedItem;
+        else if (activeData.type === "element") {
+            sourceRow.elements.splice(sourceIndex, 1);
+        }
 
-            // ======================================================
-            // STEP 10: DROP ONTO A FIELD OR CREATED ELEMENT.
-            // ======================================================
+        else if (activeData.type === "rootElement") {
+            sourcePage.rootElements.splice(sourceIndex, 1);
+        }
 
+        // ======================================================
+        // STEP 11: CLEAR OLD ROOT POSITION ANCHORS.
+        // The destination decides the new position.
+        // ======================================================
+
+        const {
+            insertBeforeRowId,
+            insertAfterRowId,
+            ...cleanDraggedItem
+        } = draggedItem;
+
+        draggedItem = cleanDraggedItem;
+
+        // ======================================================
+        // STEP 12: DROP ONTO A FIELD OR CREATED ELEMENT.
+        // ======================================================
+
+        if (
+            !shouldDropAsStandalone &&
+            targetRow &&
+            (
+                overData.type === "field" ||
+                overData.type === "element"
+            )
+        ) {
+            const targetCollection =
+                overData.type === "field"
+                    ? "fields"
+                    : "elements";
+
+            // Keep the dragged item in its original collection.
+            const destinationCollection = sourceCollection;
+
+            const destinationItems =
+                targetRow[destinationCollection];
+
+            let insertIndex = destinationItems.length;
+
+            // Insert relative to the target when both collections
+            // are the same.
             if (
-                targetRow &&
-                (
-                    overData.type === "field" ||
-                    overData.type === "element"
-                )
+                destinationCollection === targetCollection
             ) {
-                const targetCollection =
-                    overData.type === "field"
-                        ? "fields"
-                        : "elements";
+                const currentTargetIndex =
+                    destinationItems.findIndex(
+                        (item, index) => {
+                            const itemId =
+                                targetCollection === "fields"
+                                    ? getDragItemId(item, index)
+                                    : `element-${item.id}`;
 
-                // Keep the dragged item in its original collection.
-                const destinationCollection = sourceCollection;
-
-                const destinationItems =
-                    targetRow[destinationCollection];
-
-                let insertIndex = destinationItems.length;
-
-                // Insert relative to the target when both collections
-                // are the same.
-                if (
-                    destinationCollection === targetCollection
-                ) {
-                    const currentTargetIndex =
-                        destinationItems.findIndex(
-                            (item, index) => {
-                                const itemId =
-                                    targetCollection === "fields"
-                                        ? getDragItemId(item, index)
-                                        : `element-${item.id}`;
-
-                                return String(itemId) === String(over.id);
-                            }
-                        );
-
-                    if (currentTargetIndex === -1) {
-                        return previousPages;
-                    }
-
-                    insertIndex =
-                        currentTargetIndex +
-                        (placement === "after" ? 1 : 0);
-                }
-
-                destinationItems.splice(
-                    insertIndex,
-                    0,
-                    draggedItem
-                );
-            }
-
-            // ======================================================
-            // STEP 11: DROP ONTO THE ROW BODY.
-            // ======================================================
-
-            else if (
-                targetRow &&
-                (
-                    overData.type === "rowDrop" ||
-                    overData.type === "row"
-                )
-            ) {
-                targetRow[sourceCollection].push(draggedItem);
-            }
-
-            // ======================================================
-            // STEP 12: DROP ONTO ANOTHER STANDALONE ELEMENT.
-            // ======================================================
-
-            else if (overData.type === "rootElement") {
-                const rootElements = targetPage.rootElements;
-
-                const currentTargetIndex = rootElements.findIndex(
-                    (item) =>
-                        `element-${item.id}` === String(over.id)
-                );
+                            return String(itemId) === String(over.id);
+                        }
+                    );
 
                 if (currentTargetIndex === -1) {
                     return previousPages;
                 }
 
-                const currentTargetElement =
-                    rootElements[currentTargetIndex];
-
-                const standaloneElement = {
-                    ...draggedItem,
-
-                    ...(currentTargetElement.insertBeforeRowId != null
-                        ? {
-                            insertBeforeRowId:
-                                currentTargetElement.insertBeforeRowId,
-                        }
-                        : {}),
-
-                    ...(currentTargetElement.insertAfterRowId != null
-                        ? {
-                            insertAfterRowId:
-                                currentTargetElement.insertAfterRowId,
-                        }
-                        : {}),
-                };
-
-                rootElements.splice(
+                insertIndex =
                     currentTargetIndex +
-                    (placement === "after" ? 1 : 0),
-                    0,
-                    standaloneElement
-                );
+                    (placement === "after" ? 1 : 0);
             }
 
-            // ======================================================
-            // STEP 13: DROP ONTO THE PAGE ROOT AREA.
-            // Turn the dragged item into a standalone element
-            // at the position where it was dropped.
-            // ======================================================
+            destinationItems.splice(
+                insertIndex,
+                0,
+                draggedItem
+            );
+        }
 
-            else if (overData.type === "pageRoot") {
-                const activeRect = active.rect.current.translated;
+        // ======================================================
+        // STEP 13: DROP INSIDE THE ACTUAL ROW BODY.
+        // ======================================================
 
-                const dropY = activeRect
-                    ? activeRect.top + activeRect.height / 2
-                    : null;
+        else if (
+            !shouldDropAsStandalone &&
+            targetRow &&
+            (
+                overData.type === "rowDrop" ||
+                overData.type === "row"
+            )
+        ) {
+            targetRow[sourceCollection].push(draggedItem);
+        }
 
-                const rowElements = Array.from(
-                    document.querySelectorAll(
-                        `[data-element-tree-row="true"][data-page-id="${String(targetPageId)}"]`
-                    )
-                );
+        // ======================================================
+        // STEP 14: DROP ONTO ANOTHER STANDALONE ELEMENT.
+        // ======================================================
 
-                if (
-                    rowElements.length === 0 ||
-                    dropY === null
-                ) {
-                    targetPage.rootElements.push(draggedItem);
-                } else {
-                    const rowPositions = rowElements
-                        .map((rowElement) => ({
-                            rowId: rowElement.dataset.rowId,
-                            top: rowElement.getBoundingClientRect().top,
-                            bottom: rowElement.getBoundingClientRect().bottom,
-                        }))
-                        .sort((a, b) => a.top - b.top);
+        else if (
+            !shouldDropAsStandalone &&
+            overData.type === "rootElement"
+        ) {
+            const rootElements = targetPage.rootElements;
 
-                    const nextRow = rowPositions.find(
-                        (row) =>
-                            dropY < (row.top + row.bottom) / 2
-                    );
+            const currentTargetIndex = rootElements.findIndex(
+                (item) =>
+                    `element-${item.id}` === String(over.id)
+            );
 
-                    if (nextRow) {
-                        targetPage.rootElements.push({
-                            ...draggedItem,
-                            insertBeforeRowId: nextRow.rowId,
-                        });
-                    } else {
-                        const lastRow =
-                            rowPositions[rowPositions.length - 1];
-
-                        targetPage.rootElements.push({
-                            ...draggedItem,
-                            insertAfterRowId: lastRow.rowId,
-                        });
-                    }
-                }
-            }
-
-            // ======================================================
-            // STEP 14: CANCEL ANY UNHANDLED DROP TARGET.
-            // ======================================================
-
-            else {
+            if (currentTargetIndex === -1) {
                 return previousPages;
             }
 
-            // ======================================================
-            // STEP 15: NORMALIZE ROWS.
-            // Remove empty rows and convert one-item rows
-            // into standalone elements.
-            // ======================================================
+            const currentTargetElement =
+                rootElements[currentTargetIndex];
 
-            return normalizeRows
-                ? normalizeRows(updatedPages)
-                : updatedPages;
-        });
-    };
+            const standaloneElement = {
+                ...draggedItem,
+
+                ...(currentTargetElement.insertBeforeRowId != null
+                    ? {
+                        insertBeforeRowId:
+                            currentTargetElement.insertBeforeRowId,
+                    }
+                    : {}),
+
+                ...(currentTargetElement.insertAfterRowId != null
+                    ? {
+                        insertAfterRowId:
+                            currentTargetElement.insertAfterRowId,
+                    }
+                    : {}),
+            };
+
+            rootElements.splice(
+                currentTargetIndex +
+                (placement === "after" ? 1 : 0),
+                0,
+                standaloneElement
+            );
+        }
+
+        // ======================================================
+        // STEP 15: DROP ONTO PAGE ROOT OR OUTSIDE ROW.
+        // Create a standalone element at the correct position.
+        // ======================================================
+
+        else if (
+            overData.type === "pageRoot" ||
+            shouldDropAsStandalone
+        ) {
+            const dropY = draggedCenterY;
+
+            const rowElements = Array.from(
+                document.querySelectorAll(
+                    `[data-element-tree-row="true"][data-page-id="${String(targetPageId)}"]`
+                )
+            );
+
+            if (
+                rowElements.length === 0 ||
+                dropY === null
+            ) {
+                targetPage.rootElements.push(draggedItem);
+            } else {
+                const rowPositions = rowElements
+                    .map((rowElement) => ({
+                        rowId: rowElement.dataset.rowId,
+                        top: rowElement.getBoundingClientRect().top,
+                        bottom: rowElement.getBoundingClientRect().bottom,
+                    }))
+                    .filter((row) => row.rowId != null)
+                    .sort((a, b) => a.top - b.top);
+
+                const nextRow = rowPositions.find(
+                    (row) =>
+                        dropY < (row.top + row.bottom) / 2
+                );
+
+                if (nextRow) {
+                    targetPage.rootElements.push({
+                        ...draggedItem,
+                        insertBeforeRowId: nextRow.rowId,
+                    });
+                } else if (rowPositions.length > 0) {
+                    const lastRow =
+                        rowPositions[rowPositions.length - 1];
+
+                    targetPage.rootElements.push({
+                        ...draggedItem,
+                        insertAfterRowId: lastRow.rowId,
+                    });
+                } else {
+                    targetPage.rootElements.push(draggedItem);
+                }
+            }
+        }
+
+        // ======================================================
+        // STEP 16: CANCEL ANY UNHANDLED DROP TARGET.
+        // ======================================================
+
+        else {
+            return previousPages;
+        }
+
+        // ======================================================
+        // STEP 17: NORMALIZE ROWS.
+        // Remove empty rows and convert one-item rows
+        // into standalone elements.
+        // ======================================================
+
+        return normalizeRows
+            ? normalizeRows(updatedPages)
+            : updatedPages;
+    });
+};
 
     // ======================================================
     // 5.2. REORDER PAGES
@@ -1153,21 +1225,25 @@ export default function ElementsPanel({
 
                 {/* SHARED DRAG AND DROP CONTEXT */}
 
+
                 <DndContext
                     sensors={sensors}
 
-                    // Restrict page and row dragging to their own containers.
+                    // Restrict page, row, and element dragging to valid targets.
                     collisionDetection={(args) => {
-                        const activeType =
-                            args.active.data.current?.type;
+                        console.log("ELEMENTS PANEL COLLISION RUNNING");
 
+                        const activeType = args.active.data.current?.type;
+                        const activeData = args.active.data.current;
+
+                        // =====================================================
                         // PAGE DRAGGING: Only detect pages.
+                        // =====================================================
                         if (activeType === "page") {
                             const pageContainers =
                                 args.droppableContainers.filter(
                                     (container) =>
-                                        container.data.current?.type ===
-                                        "page"
+                                        container.data.current?.type === "page"
                                 );
 
                             return closestCenter({
@@ -1176,13 +1252,14 @@ export default function ElementsPanel({
                             });
                         }
 
+                        // =====================================================
                         // ROW DRAGGING: Only detect rows.
+                        // =====================================================
                         if (activeType === "row") {
                             const rowContainers =
                                 args.droppableContainers.filter(
                                     (container) =>
-                                        container.data.current?.type ===
-                                        "row"
+                                        container.data.current?.type === "row"
                                 );
 
                             return closestCenter({
@@ -1191,27 +1268,141 @@ export default function ElementsPanel({
                             });
                         }
 
-                        // ELEMENT AND FIELD DRAGGING:
-                        // Detect what is actually underneath the pointer.
-                        const pointerCollisions =
-                            pointerWithin(args);
+                        // =====================================================
+                        // ELEMENT AND FIELD DRAGGING
+                        // Exclude the active item and page containers.
+                        // =====================================================
+                        const validDropContainers =
+                            args.droppableContainers.filter((container) => {
+                                const type = container.data.current?.type;
 
+                                return (
+                                    String(container.id) !== String(args.active.id) &&
+                                    type !== "page"
+                                );
+                            });
+
+                        const pointerCollisions = pointerWithin({
+                            ...args,
+                            droppableContainers: validDropContainers,
+                        });
+
+                        console.log(
+                            "DROP TARGET DETAILS",
+                            JSON.stringify(
+                                {
+                                    activeId: args.active.id,
+                                    activeType,
+                                    pointerCollisions: pointerCollisions.map(
+                                        (collision) => ({
+                                            id: collision.id,
+                                            type: collision.data?.droppableContainer?.data?.current?.type,
+                                            pageId: collision.data?.droppableContainer?.data?.current?.pageId,
+                                            rowId: collision.data?.droppableContainer?.data?.current?.rowId,
+                                        })
+                                    ),
+                                },
+                                null,
+                                2
+                            )
+                        );
+
+                        // =====================================================
+                        // SAME ROW DETECTION
+                        // =====================================================
+                        const isOverSameRow = pointerCollisions.some((collision) => {
+                            const data =
+                                collision.data?.droppableContainer?.data?.current;
+
+                            return (
+                                data?.type === "row" &&
+                                String(data.rowId) === String(activeData?.rowId) &&
+                                String(data.pageId) === String(activeData?.pageId)
+                            );
+                        });
+
+                        // If the row is detected, find the closest field/element
+                        // inside that same row.
+                        if (isOverSameRow) {
+                            const sameRowItems =
+                                args.droppableContainers.filter((container) => {
+                                    const data = container.data.current;
+
+                                    return (
+                                        (data?.type === "field" ||
+                                            data?.type === "element") &&
+                                        String(data.rowId) === String(activeData.rowId) &&
+                                        String(data.pageId) === String(activeData.pageId) &&
+                                        String(container.id) !== String(args.active.id)
+                                    );
+                                });
+
+                            if (sameRowItems.length > 0) {
+                                const itemCollisions = closestCenter({
+                                    ...args,
+                                    droppableContainers: sameRowItems,
+                                });
+
+                                if (itemCollisions.length > 0) {
+                                    return itemCollisions;
+                                }
+                            }
+                        }
+
+                        // =====================================================
+                        // STANDALONE ELEMENT FALLBACK
+                        // =====================================================
+                        // If pointerWithin detects no target, or detects only
+                        // the page root, find the nearest standalone element
+                        // on the same page.
+                        const shouldUseRootFallback =
+                            pointerCollisions.length === 0 ||
+                            pointerCollisions.every((collision) => {
+                                const type =
+                                    collision.data?.droppableContainer?.data?.current?.type;
+
+                                return type === "pageRoot";
+                            });
+
+                        if (
+                            activeType === "rootElement" &&
+                            shouldUseRootFallback
+                        ) {
+                            const rootElementContainers =
+                                args.droppableContainers.filter((container) => {
+                                    const data = container.data.current;
+
+                                    return (
+                                        data?.type === "rootElement" &&
+                                        String(container.id) !== String(args.active.id) &&
+                                        String(data.pageId) === String(activeData.pageId)
+                                    );
+                                });
+
+                            if (rootElementContainers.length > 0) {
+                                const rootElementCollisions = closestCenter({
+                                    ...args,
+                                    droppableContainers: rootElementContainers,
+                                });
+
+                                if (rootElementCollisions.length > 0) {
+                                    return rootElementCollisions;
+                                }
+                            }
+                        }
+
+                        // =====================================================
+                        // NO COLLISION
+                        // =====================================================
+                        // This check must stay AFTER the standalone fallback.
                         if (pointerCollisions.length === 0) {
                             return [];
                         }
 
-                        // Never allow the outer page sortable to become
-                        // a content drop target.
-                        const contentCollisions =
-                            pointerCollisions.filter((collision) => {
-                                const type =
-                                    collision.data?.droppableContainer
-                                        ?.data?.current?.type;
-
-                                return type !== "page";
-                            });
-
+                        // =====================================================
+                        // COLLISION PRIORITY
                         // Prefer specific targets over the large page root.
+                        // =====================================================
                         const priority = {
                             field: 5,
                             element: 5,
@@ -1221,30 +1412,25 @@ export default function ElementsPanel({
                             pageRoot: 1,
                         };
 
-                        const sortedCollisions = [
-                            ...contentCollisions,
-                        ].sort((a, b) => {
+                        return [...pointerCollisions].sort((a, b) => {
                             const typeA =
-                                a.data?.droppableContainer
-                                    ?.data?.current?.type;
+                                a.data?.droppableContainer?.data?.current?.type;
 
                             const typeB =
-                                b.data?.droppableContainer
-                                    ?.data?.current?.type;
+                                b.data?.droppableContainer?.data?.current?.type;
 
                             return (
                                 (priority[typeB] || 0) -
                                 (priority[typeA] || 0)
                             );
                         });
-
-                        return sortedCollisions;
                     }}
 
-                    // Store information for the floating drag preview.
+                    // =====================================================
+                    // DRAG START
+                    // =====================================================
                     onDragStart={(event) => {
-                        const data =
-                            event.active.data.current;
+                        const data = event.active.data.current;
 
                         setActiveDragItem({
                             label: data?.label || "Element",
@@ -1253,32 +1439,39 @@ export default function ElementsPanel({
                         });
                     }}
 
-                    // Run the appropriate drag-and-drop handler.
+                    // =====================================================
+                    // DRAG END
+                    // =====================================================
                     onDragEnd={(event) => {
+                        console.log("ELEMENT DRAG DEBUG", {
+                            activeId: event.active.id,
+                            activeData: event.active.data.current,
+                            overId: event.over?.id,
+                            overData: event.over?.data.current,
+                        });
+
                         handleAllDragEnd(event);
                         setActiveDragItem(null);
                     }}
 
-                    // Clear the floating preview if dragging is cancelled.
+                    // =====================================================
+                    // DRAG CANCEL
+                    // =====================================================
                     onDragCancel={() => {
                         setActiveDragItem(null);
                     }}
                 >
                     <SortableContext
-                        items={pages.map(
-                            (page) => `page-${page.id}`
-                        )}
+                        items={pages.map((page) => `page-${page.id}`)}
                         strategy={verticalListSortingStrategy}
                     >
-                        {/* Render all draggable pages. */}
-
                         {pages.map((page) => (
                             <SortablePage
                                 key={page.id}
                                 page={page}
                                 togglePage={togglePage}
 
-                                // handle the page and row setting
+                                // Page and row settings.
                                 onSelectPage={onSelectPage}
                                 onSelectRow={onSelectRow}
 
@@ -1309,7 +1502,6 @@ export default function ElementsPanel({
                     </SortableContext>
 
                     {/* FLOATING DRAG PREVIEW */}
-
                     <DragOverlay>
                         {activeDragItem ? (
                             <div className="element-tree__drag-overlay">
@@ -1324,7 +1516,6 @@ export default function ElementsPanel({
                         ) : null}
                     </DragOverlay>
                 </DndContext>
-
                 {/* ADD PAGE BUTTON */}
 
                 <button
@@ -2056,9 +2247,15 @@ function SortableRow({
 
                 <ElementActions
                     element={row}
-                    onToggleElementVisibility={onToggleRowVisibility}
-                    onDuplicateElement={onDuplicateRow}
-                    onDeleteElement={onDeleteRow}
+                    onToggleElementVisibility={(row) =>
+                        onToggleRowVisibility(pageId, row.id)
+                    }
+                    onDuplicateElement={(row) =>
+                        onDuplicateRow(pageId, row.id)
+                    }
+                    onDeleteElement={(row) =>
+                        onDeleteRow(pageId, row.id)
+                    }
                 />
             </div>
 

@@ -47,6 +47,7 @@ import useTextField from "../../utils/hooks/useTextField.js";
 import useDropdownField from "../../utils/hooks/useDropdownField";
 import useProductField from "../../utils/hooks/useProductField";
 import useImageDropdownField from "../../utils/hooks/useImageDropdownField";
+import useImageOptionsField from "../../utils/hooks/useImageOptionsField.js";
 // 1. SIGNATURE PREVIEW
 import SignaturePreview from "../../utils/SignaturePreview.jsx";
 // =============================================================
@@ -539,6 +540,20 @@ export default function PreviewField({
     value,
     updateValue,
   });
+
+  // image options 
+const {
+  maxImages,
+  selectedImages,
+  remainingImages,
+  handleImageRemove,
+  handleImageSelection,
+} = useImageOptionsField({
+  savedValue,
+  normalizedElement,
+  reportChange,
+  isReadOnly,
+});
 
   const {
     imageOptions,
@@ -2158,22 +2173,25 @@ export default function PreviewField({
     // -------------------------------------------------------
     // QUANTITY
     // -------------------------------------------------------
-   case "quantity":
-  return (
-   <PreviewQuantity
-  label={label}
-  required={required}
-  hideLabel={hideLabel}
-  description={descriptionText}
-  value={safeValue}
-  min={quantityMin}
-  max={quantityMax}
-  isReadOnly={isReadOnly}
-  onDecrease={decreaseValue}
-  onIncrease={increaseValue}
-  onChange={handleQuantityChange}
-/>
-  );
+    case "quantity":
+      return (
+        <PreviewQuantity
+          label={label}
+          required={required}
+          hideLabel={hideLabel}
+          description={descriptionText}
+          value={safeValue}
+          min={quantityMin}
+          max={quantityMax}
+          handleQuantityChange={handleQuantityChange}
+          isReadOnly={isReadOnly}
+          onDecrease={decreaseValue}
+          onIncrease={increaseValue}
+          onChange={(nextValue) => {
+            reportChange(nextValue);
+          }}
+        />
+      );
     // -------------------------------------------------------
     // REPEATER
     // -------------------------------------------------------
@@ -3527,169 +3545,148 @@ export default function PreviewField({
       );
     // IMAGE DROPDOWN
     // -------------------------------------------------------
-    case "image_dropdown": {
-      const showOptionLabel =
-        normalizedElement.showOptionLabel !== false;
 
-      return (
-        <BlockStack gap="200">
-          {!hideLabel && (
-            <Text as="p" variant="bodyMd">
-              {label}
-              {required && (
-                <span style={{ color: "var(--p-color-text-critical)" }}>
-                  {" "}*
-                </span>
-              )}
-            </Text>
+
+case "image_options": {
+  return (
+    <BlockStack gap="200">
+      {!hideLabel && (
+        <Text as="p" variant="bodyMd">
+          {label}
+          {required && (
+            <span style={{ color: "var(--p-color-text-critical)" }}>
+              {" "}*
+            </span>
           )}
+        </Text>
+      )}
 
+      <div
+        style={{
+          width: "100%",
+          minHeight: "150px",
+          background: "#eeeeee",
+          border: "1px dashed #8c9196",
+          borderRadius: "8px",
+          display: "flex",
+          flexDirection: "column",
+          gap: "12px",
+          padding: "16px",
+          boxSizing: "border-box",
+        }}
+      >
+        {/* IMAGE PREVIEWS */}
+        {selectedImages.length > 0 && (
           <div
             style={{
-              position: "relative",
-              width: "100%",
+              display: "grid",
+              gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+              gap: "10px",
             }}
           >
-            {/* DROPDOWN BUTTON */}
-
-            <button
-              type="button"
-              disabled={isReadOnly}
-              onClick={() =>
-                setImageDropdownOpen((prev) => !prev)
-              }
-              style={{
-                width: "100%",
-                minHeight: "42px",
-                padding: "10px 12px",
-                border: "1px solid #8c9196",
-                borderRadius: "8px",
-                background: "#fff",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                cursor: isReadOnly ? "default" : "pointer",
-                textAlign: "left",
-              }}
-            >
-              <span>
-                {selectedImageOption?.label || "Select an option"}
-              </span>
-
-              <span
-                style={{
-                  transform: imageDropdownOpen
-                    ? "rotate(180deg)"
-                    : "rotate(0)",
-                  transition: "transform 0.2s",
-                }}
-              >
-                ▼
-              </span>
-            </button>
-
-            {/* DROPDOWN OPTIONS */}
-
-            {imageDropdownOpen && (
+            {selectedImages.map((image, index) => (
               <div
+                key={index}
                 style={{
-                  position: "absolute",
-                  top: "calc(100% + 5px)",
-                  left: 0,
-                  right: 0,
-                  zIndex: 10000,
-                  background: "#fff",
-                  border: "1px solid #d2d5d8",
-                  borderRadius: "8px",
-                  padding: "12px",
-                  maxHeight: "260px",
-                  overflowY: "auto",
-                  overflowX: "hidden",
-                  display: "grid",
-                  gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-                  gap: "12px",
-                  boxShadow: "0 4px 12px rgba(0,0,0,0.12)",
+                  position: "relative",
+                  minWidth: 0,
                 }}
               >
-                {imageOptions.map((option, index) => {
-                  const optionValue =
-                    option.value || option.label;
+                <img
+                  src={image}
+                  alt={`Selected image ${index + 1}`}
+                  style={{
+                    width: "100%",
+                    height: "100px",
+                    objectFit: "cover",
+                    borderRadius: "6px",
+                    display: "block",
+                  }}
+                />
 
-                  const isSelected = value === optionValue;
-
-                  return (
-                    <div
-                      key={option.id || optionValue || index}
-                      onClick={() =>
-                        handleImageDropdownSelect(option)
-                      }
-                      style={{
-                        cursor: isReadOnly ? "default" : "pointer",
-                        padding: "6px",
-                        borderRadius: "7px",
-                        border: isSelected
-                          ? "2px solid #303030"
-                          : "1px solid #e1e3e5",
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        gap: "6px",
-                        background: isSelected ? "#f6f6f7" : "#fff",
-                        minWidth: 0,
-                      }}
-                    >
-                      <img
-                        src={option.image}
-                        alt={option.label || "Option"}
-                        onError={(event) => {
-                          console.log("IMAGE FAILED:", {
-                            label: option.label,
-                            image: option.image,
-                            option,
-                          });
-
-                          event.currentTarget.style.display = "none";
-                        }}
-                        onLoad={() => {
-                          console.log("IMAGE LOADED:", option.image);
-                        }}
-                        style={{
-                          width: "100%",
-                          height: "75px",
-                          objectFit: "cover",
-                          borderRadius: "5px",
-                          display: "block",
-                        }}
-                      />
-
-                      {showOptionLabel && (
-                        <div
-                          style={{
-                            fontSize: "12px",
-                            textAlign: "center",
-                            overflowWrap: "anywhere",
-                          }}
-                        >
-                          {option.label}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-
-                {imageOptions.length === 0 && (
-                  <Text as="p" tone="subdued">
-                    No image options available.
-                  </Text>
+                {!isReadOnly && (
+                  <button
+                    type="button"
+                    onClick={() => handleImageRemove(index)}
+                    style={{
+                      position: "absolute",
+                      top: "4px",
+                      right: "4px",
+                      width: "23px",
+                      height: "23px",
+                      border: "none",
+                      borderRadius: "50%",
+                      background: "#ffffff",
+                      cursor: "pointer",
+                      fontSize: "15px",
+                    }}
+                  >
+                    ×
+                  </button>
                 )}
               </div>
-            )}
+            ))}
           </div>
+        )}
 
-          {descriptionText}
-        </BlockStack>
-      );
-    }
+        {selectedImages.length === 0 && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              minHeight: "90px",
+            }}
+          >
+            <Text as="p" variant="bodyMd">
+              {normalizedElement.placeholder || "Choose images"}
+            </Text>
+          </div>
+        )}
+
+        {/* UPLOAD BUTTON */}
+        {!isReadOnly && remainingImages > 0 && (
+          <label
+            style={{
+              padding: "9px 14px",
+              border: "1px solid #8c9196",
+              borderRadius: "5px",
+              color: "#303030",
+              fontSize: "14px",
+              background: "#ffffff",
+              cursor: "pointer",
+              textAlign: "center",
+            }}
+          >
+            {selectedImages.length > 0
+              ? "Add more images"
+              : "Browse images"}
+
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              hidden
+              onChange={handleImageSelection}
+            />
+          </label>
+        )}
+
+        <Text
+          as="p"
+          variant="bodySm"
+          tone="subdued"
+          alignment="center"
+        >
+          {selectedImages.length} / {maxImages} images selected
+        </Text>
+      </div>
+
+      {descriptionText}
+    </BlockStack>
+  );
+}
+
     // -------------------------------------------------------
     // PRODUCT
     // -------------------------------------------------------

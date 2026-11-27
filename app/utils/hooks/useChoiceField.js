@@ -469,26 +469,46 @@ const handleButtonChange = useCallback(
   // 10. RETURN
   // ===========================================================
 
- return {
-  // Choice
-options,
-selectedValues,
-otherChecked,
+ 
+return {
+  // Choice options
+  options,
+  selectedValues,
+  otherChecked,
 
-minSelections,
-isMaxReached,
-hasMinimumSelections,
+  // Selection limits
+  minSelections,
+  isMaxReached,
+  hasMinimumSelections,
 
-optionsPerLine,
-checkboxColumns,
-choiceGridStyle,
-checkboxGridStyle,
+  // Grid configuration
+  optionsPerLine,
+  checkboxColumns,
+  choiceGridStyle,
+  checkboxGridStyle,
 
-handleCheckboxChange,
-handleRadioChange,
-handleCheckboxOtherChange,
-handleRadioOtherChange,
-handleOtherTextChange,
-handleButtonChange, // ADD THIS
+  // Checkbox and radio handlers
+  handleCheckboxChange,
+  handleRadioChange,
+  handleCheckboxOtherChange,
+  handleRadioOtherChange,
+  handleOtherTextChange,
+
+  // Button handler
+  handleButtonChange,
+
+  // Matrix
+  matrixQuestions,
+  matrixAnswers,
+  matrixAllowMultiple,
+  getAnswerValue,
+  isAnswerSelected,
+  handleMatrixSelection,
+
+  // Feedback
+  feedbackEmojis,
+  feedbackAllowMultiple,
+  handleFeedbackSelection,
 };
+
 }
