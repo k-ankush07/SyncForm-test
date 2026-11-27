@@ -73,8 +73,6 @@ import { ELEMENT_TYPES } from "../../utils/elementsConfig.js";
 //   left / right = insert elements side by side
 // Each zone also has a "+" button that opens the element picker.
 // =====================================================================
-
-
 function PreviewDropZone({
   pageId,
   rowId,
@@ -154,8 +152,6 @@ function PreviewDropZone({
     </div>
   );
 }
-
-
 
 // =====================================================================
 // 3. PREVIEW ROW INSERT
