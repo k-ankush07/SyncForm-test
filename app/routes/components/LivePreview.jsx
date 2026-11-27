@@ -756,6 +756,35 @@ function PreviewRootDropArea({ pageId, children }) {
 }
 
 
+const getPreviewRowItemDragId = (item, index) => {
+  if (
+    item &&
+    typeof item === "object" &&
+    item.id != null
+  ) {
+    return `field-${item.id}`;
+  }
+
+  if (typeof item === "string") {
+    return `field-${encodeURIComponent(
+      item.trim().toLowerCase()
+    )}`;
+  }
+
+  const fieldName =
+    item?.name ||
+    item?.label ||
+    item?.type;
+
+  if (fieldName) {
+    return `field-${encodeURIComponent(
+      String(fieldName).trim().toLowerCase()
+    )}`;
+  }
+
+  return `field-index-${index}`;
+};
+
 // =====================================================================
 // 7. LIVE PREVIEW (default export)
 // =====================================================================
@@ -1227,11 +1256,7 @@ export default function LivePreview({
                   PAGE CONTENT
 
                   Each page chooses its own header/footer
-                  using its custom header/footer checkboxes.
-
-                  Custom Header OFF -> shared header
-                  Custom Header ON  -> page.header
-
+                  using its custom header/footer checkboxes
                   Custom Footer OFF -> shared footer
                   Custom Footer ON  -> page.footer
               ========================================= */}
@@ -1247,24 +1272,45 @@ export default function LivePreview({
                   )
               ).map((page) => {
                 // Prepare only rows that actually contain visible elements.
+
                 const visibleRows = (page.rows ?? [])
                   .filter((row) => row.visible !== false)
                   .map((row) => {
-                    const rowItems = [
-                      ...(row.fields ?? []).map((field) => ({
+                    const combinedItems = [
+                      ...(row.fields ?? []).map((field, index) => ({
                         element: field,
                         collection: "fields",
+                        dragId: getPreviewRowItemDragId(field, index),
                       })),
 
                       ...(row.elements ?? []).map((element) => ({
                         element,
                         collection: "elements",
+                        dragId: `element-${element.id}`,
                       })),
                     ].filter(({ element }) => shouldRenderElement(element));
 
-                    return { row, rowItems };
+                    // Restore the same mixed order used by Elements Panel.
+                    const savedOrder = row.itemOrder ?? [];
+
+                    combinedItems.sort((a, b) => {
+                      const indexA = savedOrder.indexOf(a.dragId);
+                      const indexB = savedOrder.indexOf(b.dragId);
+
+                      if (indexA === -1 && indexB === -1) return 0;
+                      if (indexA === -1) return 1;
+                      if (indexB === -1) return -1;
+
+                      return indexA - indexB;
+                    });
+
+                    return {
+                      row,
+                      rowItems: combinedItems,
+                    };
                   })
                   .filter(({ rowItems }) => rowItems.length > 0);
+
 
                 // IDs of rows that are actually rendered.
                 const renderedRowIds = new Set(

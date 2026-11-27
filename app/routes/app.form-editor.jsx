@@ -3004,6 +3004,7 @@ export default function FormEditor() {
         return normalizeRows(updatedPages);
       }
 
+        
       // Unsupported placement.
       return previousPages;
     });
@@ -3398,8 +3399,6 @@ export default function FormEditor() {
 
             </div>
           </div>
-
-          {/* Preview with its own drag & drop context */}
 
           {/* Preview with its own drag & drop context */}
           <DndContext
